@@ -1,0 +1,138 @@
+.overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.28);
+  z-index: 10;
+}
+
+.panel {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+
+  padding: 18px 14px 16px;
+  background: rgba(0, 0, 0, 0.85);
+  color: #fff;
+
+  box-sizing: border-box;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(6px);
+  z-index: 20;
+}
+
+.closeBtn {
+  position: absolute;
+  right: 10px;
+  top: 8px;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.95);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  font-size: 22px;
+  line-height: 1;
+}
+
+.closeBtn:active {
+  transform: translateY(1px);
+}
+
+.speaker {
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: -0.2px;
+  margin-bottom: 8px;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.text {
+  padding-right: 40px; /* 닫기 버튼 영역 회피 */
+  font-size: 15px;
+  line-height: 1.55;
+  letter-spacing: -0.2px;
+  white-space: pre-wrap;
+  word-break: keep-all;
+  cursor: pointer; /* 클릭해서 스킵 가능 */
+}
+
+.prompt {
+  padding-right: 40px; /* 닫기 버튼 영역 회피 */
+  font-weight: 800;
+  font-size: 14px;
+  line-height: 1.45;
+  letter-spacing: -0.2px;
+  margin-bottom: 10px;
+  cursor: pointer; /* 클릭해서 스킵 가능 */
+}
+
+.options {
+  display: grid;
+  gap: 8px;
+}
+
+.optionBtn {
+  width: 100%;
+  text-align: left;
+  padding: 12px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1.25;
+}
+
+.optionBtn:active {
+  transform: translateY(1px);
+}
+
+.optionBtn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.result {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.correct {
+  background: rgba(34, 197, 94, 0.14);
+}
+
+.wrong {
+  background: rgba(239, 68, 68, 0.14);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+
+.primaryBtn {
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.primaryBtn:active {
+  transform: translateY(1px);
+}

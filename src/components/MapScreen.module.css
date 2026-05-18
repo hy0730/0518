@@ -1,0 +1,117 @@
+.map {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+  background-color: #111;
+  background-size: cover;
+  background-position: center;
+}
+
+.pin {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+
+  border: 0;
+  background: transparent;
+  color: #fff;
+  padding: 0;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.pinInner {
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 2px solid rgba(255, 255, 255, 0.85);
+  display: grid;
+  place-items: center;
+  position: relative;
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.35);
+}
+
+.pinIcon {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  display: block;
+  pointer-events: none; /* 클릭은 버튼이 받게 */
+}
+
+.pinSvg {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.pinDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: #ff3b30;
+  box-shadow: 0 0 0 4px rgba(255, 59, 48, 0.25);
+}
+
+.pinLabel {
+  max-width: 140px;
+  font-size: 12px;
+  line-height: 1.1;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.visited {
+  filter: grayscale(1);
+  opacity: 0.85;
+}
+
+.floating {
+  animation: floatY 2.4s ease-in-out infinite;
+}
+
+@keyframes floatY {
+  0% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-7px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+.checkMark {
+  position: absolute;
+  right: -4px;
+  top: -6px;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: rgba(34, 197, 94, 0.95);
+  color: #04130a;
+  font-size: 12px;
+  font-weight: 900;
+  border: 2px solid rgba(0, 0, 0, 0.25);
+}
+
+.pin:focus-visible .pinInner {
+  outline: 3px solid rgba(255, 255, 255, 0.6);
+  outline-offset: 2px;
+}

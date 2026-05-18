@@ -1,0 +1,79 @@
+.banner {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  top: 10px;
+  z-index: 40; /* HUD(30)보다 위, CollectionModal(60)보다 아래 */
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+
+  padding: 10px 10px;
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: #fff;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 18px 46px rgba(0, 0, 0, 0.35);
+}
+
+.text {
+  min-width: 0;
+}
+
+.title {
+  font-weight: 900;
+  font-size: 13px;
+  letter-spacing: -0.2px;
+}
+
+.desc {
+  margin-top: 2px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.82);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.installBtn {
+  padding: 8px 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  cursor: pointer;
+  font-weight: 900;
+  letter-spacing: -0.2px;
+}
+
+.installBtn:active {
+  transform: translateY(1px);
+}
+
+.closeBtn {
+  width: 32px;
+  height: 32px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.95);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.closeBtn:active {
+  transform: translateY(1px);
+}
+

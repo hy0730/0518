@@ -1,0 +1,56 @@
+.wrapper {
+  width: 100vw;
+  height: 100dvh;
+  position: relative;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: #000;
+}
+
+/* 배경 이미지 + 블러 */
+.wrapper::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: var(--bg-image);
+  background-size: cover;
+  background-position: center;
+  filter: blur(15px);
+  transform: scale(1.08); /* 블러 가장자리 빈틈 방지 */
+  z-index: 0;
+}
+
+/* 어두운 오버레이 */
+.wrapper::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1;
+}
+
+/* 실제 게임 화면(9:16) */
+.gameContainer {
+  position: relative;
+  z-index: 2;
+
+  width: min(450px, 100vw);
+  height: auto;
+  aspect-ratio: 9 / 16;
+  max-width: 450px;
+  max-height: 900px;
+
+  overflow: hidden;
+  box-sizing: border-box;
+
+  background: #fff;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+  border-radius: 16px;
+}
+
+/* 컨테이너 내부 요소 박스모델 안전장치 */
+.gameContainer,
+.gameContainer * {
+  box-sizing: border-box;
+}
