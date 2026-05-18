@@ -3,6 +3,27 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import { RegionDataSchema, type RegionData, type DialogStep } from '../types/region';
 import { audio } from '../utils/audio';
 import { trackEvent } from '../utils/analytics';
+import { supabase } from '../utils/supabase';
+import type { RealtimeChannel } from '@supabase/supabase-js';
+
+let realtimeChannel: RealtimeChannel | null = null;
+let realtimeRegionId: string | null = null;
+
+function applyRegionDataSafely(set: (fn: any) => void, nextRaw: unknown) {
+  const parsed = RegionDataSchema.safeParse(nextRaw);
+  if (!parsed.success) return false;
+
+  const validNodeIds = new Set(parsed.data.map.nodes.map((n) => n.id));
+  set((state: any) => ({
+    regionData: parsed.data,
+    status: 'ready',
+    error: null,
+    // 기존 진행도 유지하되, 데이터 변경으로 사라진 노드 id는 제거
+    visitedNodes: Array.from(new Set(state.visitedNodes)).filter((id: string) => validNodeIds.has(id)),
+  }));
+
+  return true;
+}
 
 type LoadStatus = 'idle' | 'loading' | 'ready' | 'error';
 
@@ -43,6 +64,7 @@ type GameState = {
 
   // actions
   fetchRegionData: (regionKey?: string) => Promise<void>;
+  cleanupRealtime: () => void;
   selectNode: (nodeId: string) => void;
   closeDialog: () => void;
   nextDialogStep: () => void;
@@ -103,36 +125,64 @@ export const useGameStore = create<GameState>()(
         set({ status: 'loading', error: null, regionData: null, currentNodeId: null, currentDialog: null, quizState: null });
 
         try {
-          // Vite: JSON을 비동기로 로드(번들 내부). 추후 서버/원격으로 바꿔도 액션 시그니처 유지 가능.
-          // 파일명 규칙: `${regionKey}_schema.json`
-          const mod = await import(`../data/${regionKey}_schema.json`);
-          const raw = mod.default;
+          const { data, error } = await supabase.from('regions').select('data').eq('id', regionKey).single();
 
-          const parsed = RegionDataSchema.safeParse(raw);
-          if (!parsed.success) {
+          if (error) {
             set({
               status: 'error',
-              error: `지역 데이터 스키마 검증 실패: ${parsed.error.message}`,
+              error: `Supabase regions 조회 실패: ${error.message}`,
             });
             return;
           }
 
-          const validNodeIds = new Set(parsed.data.map.nodes.map((n) => n.id));
+          const ok = applyRegionDataSafely(set, data?.data);
+          if (!ok) {
+            set({
+              status: 'error',
+              error: '지역 데이터 스키마 검증 실패: Supabase에서 받은 JSON이 RegionDataSchema와 일치하지 않습니다.',
+            });
+            return;
+          }
 
-          // Hydration 안전장치:
-          // - localStorage에 남아있는 visitedNodes가 현재 JSON과 불일치할 수 있으므로 교집합만 유지
-          set((state) => ({
-            regionData: parsed.data,
-            status: 'ready',
-            error: null,
-            visitedNodes: Array.from(new Set(state.visitedNodes)).filter((id) => validNodeIds.has(id)),
-          }));
+          // Realtime subscribe (DB UPDATE → 즉시 화면 반영)
+          if (realtimeChannel && realtimeRegionId === regionKey) return;
+
+          if (realtimeChannel) {
+            supabase.removeChannel(realtimeChannel);
+            realtimeChannel = null;
+            realtimeRegionId = null;
+          }
+
+          realtimeRegionId = regionKey;
+          realtimeChannel = supabase
+            .channel('custom-all-channel')
+            .on(
+              'postgres_changes',
+              {
+                event: 'UPDATE',
+                schema: 'public',
+                table: 'regions',
+                filter: `id=eq.${regionKey}`,
+              },
+              (payload: any) => {
+                // payload.new.data 에 최신 JSON이 들어온다고 가정
+                applyRegionDataSafely(set, payload?.new?.data);
+              }
+            )
+            .subscribe();
         } catch (e) {
           set({
             status: 'error',
             error: `지역 데이터 로드 실패: ${zodErrorToString(e)}`,
           });
         }
+      },
+
+      cleanupRealtime: () => {
+        if (!realtimeChannel) return;
+        supabase.removeChannel(realtimeChannel);
+        realtimeChannel = null;
+        realtimeRegionId = null;
       },
 
       selectNode: (nodeId: string) => {

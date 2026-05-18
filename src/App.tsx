@@ -35,6 +35,9 @@ export default function App() {
 
   useEffect(() => {
     useGameStore.getState().fetchRegionData();
+    return () => {
+      useGameStore.getState().cleanupRealtime();
+    };
   }, []);
 
   useEffect(() => {
