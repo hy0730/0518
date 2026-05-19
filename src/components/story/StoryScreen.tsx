@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { storyDataByStageId, type StoryDialogueLine, type StageStory } from '../../data/storyData';
 import styles from './StoryScreen.module.css';
@@ -7,6 +7,7 @@ export default function StoryScreen() {
   const currentStageId = useGameStore((s) => s.currentStageId);
   const unlockedStageId = useGameStore((s) => s.unlockedStageId);
   const playerName = useGameStore((s) => s.playerName);
+  const playerOrg = useGameStore((s) => s.playerOrg);
   const setAppPhase = useGameStore((s) => s.setAppPhase);
 
   const stage = useMemo<StageStory | null>(() => {
@@ -16,12 +17,26 @@ export default function StoryScreen() {
 
   const lines = useMemo<StoryDialogueLine[]>(() => {
     if (!stage) return [];
-    const who = playerName ? `${playerName} 대원` : '수호대원';
-    // 일부 문구에 플레이어 이름이 들어가도록 가볍게 치환
-    return stage.dialogues.map((d) => ({ ...d, text: d.text.replaceAll('{PLAYER}', who) }));
-  }, [stage, playerName]);
+    const who = playerName?.trim() ? `${playerName.trim()} 대원` : '수호대원';
+    const org = playerOrg?.trim() ? playerOrg.trim() : '수호대';
+
+    const interpolate = (text: string) =>
+      text
+        .replaceAll('{PLAYER}', who)
+        .replaceAll('{ORG}', org)
+        // 치환 후 공백이 어색하게 남는 경우 정리
+        .replace(/\s{2,}/g, ' ')
+        .trim();
+
+    return stage.dialogues.map((d) => ({ ...d, text: interpolate(d.text) }));
+  }, [stage, playerName, playerOrg]);
 
   const [idx, setIdx] = useState(0);
+
+  // 스테이지가 바뀌면 대사 인덱스 초기화
+  useEffect(() => {
+    setIdx(0);
+  }, [currentStageId]);
 
   if (!currentStageId) {
     return (
