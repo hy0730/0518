@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useGameStore } from '../../store/useGameStore';
+import { nudgeHideBrowserUI, tryEnterFullscreen } from '../../utils/fullscreen';
 import styles from './IntroScreen.module.css';
 
 export default function IntroScreen() {
@@ -54,6 +55,12 @@ export default function IntroScreen() {
             type="button"
             className={styles.primaryBtn}
             onClick={async () => {
+              // A+B+C 조합:
+              // C) 가능한 브라우저에서는 "진짜" 풀스크린 시도 (반드시 사용자 제스처 내에서!)
+              void tryEnterFullscreen();
+              // B) 탭 브라우저에서는 주소창/하단바가 접히도록 스크롤 유도
+              nudgeHideBrowserUI();
+
               const trimmedOrg = org.trim();
               const trimmedName = name.trim();
               if (!trimmedOrg || !trimmedName) {
@@ -87,4 +94,3 @@ export default function IntroScreen() {
     </div>
   );
 }
-
