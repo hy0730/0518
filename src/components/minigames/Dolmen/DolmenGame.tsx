@@ -128,7 +128,7 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
 
   return (
     <div
-      className="w-full h-full p-3 text-white flex flex-col"
+      className="w-full h-full p-2 md:p-3 text-white flex flex-col"
       style={{
         backgroundImage: "linear-gradient(rgba(0,0,0,0.35),rgba(0,0,0,0.7)), url('/assets/images/capstone_map.png')",
         backgroundSize: 'cover',
@@ -167,8 +167,9 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
         </div>
       </div>
 
-      <div className="mt-2 flex-1 overflow-auto">
-        <div className="rounded-2xl border border-white/10 bg-black/35 p-3">
+      {/* 스크롤 없이 화면 내에 맞추기: flex 레이아웃으로 높이를 분배 */}
+      <div className="mt-2 flex-1 min-h-0">
+        <div className="h-full rounded-2xl border border-white/10 bg-black/35 p-2 md:p-3 flex flex-col min-h-0">
           <div className="text-sm font-extrabold mb-2">
             {phase === 'QUARRY' && 'Phase 1: 채석 (나무쐐기 + 물의 팽창)'}
             {phase === 'BIND' && 'Phase 2: 밧줄 묶기'}
@@ -176,7 +177,7 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
             {phase === 'MOVE' && 'Phase 4: 이동'}
           </div>
 
-          <div className="relative rounded-2xl border border-white/10 bg-black/30 overflow-hidden h-[340px] md:h-[420px]">
+          <div className="relative flex-1 min-h-0 rounded-2xl border border-white/10 bg-black/30 overflow-hidden">
             {/* 좌측 바위산 */}
             <div className={['absolute left-0 top-0 bottom-0 w-[46%] md:w-[40%]', mountainShake ? 'shakeFx' : ''].join(' ')}>
               <img
@@ -227,7 +228,7 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
                       <img
                         src="/assets/images/wood_wedge.png"
                         alt="쐐기"
-                        className={['w-10 h-10 object-contain', wedgeSwelling ? 'swellFx' : ''].join(' ')}
+                        className={['w-9 h-9 md:w-10 md:h-10 object-contain', wedgeSwelling ? 'swellFx' : ''].join(' ')}
                         draggable={false}
                       />
                     ) : (
@@ -251,7 +252,10 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
                     <img
                       src={ropeBound ? '/assets/images/capstone_rope.png' : '/assets/images/capstone_raw.png'}
                       alt="떼돌"
-                      className={['w-[220px] md:w-[280px] select-none drop-shadow-[0_18px_40px_rgba(0,0,0,0.55)]', !ropeBound ? 'fallFx' : ''].join(
+                      className={[
+                        'w-[min(260px,42vw)] md:w-[280px] select-none drop-shadow-[0_18px_40px_rgba(0,0,0,0.55)]',
+                        !ropeBound ? 'fallFx' : '',
+                      ].join(
                         ' '
                       )}
                       draggable={false}
@@ -260,11 +264,11 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
 
                   {/* 통나무(돌 아래) */}
                   {(phase === 'PREPARE' || phase === 'MOVE') && ropeBound && (
-                    <div className="mt-2 grid grid-cols-3 gap-2 w-[240px] md:w-[300px]">
+                    <div className="mt-2 grid grid-cols-3 gap-2 w-[min(300px,46vw)] md:w-[300px]">
                       {logSlots.map((s, i) => (
                         <div
                           key={i}
-                          className="rounded-xl border-2 border-dashed border-white/25 bg-black/25 h-14 grid place-items-center"
+                          className="rounded-xl border-2 border-dashed border-white/25 bg-black/25 h-12 md:h-14 grid place-items-center"
                           onDragOver={(e) => e.preventDefault()}
                           onDrop={(e) => {
                             e.preventDefault();
@@ -309,7 +313,7 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
                         if (phase === 'BIND') bindRope();
                         if (phase === 'MOVE') moveOnce();
                       }}
-                      className="absolute -right-10 -top-8 md:-right-14 md:-top-10 animate-pulse"
+                      className="absolute -right-9 -top-7 md:-right-14 md:-top-10 animate-pulse"
                       title={phase === 'BIND' ? '밧줄 묶기' : '눌러서 옮기기'}
                     >
                       <img src="/assets/images/hand.png" alt="손" className="w-12 h-12 md:w-14 md:h-14 object-contain" draggable={false} />
@@ -326,8 +330,81 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
               </div>
             </div>
 
-            {/* 안내 메시지 */}
-            <div className="absolute left-3 right-3 bottom-3">
+            {/* 하단 UI 스택(인벤토리 + 안내) : 화면 밖으로 밀리지 않도록 내부에 포함 */}
+            <div className="absolute left-3 right-3 bottom-3 grid gap-2">
+              {/* 인벤토리(컴팩트) */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                {/* 쐐기 + 물 */}
+                <div className="rounded-xl border border-white/10 bg-black/35 p-2">
+                  <div className="text-[11px] font-black opacity-90 mb-1">도구</div>
+                  <div className="flex items-center gap-2">
+                    <div
+                      draggable={phase === 'QUARRY'}
+                      onDragStart={(e) => {
+                        e.dataTransfer.setData('text/plain', 'wedge');
+                        e.dataTransfer.effectAllowed = 'move';
+                      }}
+                      onClick={() => {
+                        if (phase !== 'QUARRY') return;
+                        startIfNeeded();
+                        placeWedgeToFirstEmpty();
+                      }}
+                      className={[
+                        'rounded-lg border border-white/10 bg-white/5 p-2 flex items-center gap-2',
+                        phase === 'QUARRY' ? 'cursor-grab active:cursor-grabbing hover:bg-white/10' : 'opacity-50 cursor-not-allowed',
+                      ].join(' ')}
+                      title="드래그 또는 클릭해서 틈에 꽂기"
+                    >
+                      <img src="/assets/images/wood_wedge.png" alt="나무쐐기" className="w-10 h-10 object-contain" />
+                      <div className="text-[11px] font-black">나무쐐기</div>
+                    </div>
+
+                    <button
+                      type="button"
+                      disabled={!allWedgesPlaced || phase !== 'QUARRY'}
+                      onClick={water}
+                      className={[
+                        'ml-auto rounded-lg px-2 py-2 font-black text-[11px] flex items-center gap-1.5',
+                        allWedgesPlaced && phase === 'QUARRY'
+                          ? 'bg-sky-400 text-black hover:bg-sky-300 active:translate-y-[1px]'
+                          : 'bg-white/10 text-white/40 cursor-not-allowed',
+                      ].join(' ')}
+                    >
+                      <img src="/assets/images/icon_water.png" alt="" className="w-5 h-5 object-contain" />
+                      물
+                    </button>
+                  </div>
+                </div>
+
+                {/* 통나무 */}
+                <div className="rounded-xl border border-white/10 bg-black/35 p-2">
+                  <div className="text-[11px] font-black opacity-90 mb-1">통나무</div>
+                  <div className="flex items-center gap-2">
+                    <div
+                      draggable={phase === 'PREPARE'}
+                      onDragStart={(e) => {
+                        e.dataTransfer.setData('text/plain', 'log');
+                        e.dataTransfer.effectAllowed = 'move';
+                      }}
+                      onClick={() => {
+                        if (phase !== 'PREPARE') return;
+                        startIfNeeded();
+                        placeLogToFirstEmpty();
+                      }}
+                      className={[
+                        'rounded-lg border border-white/10 bg-white/5 p-2 flex items-center gap-2',
+                        phase === 'PREPARE' && logsCount > 0 ? 'cursor-grab active:cursor-grabbing hover:bg-white/10' : 'opacity-50 cursor-not-allowed',
+                      ].join(' ')}
+                      title="드래그 또는 클릭해서 통나무 배치"
+                    >
+                      <img src="/assets/images/log.png" alt="통나무" className="w-10 h-10 object-contain" />
+                      <div className="text-[11px] font-black">남은: {logsCount}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 안내 메시지 */}
               <div className="rounded-xl border border-white/10 bg-black/45 p-2 text-[12px] leading-relaxed">
                 {phase === 'QUARRY' && '나무쐐기 3개를 바위 틈에 꽂고, 물을 뿌려 바위를 쪼개보자! (드래그 또는 클릭)'}
                 {phase === 'BIND' && '떼돌 옆의 손 아이콘을 눌러 밧줄로 묶어보자!'}
@@ -337,80 +414,8 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
             </div>
           </div>
 
-          {/* 인벤토리 */}
-          <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
-            {/* 쐐기 */}
-            <div className="rounded-2xl border border-white/10 bg-black/25 p-3">
-              <div className="text-xs font-black opacity-90 mb-2">도구</div>
-              <div className="flex items-center gap-2">
-                <div
-                  draggable={phase === 'QUARRY'}
-                  onDragStart={(e) => {
-                    e.dataTransfer.setData('text/plain', 'wedge');
-                    e.dataTransfer.effectAllowed = 'move';
-                  }}
-                  onClick={() => {
-                    if (phase !== 'QUARRY') return;
-                    startIfNeeded();
-                    placeWedgeToFirstEmpty();
-                  }}
-                  className={[
-                    'rounded-xl border border-white/10 bg-white/5 p-2 flex items-center gap-2',
-                    phase === 'QUARRY' ? 'cursor-grab active:cursor-grabbing hover:bg-white/10' : 'opacity-50 cursor-not-allowed',
-                  ].join(' ')}
-                  title="드래그 또는 클릭해서 틈에 꽂기"
-                >
-                  <img src="/assets/images/wood_wedge.png" alt="나무쐐기" className="w-12 h-12 object-contain" />
-                  <div className="text-xs font-black">나무쐐기</div>
-                </div>
-
-                <button
-                  type="button"
-                  disabled={!allWedgesPlaced || phase !== 'QUARRY'}
-                  onClick={water}
-                  className={[
-                    'ml-auto rounded-xl px-3 py-2 font-black text-xs flex items-center gap-2',
-                    allWedgesPlaced && phase === 'QUARRY'
-                      ? 'bg-sky-400 text-black hover:bg-sky-300 active:translate-y-[1px]'
-                      : 'bg-white/10 text-white/40 cursor-not-allowed',
-                  ].join(' ')}
-                >
-                  <img src="/assets/images/icon_water.png" alt="" className="w-6 h-6 object-contain" />
-                  물 뿌리기
-                </button>
-              </div>
-            </div>
-
-            {/* 통나무 */}
-            <div className="rounded-2xl border border-white/10 bg-black/25 p-3">
-              <div className="text-xs font-black opacity-90 mb-2">통나무</div>
-              <div className="flex items-center gap-2">
-                <div
-                  draggable={phase === 'PREPARE'}
-                  onDragStart={(e) => {
-                    e.dataTransfer.setData('text/plain', 'log');
-                    e.dataTransfer.effectAllowed = 'move';
-                  }}
-                  onClick={() => {
-                    if (phase !== 'PREPARE') return;
-                    startIfNeeded();
-                    placeLogToFirstEmpty();
-                  }}
-                  className={[
-                    'rounded-xl border border-white/10 bg-white/5 p-2 flex items-center gap-2',
-                    phase === 'PREPARE' && logsCount > 0 ? 'cursor-grab active:cursor-grabbing hover:bg-white/10' : 'opacity-50 cursor-not-allowed',
-                  ].join(' ')}
-                  title="드래그 또는 클릭해서 통나무 배치"
-                >
-                  <img src="/assets/images/log.png" alt="통나무" className="w-12 h-12 object-contain" />
-                  <div className="text-xs font-black">남은 통나무: {logsCount}</div>
-                </div>
-              </div>
-            </div>
-          </div>
-
           {feedback && (
-            <div className="mt-3 rounded-xl border border-white/10 bg-black/35 p-2 text-center text-sm font-black">
+            <div className="mt-2 rounded-xl border border-white/10 bg-black/35 p-2 text-center text-sm font-black">
               {feedback}
             </div>
           )}
