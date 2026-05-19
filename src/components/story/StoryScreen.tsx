@@ -127,6 +127,13 @@ export default function StoryScreen() {
           <img src="/assets/images/yang_1.png" alt="양" />
         </div>
 
+        <div className={styles.portrait}>
+          <img
+            src={line.speaker === 'han' ? '/assets/images/han_2.png' : '/assets/images/yang_2.png'}
+            alt={line.speaker === 'han' ? '한' : '양'}
+          />
+        </div>
+
         <div className={`${styles.bubble} ${line.speaker === 'han' ? styles.bubbleLeft : styles.bubbleRight}`}>
           {line.text}
         </div>
