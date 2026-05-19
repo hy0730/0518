@@ -57,6 +57,18 @@
   max-height: 100dvh;
 }
 
+/* 폰/작은 화면에서는 잘림 방지를 위해 전체 화면을 사용 */
+@media (max-width: 520px), (max-height: 520px) {
+  .landscapeContainer {
+    width: 100vw;
+    height: 100dvh;
+    max-width: none;
+    max-height: none;
+    aspect-ratio: auto;
+    border-radius: 0;
+  }
+}
+
 /* 컨테이너 내부 요소 박스모델 안전장치 */
 .gameContainer,
 .gameContainer * {

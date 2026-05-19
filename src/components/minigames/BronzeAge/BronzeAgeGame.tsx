@@ -161,7 +161,7 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
   };
 
   return (
-    <div className="w-full h-full p-3 text-white">
+    <div className="w-full h-full p-3 text-white flex flex-col">
       {/* 커스텀 애니메이션(무거운 라이브러리 없이) */}
       <style>{`
         @keyframes shake {
@@ -190,9 +190,11 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
         </div>
       </div>
 
-      <div className="mt-2 grid grid-cols-12 gap-3 h-[calc(100%-32px)]">
+      {/* 작은 화면(모바일/태블릿)에서 잘림 방지: 내부 스크롤 + 반응형 배치 */}
+      <div className="mt-2 flex-1 overflow-auto">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
         {/* 재료 */}
-        <div className="col-span-4 rounded-2xl border border-white/10 bg-black/40 p-3">
+        <div className="md:col-span-4 rounded-2xl border border-white/10 bg-black/40 p-3">
           <div className="text-sm font-extrabold mb-2">재료</div>
           <div className="grid grid-cols-2 gap-2">
             {INGREDIENTS.map((ing) => {
@@ -231,12 +233,12 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
         </div>
 
         {/* 화덕(드롭존) */}
-        <div className="col-span-4 rounded-2xl border border-white/10 bg-black/40 p-3 relative">
+        <div className="md:col-span-4 rounded-2xl border border-white/10 bg-black/40 p-3 relative">
           <div className="text-sm font-extrabold mb-2">화덕</div>
 
           <div
             className={[
-              'relative rounded-2xl border-2 border-dashed p-3 h-[55%] flex flex-col justify-between',
+              'relative rounded-2xl border-2 border-dashed p-3 min-h-[260px] flex flex-col justify-between',
               isOver && canDrop ? 'border-amber-400 bg-amber-400/10' : 'border-white/20 bg-white/5',
               shake ? 'shake' : '',
             ].join(' ')}
@@ -325,7 +327,7 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
         </div>
 
         {/* 내 유물 도감 */}
-        <div className="col-span-4 rounded-2xl border border-white/10 bg-black/40 p-3">
+        <div className="md:col-span-4 rounded-2xl border border-white/10 bg-black/40 p-3">
           <div className="text-sm font-extrabold mb-2">내 유물 도감</div>
           <div className="grid grid-cols-2 gap-2">
             {RELICS.map((r) => {
@@ -364,6 +366,7 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
               <li>밧줄 + 나무 + 짚 = 움집</li>
             </ul>
           </div>
+        </div>
         </div>
       </div>
     </div>
