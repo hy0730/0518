@@ -9,3 +9,11 @@ body,
   height: 100%;
 }
 
+body {
+  margin: 0;
+  /* 모바일에서 바운스/오버스크롤로 화면이 밀리는 현상 방지 */
+  overscroll-behavior: none;
+  /* 안전영역(노치) 고려 */
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  background: #000;
+}

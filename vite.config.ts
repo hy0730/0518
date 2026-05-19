@@ -13,7 +13,10 @@ export default defineConfig({
         description: '데이터 주도형 모바일 반응형 문화재 탐험 게임',
         theme_color: '#0b0b0b',
         background_color: '#0b0b0b',
-        display: 'standalone',
+        // 설치(PWA) 실행 시 브라우저 UI를 최대한 숨겨 "앱처럼" 보이게 함
+        // (브라우저/OS 정책에 따라 fullscreen이 무시될 수 있어 fallback도 함께 제공)
+        display: 'fullscreen',
+        display_override: ['fullscreen', 'standalone', 'minimal-ui', 'browser'],
         // 설치(PWA) 실행 시 가로 화면을 우선 권장 (브라우저 정책에 따라 적용 여부는 다를 수 있음)
         orientation: 'landscape',
         start_url: '/',
