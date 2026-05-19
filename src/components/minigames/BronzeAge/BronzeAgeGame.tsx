@@ -180,7 +180,7 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
   };
 
   return (
-    <div className="w-full h-full p-3 text-white flex flex-col">
+    <div className="w-full h-full text-white flex flex-col relative p-2">
       {/* 커스텀 애니메이션(무거운 라이브러리 없이) */}
       <style>{`
         @keyframes shake {
@@ -223,13 +223,13 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
         </div>
       </div>
 
-      {/* 작은 화면(모바일/태블릿)에서 잘림 방지: 내부 스크롤 + 반응형 배치 */}
-      <div className="mt-2 flex-1 overflow-auto">
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+      {/* Fit-to-screen(800x450) 기준: 3패널 고정 레이아웃(스크롤 없이 설계) */}
+      <div className="mt-2 flex-1 min-h-0">
+        <div className="grid grid-cols-12 gap-2 h-full">
         {/* 재료 */}
-        <div className="md:col-span-4 rounded-2xl border border-white/10 bg-black/40 p-3">
+        <div className="col-span-4 rounded-2xl border border-white/10 bg-black/40 p-2 flex flex-col min-h-0">
           <div className="text-sm font-extrabold mb-2">재료</div>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-1 flex-1 min-h-0">
             {INGREDIENTS.map((ing) => {
               const left = counts[ing.id] ?? 0;
               const disabled = left <= 0;
@@ -247,17 +247,17 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
                     handleDropIngredient(ing.id);
                   }}
                   className={[
-                    'select-none rounded-xl border p-2',
+                    'select-none rounded-xl border p-1.5',
                     'bg-white/5 border-white/10',
                     disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-grab active:cursor-grabbing hover:bg-white/10',
                   ].join(' ')}
                   title={disabled ? '재료가 부족해요' : '드래그해서 작업대에 넣기'}
                 >
                   <div className="flex items-center gap-2">
-                    <img src={ing.img} alt={ing.name} className="w-10 h-10 object-contain" />
+                    <img src={ing.img} alt={ing.name} className="w-8 h-8 object-contain" />
                     <div className="min-w-0">
                       <div className="text-xs font-black">{ing.name}</div>
-                      <div className="text-[11px] opacity-80">남은 수량: {left}</div>
+                      <div className="text-[10px] opacity-80">x {left}</div>
                     </div>
                   </div>
                 </div>
@@ -265,18 +265,18 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
             })}
           </div>
 
-          <div className="mt-3 text-[11px] opacity-80 leading-relaxed">
+          <div className="mt-2 text-[10px] opacity-80 leading-relaxed">
             팁: 작업대에는 <b>최대 3개</b>까지 넣을 수 있어요. 넣은 재료는 클릭하면 다시 뺄 수 있어요.
           </div>
         </div>
 
         {/* 작업대(드롭존) */}
-        <div className="md:col-span-4 rounded-2xl border border-white/10 bg-black/40 p-3 relative">
+        <div className="col-span-4 rounded-2xl border border-white/10 bg-black/40 p-2 relative flex flex-col min-h-0">
           <div className="text-sm font-extrabold mb-2">작업대</div>
 
           <div
             className={[
-              'relative rounded-2xl border-2 border-dashed p-3 min-h-[260px] flex flex-col justify-between bg-cover bg-center',
+              'relative rounded-2xl border-2 border-dashed p-2 flex-1 min-h-0 flex flex-col justify-between bg-cover bg-center',
               isOver && canDrop ? 'border-amber-400' : 'border-white/20',
               shake ? 'shake' : '',
             ].join(' ')}
@@ -315,7 +315,7 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
                 const id = workbench[i];
                 if (!id) {
                   return (
-                    <div key={i} className="rounded-xl border border-white/10 bg-black/30 h-16 grid place-items-center text-xs opacity-60">
+                    <div key={i} className="rounded-xl border border-white/10 bg-black/30 h-14 grid place-items-center text-xs opacity-60">
                       비어있음
                     </div>
                   );
@@ -326,10 +326,10 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
                     key={i}
                     type="button"
                     onClick={() => removeFromWorkbench(i)}
-                    className="rounded-xl border border-white/10 bg-white/5 h-16 flex items-center justify-center hover:bg-white/10"
+                    className="rounded-xl border border-white/10 bg-white/5 h-14 flex items-center justify-center hover:bg-white/10"
                     title="클릭해서 빼기"
                   >
-                    <img src={def.img} alt={def.name} className="w-12 h-12 object-contain" />
+                    <img src={def.img} alt={def.name} className="w-10 h-10 object-contain" />
                   </button>
                 );
               })}
@@ -372,22 +372,22 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
             )}
           </div>
 
-          <div className="mt-3 text-[11px] opacity-85">
+          <div className="mt-2 text-[10px] opacity-85">
             정답 레시피는 <b>2~3개 조합</b>이에요. 재료를 넣고 <b>조합하기</b>를 눌러보자!
           </div>
         </div>
 
         {/* 내 유물 도감 */}
-        <div className="md:col-span-4 rounded-2xl border border-white/10 bg-black/40 p-3">
+        <div className="col-span-4 rounded-2xl border border-white/10 bg-black/40 p-2 flex flex-col min-h-0">
           <div className="text-sm font-extrabold mb-2">내 유물 도감</div>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-1">
             {RELICS.map((r) => {
               const got = collected.includes(r.id);
               return (
                 <div
                   key={r.id}
                   className={[
-                    'rounded-xl border p-2',
+                    'rounded-xl border p-1.5',
                     got ? 'border-emerald-400/40 bg-emerald-400/10' : 'border-white/10 bg-white/5 opacity-70',
                   ].join(' ')}
                 >
@@ -395,11 +395,11 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
                     <img
                       src={r.img}
                       alt={r.name}
-                      className={['w-10 h-10 object-contain', got ? '' : 'grayscale opacity-60'].join(' ')}
+                      className={['w-8 h-8 object-contain', got ? '' : 'grayscale opacity-60'].join(' ')}
                     />
                     <div className="min-w-0">
                       <div className="text-xs font-black">{got ? r.name : '???'}</div>
-                      <div className="text-[11px] opacity-80">{got ? '완성!' : '미완성'}</div>
+                      <div className="text-[10px] opacity-80">{got ? '완성!' : '미완성'}</div>
                     </div>
                   </div>
                 </div>
@@ -407,22 +407,18 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
             })}
           </div>
 
-          <div className="mt-3 rounded-xl border border-white/10 bg-black/30 p-2">
-            <div className="text-[11px] font-black opacity-90 mb-1">레시피 힌트</div>
-            <ul className="text-[11px] opacity-85 leading-relaxed list-disc pl-4">
-              <li>흙 + 불 = 민무늬 토기</li>
-              <li>돌 + 돌 = 반달 돌칼</li>
-              <li>구리 + 주석 + 불 = 청동 거울</li>
-              <li>돌 + 나무 + 밧줄 = 돌화살</li>
-              <li>밧줄 + 나무 + 짚 = 움집</li>
-            </ul>
+          <div className="mt-2 rounded-xl border border-white/10 bg-black/30 p-2">
+            <div className="text-[10px] font-black opacity-90 mb-1">레시피 힌트</div>
+            <div className="text-[10px] opacity-85 leading-relaxed">
+              흙+불 / 돌+돌 / 구리+주석+불 / 돌+나무+밧줄 / 밧줄+나무+짚
+            </div>
           </div>
         </div>
         </div>
       </div>
       {/* 유물 획득 팝업(정답 조합 시) */}
       {relicModal && (
-        <div className="fixed inset-0 z-[10000] grid place-items-center bg-black/60 p-4">
+        <div className="absolute inset-0 z-[10000] grid place-items-center bg-black/60 p-4">
           <div className="relative overflow-hidden w-full max-w-[440px] rounded-2xl border border-white/15 bg-zinc-950/95 text-white shadow-2xl">
             {/* 반짝 이펙트 */}
             {sparkle && (
@@ -489,7 +485,7 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
 
       {/* 최종 결과 감상창 (자동 전환 없이, 유저 클릭으로만 맵 복귀) */}
       {resultModal && (
-        <div className="fixed inset-0 z-[10010] grid place-items-center bg-black/75 p-4">
+        <div className="absolute inset-0 z-[10010] grid place-items-center bg-black/75 p-4">
           <div className="w-full max-w-[520px] rounded-2xl border border-white/15 bg-zinc-950/95 text-white shadow-2xl">
             <div className="p-5">
               <div className="text-xl font-black">축하해요! 유물 복원 완료</div>

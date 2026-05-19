@@ -1,4 +1,5 @@
 import React, { Suspense, lazy } from 'react';
+import FitScaleWrapper from '../common/FitScaleWrapper';
 import { useGameStore } from '../../store/useGameStore';
 import type { MinigameProps } from '../../types/game';
 
@@ -45,12 +46,14 @@ export default function MiniGameManager() {
 
   return (
     <Suspense fallback={<div style={{ padding: 20 }}>게임 불러오는 중...</div>}>
-      <CurrentMiniGame
-        stageId={currentStageId}
-        regionData={regionData}
-        onComplete={() => completeStage(currentStageId)}
-        onFail={() => setAppPhase('MAP')}
-      />
+      <FitScaleWrapper baseWidth={800} baseHeight={450}>
+        <CurrentMiniGame
+          stageId={currentStageId}
+          regionData={regionData}
+          onComplete={() => completeStage(currentStageId)}
+          onFail={() => setAppPhase('MAP')}
+        />
+      </FitScaleWrapper>
     </Suspense>
   );
 }
