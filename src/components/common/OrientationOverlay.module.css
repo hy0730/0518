@@ -1,19 +1,12 @@
 .overlay {
-  display: none;
-}
-
-/* 세로 모드일 때만 전체 화면을 덮어서 “가로로 돌려달라” 안내 */
-@media (orientation: portrait) {
-  .overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 9999;
-    display: grid;
-    place-items: center;
-    padding: 20px;
-    background: rgba(3, 7, 18, 0.92);
-    color: #fff;
-  }
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(3, 7, 18, 0.92);
+  color: #fff;
 }
 
 .card {
@@ -98,4 +91,3 @@
 .desc b {
   color: #fbbf24;
 }
-

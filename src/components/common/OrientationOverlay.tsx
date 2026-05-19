@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import styles from './OrientationOverlay.module.css';
 
 type Props = {
@@ -7,7 +7,43 @@ type Props = {
 };
 
 export default function OrientationOverlay({ enabled = true }: Props) {
+  const [isPortrait, setIsPortrait] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia?.('(orientation: portrait)');
+
+    const update = () => {
+      // matchMedia가 안 되거나 일부 브라우저에서 부정확할 수 있어 보조 판정도 함께 사용
+      const bySize = window.innerHeight > window.innerWidth;
+      const byMedia = mq ? mq.matches : false;
+      setIsPortrait(byMedia || bySize);
+    };
+
+    update();
+
+    // Safari 호환: addEventListener 미지원일 수 있음
+    const onChange = () => update();
+    try {
+      mq?.addEventListener?.('change', onChange);
+    } catch {
+      mq?.addListener?.(onChange);
+    }
+    window.addEventListener('resize', onChange);
+    window.addEventListener('orientationchange', onChange);
+
+    return () => {
+      try {
+        mq?.removeEventListener?.('change', onChange);
+      } catch {
+        mq?.removeListener?.(onChange);
+      }
+      window.removeEventListener('resize', onChange);
+      window.removeEventListener('orientationchange', onChange);
+    };
+  }, []);
+
   if (!enabled) return null;
+  if (!isPortrait) return null;
 
   return (
     <div className={styles.overlay} role="dialog" aria-label="가로 모드 안내">
@@ -25,4 +61,3 @@ export default function OrientationOverlay({ enabled = true }: Props) {
     </div>
   );
 }
-
