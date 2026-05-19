@@ -141,8 +141,8 @@ export default function App() {
     <GameWrapper>
       <InstallBanner />
 
-      {/* 모바일 세로모드일 때: “가로모드 권장” 안내 (미니게임에서만) */}
-      <OrientationOverlay enabled={appPhase === 'MINIGAME'} />
+      {/* 모바일 세로모드일 때: “가로모드 권장” 안내 (INTRO 제외 전 단계) */}
+      <OrientationOverlay enabled={appPhase !== 'INTRO'} />
 
       {appPhase === 'INTRO' && <IntroScreen />}
       {appPhase === 'MAP' && <MapScreen />}
