@@ -1,0 +1,11 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 프로젝트 전역(최소) */
+html,
+body,
+#root {
+  height: 100%;
+}
+
