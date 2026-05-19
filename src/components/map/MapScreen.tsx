@@ -1,47 +1,56 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { storyDataByStageId } from '../../data/storyData';
 import { useGameStore } from '../../store/useGameStore';
 import styles from './MapScreen.module.css';
 
-function PinFallbackSvg() {
-  return (
-    <svg width="40" height="40" viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        d="M12 22s7-5.2 7-12a7 7 0 1 0-14 0c0 6.8 7 12 7 12Z"
-        fill="rgba(255,255,255,0.92)"
-      />
-      <circle cx="12" cy="10" r="3" fill="#ff3b30" />
-    </svg>
-  );
-}
+type MapNode = {
+  stageId: number;
+  left: number; // %
+  top: number; // %
+  icon: string;
+};
+
+// 9개 문화유산 노드 위치 (원하는대로 숫자만 미세 조정하면 됨)
+const NODES: MapNode[] = [
+  { stageId: 1, left: 20, top: 28, icon: '/assets/images/relic_gwanyang_main.png' },
+  { stageId: 2, left: 35, top: 42, icon: '/assets/images/relic_pyeongchon_main.png' },
+  { stageId: 3, left: 52, top: 30, icon: '/assets/images/relic_seoksu_main.png' },
+  { stageId: 4, left: 64, top: 44, icon: '/assets/images/relic_jungcho_main.png' },
+  { stageId: 5, left: 76, top: 30, icon: '/assets/images/relic_bell_main.png' },
+  { stageId: 6, left: 18, top: 58, icon: '/assets/images/relic_turtle_main.png' },
+  { stageId: 7, left: 40, top: 66, icon: '/assets/images/relic_bisan_main.png' },
+  { stageId: 8, left: 62, top: 68, icon: '/assets/images/relic_bridge_main.png' },
+  { stageId: 9, left: 82, top: 58, icon: '/assets/images/relic_seoimyeon_main.png' },
+];
 
 export default function MapScreen() {
   const regionData = useGameStore((s) => s.regionData);
-  const visitedNodes = useGameStore((s) => s.visitedNodes);
   const unlockedStageId = useGameStore((s) => s.unlockedStageId);
-  const [iconError, setIconError] = useState<Record<string, boolean>>({});
 
   if (!regionData) return null;
 
-  const mapBg = regionData.assets.mapBackground;
+  // 지도 배경(안양 지도)
+  const mapBg = '/assets/images/map_real.png';
 
   return (
     <div
       className={styles.map}
       style={mapBg ? ({ backgroundImage: `url(${mapBg})` } as React.CSSProperties) : undefined}
     >
-      {regionData.map.nodes.map((node, index) => {
-        const stageId = index + 1;
+      {NODES.map((node) => {
+        const stageId = node.stageId;
         const locked = stageId > unlockedStageId;
-        const visited = visitedNodes.includes(node.id);
+        const completed = stageId < unlockedStageId;
+        const title = storyDataByStageId[stageId]?.title ?? `스테이지 ${stageId}`;
 
         return (
           <button
-            key={node.id}
+            key={stageId}
             type="button"
-            className={`${styles.pin} ${visited ? styles.visited : ''} ${locked ? styles.locked : ''}`}
+            className={`${styles.pin} ${completed ? styles.completed : ''} ${locked ? styles.locked : ''}`}
             style={{
-              left: `${node.position.x}%`,
-              top: `${node.position.y}%`,
+              left: `${node.left}%`,
+              top: `${node.top}%`,
             }}
             disabled={locked}
             onClick={(e) => {
@@ -51,26 +60,18 @@ export default function MapScreen() {
               // 스테이지 진입 → STORY로 이동
               useGameStore.getState().playStage(stageId);
             }}
-            aria-label={node.title}
-            title={node.title}
+            aria-label={locked ? '미지의 유산' : title}
+            title={locked ? '미지의 유산' : title}
           >
-            <span className={`${styles.pinInner} ${!visited ? styles.floating : ''}`}>
-              {node.icon && !iconError[node.id] ? (
-                <img
-                  className={styles.pinIcon}
-                  src={node.icon}
-                  alt=""
-                  draggable={false}
-                  onError={() => setIconError((prev) => ({ ...prev, [node.id]: true }))}
-                />
+            <span className={`${styles.pinInner} ${!completed && !locked ? styles.floating : ''}`}>
+              {locked ? (
+                <img className={`${styles.pinIcon} ${styles.question}`} src="/assets/images/question_mark.png" alt="" draggable={false} />
               ) : (
-                <span className={styles.pinSvg} aria-hidden="true">
-                  <PinFallbackSvg />
-                </span>
+                <img className={styles.pinIcon} src={node.icon} alt="" draggable={false} />
               )}
-              {visited && <span className={styles.checkMark}>✓</span>}
+              {completed && <span className={styles.checkMark}>✓</span>}
             </span>
-            <span className={styles.pinLabel}>{node.title}</span>
+            <span className={styles.pinLabel}>{locked ? '???' : title}</span>
           </button>
         );
       })}

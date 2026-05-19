@@ -64,6 +64,7 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
   const [workbench, setWorkbench] = useState<IngredientId[]>([]);
   const [collected, setCollected] = useState<RelicId[]>([]);
   const [relicModal, setRelicModal] = useState<RelicId | null>(null);
+  const [resultModal, setResultModal] = useState(false);
   const [attempts, setAttempts] = useState(0);
   const [startedAt, setStartedAt] = useState<number | null>(null);
 
@@ -76,7 +77,8 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
 
   const flashTimer = useRef<number | null>(null);
 
-  const totalRelics = RELICS.length;
+  // MVP: 3개 유물만 모으면 클리어(기획 반영)
+  const targetRelics = 3;
   const title = useMemo(() => regionData?.map?.nodes?.[stageId - 1]?.title ?? '유물 조합', [regionData, stageId]);
 
   const setFlashSafe = (next: 'success' | 'fail' | null, msg?: string) => {
@@ -122,6 +124,7 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
   };
 
   const handleDropIngredient = (id: IngredientId) => {
+    if (relicModal || resultModal) return;
     if (!canDrop) {
       setFlashSafe('fail', '작업대에는 최대 3개까지만 넣을 수 있어요!');
       return;
@@ -135,6 +138,7 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
 
   const combine = () => {
     if (!canCombine) return;
+    if (relicModal || resultModal) return;
 
     const now = Date.now();
     const started = startedAt ?? now;
@@ -215,7 +219,7 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
           스테이지 {stageId} · {title}
         </div>
         <div className="text-xs font-bold opacity-90">
-          도감 {collected.length}/{totalRelics} · 시도 {attempts}
+          도감 {Math.min(collected.length, targetRelics)}/{targetRelics} · 시도 {attempts}
         </div>
       </div>
 
@@ -236,6 +240,11 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
                   onDragStart={(e) => {
                     e.dataTransfer.setData('text/plain', ing.id);
                     e.dataTransfer.effectAllowed = 'move';
+                  }}
+                  onClick={() => {
+                    // 클릭만 해도 작업대에 자동으로 들어가게(빈 슬롯이 있을 때)
+                    if (disabled) return;
+                    handleDropIngredient(ing.id);
                   }}
                   className={[
                     'select-none rounded-xl border p-2',
@@ -462,10 +471,9 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
 
                   setCollected((prev) => {
                     const next = prev.includes(relicModal) ? prev : [...prev, relicModal];
-                    if (next.length >= totalRelics) {
-                      const clearTime = Math.max(0, Math.round(((now - started) / 1000) * 10) / 10);
-                      window.setTimeout(() => onComplete({ attempts, clearTime }), 300);
-                    }
+                    // 자동 화면 전환 금지: 목표 개수 달성 시 최종 결과창을 띄우고,
+                    // 사용자가 직접 "지도" 버튼을 눌렀을 때만 onComplete 호출
+                    if (next.length >= targetRelics) setResultModal(true);
                     return next;
                   });
 
@@ -473,6 +481,49 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
                 }}
               >
                 확인
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 최종 결과 감상창 (자동 전환 없이, 유저 클릭으로만 맵 복귀) */}
+      {resultModal && (
+        <div className="fixed inset-0 z-[10010] grid place-items-center bg-black/75 p-4">
+          <div className="w-full max-w-[520px] rounded-2xl border border-white/15 bg-zinc-950/95 text-white shadow-2xl">
+            <div className="p-5">
+              <div className="text-xl font-black">축하해요! 유물 복원 완료</div>
+              <div className="mt-2 text-sm opacity-85 leading-relaxed">
+                {targetRelics}개의 유물을 완성해 문화유산 기록을 되살렸어요.
+                <br />
+                아래에서 방금 만든 유물을 감상해보자!
+              </div>
+
+              <div className="mt-4 grid grid-cols-3 gap-3">
+                {collected.slice(0, targetRelics).map((id) => {
+                  const r = RELICS.find((x) => x.id === id);
+                  return (
+                    <div key={id} className="rounded-2xl border border-white/10 bg-white/5 p-3 text-center">
+                      <img src={r?.img} alt="" className="mx-auto w-16 h-16 object-contain" />
+                      <div className="mt-2 text-xs font-black">{r?.name}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="p-5 pt-0">
+              <button
+                type="button"
+                className="w-full rounded-xl bg-emerald-400 text-black font-black py-3 hover:bg-emerald-300"
+                onClick={() => {
+                  const now = Date.now();
+                  const started = startedAt ?? now;
+                  const clearTime = Math.max(0, Math.round(((now - started) / 1000) * 10) / 10);
+                  onComplete({ attempts, clearTime });
+                }}
+              >
+                수호대 지도로 돌아가기
               </button>
             </div>
           </div>
