@@ -37,6 +37,15 @@ const RELICS: RelicDef[] = [
   { id: 'hut', name: '움집', img: '/assets/images/items/item_house.png', recipe: ['rope', 'wood', 'straw'] },
 ];
 
+const RELIC_DESC: Record<RelicId, string> = {
+  pottery: '무늬가 없는 청동기 시대의 대표적인 토기로, 곡식을 보관하거나 요리할 때 사용했어요.',
+  sickle:
+    '곡식의 이삭을 자를 때 사용하던 청동기 시대의 농기구예요. 가운뎃구멍에 끈을 꿰어 손에 걸고 사용했답니다.',
+  mirror: '청동기 시대 지배층(족장)이 사용하던 귀중한 물건으로, 햇빛을 반사시켜 권력을 상징했어요.',
+  arrow: '돌촉을 끼워 만든 화살이에요. 사냥이나 전투에 사용되며, 당시 생활과 기술을 보여줘요.',
+  hut: '땅을 파서 바닥을 낮추고 나무 기둥과 짚 지붕으로 만든 집이에요. 바람을 막고 따뜻하게 지냈답니다.',
+};
+
 function normalizeRecipe(ids: IngredientId[]) {
   return ids.slice().sort().join('+');
 }
@@ -51,8 +60,9 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
     for (const ing of INGREDIENTS) base[ing.id] = ing.initial;
     return base;
   });
-  const [hearth, setHearth] = useState<IngredientId[]>([]);
+  const [workbench, setWorkbench] = useState<IngredientId[]>([]);
   const [collected, setCollected] = useState<RelicId[]>([]);
+  const [relicModal, setRelicModal] = useState<RelicId | null>(null);
   const [attempts, setAttempts] = useState(0);
   const [startedAt, setStartedAt] = useState<number | null>(null);
 
@@ -82,8 +92,8 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
     };
   }, []);
 
-  const canDrop = hearth.length < 3;
-  const canCombine = hearth.length >= 2; // 최소 2개부터 조합 가능
+  const canDrop = workbench.length < 3;
+  const canCombine = workbench.length >= 2; // 최소 2개부터 조합 가능
 
   const takeFromInventory = (id: IngredientId) => {
     setCounts((prev) => ({ ...prev, [id]: Math.max(0, (prev[id] ?? 0) - 1) }));
@@ -92,8 +102,8 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
     setCounts((prev) => ({ ...prev, [id]: (prev[id] ?? 0) + 1 }));
   };
 
-  const removeFromHearth = (index: number) => {
-    setHearth((prev) => {
+  const removeFromWorkbench = (index: number) => {
+    setWorkbench((prev) => {
       const next = prev.slice();
       const [removed] = next.splice(index, 1);
       if (removed) returnToInventory(removed);
@@ -101,8 +111,8 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
     });
   };
 
-  const clearHearth = (returnItems: boolean) => {
-    setHearth((prev) => {
+  const clearWorkbench = (returnItems: boolean) => {
+    setWorkbench((prev) => {
       if (returnItems) prev.forEach((id) => returnToInventory(id));
       return [];
     });
@@ -110,14 +120,14 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
 
   const handleDropIngredient = (id: IngredientId) => {
     if (!canDrop) {
-      setFlashSafe('fail', '화덕에는 최대 3개까지만 넣을 수 있어요!');
+      setFlashSafe('fail', '작업대에는 최대 3개까지만 넣을 수 있어요!');
       return;
     }
     if ((counts[id] ?? 0) <= 0) return;
 
     if (!startedAt) setStartedAt(Date.now());
     takeFromInventory(id);
-    setHearth((prev) => [...prev, id]);
+    setWorkbench((prev) => [...prev, id]);
   };
 
   const combine = () => {
@@ -130,7 +140,7 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
     const nextAttempts = attempts + 1;
     setAttempts(nextAttempts);
 
-    const key = normalizeRecipe(hearth);
+    const key = normalizeRecipe(workbench);
     const relicId = RECIPE_TO_RELIC[key];
 
     if (!relicId) {
@@ -138,26 +148,20 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
       setShake(true);
       window.setTimeout(() => setShake(false), 420);
       setFlashSafe('fail', '펑! 조합에 실패했어… 다시 해보자!');
-      clearHearth(true);
+      clearWorkbench(true);
       return;
     }
 
     if (collected.includes(relicId)) {
       setFlashSafe('fail', '이미 완성한 유물이에요! 다른 조합을 해보자.');
-      clearHearth(true);
+      clearWorkbench(true);
       return;
     }
 
-    // 정답: 유물 획득 (재료는 소비)
-    const nextCollected = [...collected, relicId];
-    setCollected(nextCollected);
-    setFlashSafe('success', '성공! 유물이 도감에 추가됐어!');
-    setHearth([]);
-
-    if (nextCollected.length >= totalRelics) {
-      const clearTime = Math.max(0, Math.round(((now - started) / 1000) * 10) / 10);
-      window.setTimeout(() => onComplete({ attempts: nextAttempts, clearTime }), 900);
-    }
+    // 정답: 재료는 소비 + "유물 획득 팝업"을 띄운 뒤, 확인 버튼에서 도감에 추가
+    setFlashSafe('success', '성공! 유물을 획득했어!');
+    setWorkbench([]);
+    setRelicModal(relicId);
   };
 
   return (
@@ -213,7 +217,7 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
                     'bg-white/5 border-white/10',
                     disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-grab active:cursor-grabbing hover:bg-white/10',
                   ].join(' ')}
-                  title={disabled ? '재료가 부족해요' : '드래그해서 화덕에 넣기'}
+                  title={disabled ? '재료가 부족해요' : '드래그해서 작업대에 넣기'}
                 >
                   <div className="flex items-center gap-2">
                     <img src={ing.img} alt={ing.name} className="w-10 h-10 object-contain" />
@@ -228,20 +232,21 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
           </div>
 
           <div className="mt-3 text-[11px] opacity-80 leading-relaxed">
-            팁: 화덕에는 <b>최대 3개</b>까지 넣을 수 있어요. 넣은 재료는 클릭하면 다시 뺄 수 있어요.
+            팁: 작업대에는 <b>최대 3개</b>까지 넣을 수 있어요. 넣은 재료는 클릭하면 다시 뺄 수 있어요.
           </div>
         </div>
 
-        {/* 화덕(드롭존) */}
+        {/* 작업대(드롭존) */}
         <div className="md:col-span-4 rounded-2xl border border-white/10 bg-black/40 p-3 relative">
-          <div className="text-sm font-extrabold mb-2">화덕</div>
+          <div className="text-sm font-extrabold mb-2">작업대</div>
 
           <div
             className={[
-              'relative rounded-2xl border-2 border-dashed p-3 min-h-[260px] flex flex-col justify-between',
-              isOver && canDrop ? 'border-amber-400 bg-amber-400/10' : 'border-white/20 bg-white/5',
+              'relative rounded-2xl border-2 border-dashed p-3 min-h-[260px] flex flex-col justify-between bg-cover bg-center',
+              isOver && canDrop ? 'border-amber-400' : 'border-white/20',
               shake ? 'shake' : '',
             ].join(' ')}
+            style={{ backgroundImage: "url('/assets/images/craft_table.png')" }}
             onDragOver={(e) => {
               e.preventDefault();
               setIsOver(true);
@@ -255,13 +260,16 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
               handleDropIngredient(raw);
             }}
           >
-            <div className="text-xs font-bold opacity-80">
-              재료 슬롯 ({hearth.length}/3)
+            {/* 배경 위에 살짝 어둡게(가독성) */}
+            <div className="absolute inset-0 rounded-2xl bg-black/35 pointer-events-none" />
+
+            <div className="relative text-xs font-bold opacity-90">
+              재료 슬롯 ({workbench.length}/3)
             </div>
 
-            <div className="mt-2 grid grid-cols-3 gap-2">
+            <div className="relative mt-2 grid grid-cols-3 gap-2">
               {Array.from({ length: 3 }).map((_, i) => {
-                const id = hearth[i];
+                const id = workbench[i];
                 if (!id) {
                   return (
                     <div key={i} className="rounded-xl border border-white/10 bg-black/30 h-16 grid place-items-center text-xs opacity-60">
@@ -274,7 +282,7 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
                   <button
                     key={i}
                     type="button"
-                    onClick={() => removeFromHearth(i)}
+                    onClick={() => removeFromWorkbench(i)}
                     className="rounded-xl border border-white/10 bg-white/5 h-16 flex items-center justify-center hover:bg-white/10"
                     title="클릭해서 빼기"
                   >
@@ -284,10 +292,10 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
               })}
             </div>
 
-            <div className="flex items-center justify-between gap-2 mt-3">
+            <div className="relative flex items-center justify-between gap-2 mt-3">
               <button
                 type="button"
-                onClick={() => clearHearth(true)}
+                onClick={() => clearWorkbench(true)}
                 className="px-3 py-2 rounded-xl border border-white/15 bg-white/5 hover:bg-white/10 text-xs font-black"
               >
                 비우기
@@ -369,6 +377,54 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
         </div>
         </div>
       </div>
+      {/* 유물 획득 팝업(정답 조합 시) */}
+      {relicModal && (
+        <div className="fixed inset-0 z-[10000] grid place-items-center bg-black/60 p-4">
+          <div className="w-full max-w-[440px] rounded-2xl border border-white/15 bg-zinc-950/95 text-white shadow-2xl">
+            <div className="p-4">
+              <div className="text-lg font-black">유물 획득!</div>
+              <div className="mt-1 text-xs opacity-80">완성된 유물을 확인하고 도감에 추가해보자.</div>
+
+              <div className="mt-4 flex items-start gap-3">
+                <img
+                  src={RELICS.find((r) => r.id === relicModal)?.img}
+                  alt=""
+                  className="w-20 h-20 object-contain rounded-xl bg-white/5 border border-white/10"
+                />
+                <div className="min-w-0">
+                  <div className="text-sm font-black">{RELICS.find((r) => r.id === relicModal)?.name}</div>
+                  <div className="mt-2 text-xs leading-relaxed opacity-85">{RELIC_DESC[relicModal]}</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 pt-0">
+              <button
+                type="button"
+                className="w-full rounded-xl bg-amber-400 text-black font-black py-3 hover:bg-amber-300"
+                onClick={() => {
+                  const now = Date.now();
+                  const started = startedAt ?? now;
+                  if (!startedAt) setStartedAt(started);
+
+                  setCollected((prev) => {
+                    const next = prev.includes(relicModal) ? prev : [...prev, relicModal];
+                    if (next.length >= totalRelics) {
+                      const clearTime = Math.max(0, Math.round(((now - started) / 1000) * 10) / 10);
+                      window.setTimeout(() => onComplete({ attempts, clearTime }), 300);
+                    }
+                    return next;
+                  });
+
+                  setRelicModal(null);
+                }}
+              >
+                확인
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

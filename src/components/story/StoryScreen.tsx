@@ -38,6 +38,15 @@ export default function StoryScreen() {
     setIdx(0);
   }, [currentStageId]);
 
+  const advance = () => {
+    if (!lines.length) return;
+    if (idx < lines.length - 1) {
+      setIdx((v) => v + 1);
+      return;
+    }
+    setAppPhase('MINIGAME');
+  };
+
   if (!currentStageId) {
     return (
       <div className={styles.fallback}>
@@ -75,12 +84,25 @@ export default function StoryScreen() {
   const line = lines[idx] ?? lines[lines.length - 1];
 
   return (
-    <div className={styles.root}>
+    <div
+      className={styles.root}
+      onClick={() => {
+        // 화면 아무 곳이나 터치하면 다음 대사로 진행
+        advance();
+      }}
+    >
       <div className={styles.header}>
         <div className={styles.stage}>
           {stage.stageId}. {stage.title}
         </div>
-        <button type="button" className={styles.skipBtn} onClick={() => setAppPhase('MINIGAME')}>
+        <button
+          type="button"
+          className={styles.skipBtn}
+          onClick={(e) => {
+            e.stopPropagation();
+            setAppPhase('MINIGAME');
+          }}
+        >
           건너뛰기
         </button>
       </div>
@@ -114,12 +136,9 @@ export default function StoryScreen() {
         <button
           type="button"
           className={styles.nextBtn}
-          onClick={() => {
-            if (idx < lines.length - 1) {
-              setIdx((v) => v + 1);
-              return;
-            }
-            setAppPhase('MINIGAME');
+          onClick={(e) => {
+            e.stopPropagation();
+            advance();
           }}
         >
           {idx < lines.length - 1 ? '다음' : '미니게임 시작'}
