@@ -1,33 +1,25 @@
 import React, { useMemo, useState } from 'react';
 import { useGameStore } from '../../store/useGameStore';
+import { storyDataByStageId, type StoryDialogueLine, type StageStory } from '../../data/storyData';
 import styles from './StoryScreen.module.css';
-
-type Line = {
-  speaker: 'han' | 'yang';
-  text: string;
-};
 
 export default function StoryScreen() {
   const currentStageId = useGameStore((s) => s.currentStageId);
   const unlockedStageId = useGameStore((s) => s.unlockedStageId);
   const playerName = useGameStore((s) => s.playerName);
-  const regionData = useGameStore((s) => s.regionData);
   const setAppPhase = useGameStore((s) => s.setAppPhase);
 
-  const stageTitle = useMemo(() => {
-    if (!currentStageId || !regionData) return '';
-    return regionData.map.nodes[currentStageId - 1]?.title ?? '';
-  }, [currentStageId, regionData]);
+  const stage = useMemo<StageStory | null>(() => {
+    if (!currentStageId) return null;
+    return storyDataByStageId[currentStageId] ?? null;
+  }, [currentStageId]);
 
-  const lines = useMemo<Line[]>(() => {
-    if (!currentStageId) return [];
+  const lines = useMemo<StoryDialogueLine[]>(() => {
+    if (!stage) return [];
     const who = playerName ? `${playerName} 대원` : '수호대원';
-    return [
-      { speaker: 'han', text: `${who}, 긴급 상황이야. 문화유산 기록이 빠르게 사라지고 있어.` },
-      { speaker: 'yang', text: `우리가 지금 바로 조사해야 해. 목표 지점: ${stageTitle || `스테이지 ${currentStageId}`}.` },
-      { speaker: 'han', text: `준비됐으면 미니게임으로 들어가서 단서를 확보하자.` },
-    ];
-  }, [currentStageId, playerName, stageTitle]);
+    // 일부 문구에 플레이어 이름이 들어가도록 가볍게 치환
+    return stage.dialogues.map((d) => ({ ...d, text: d.text.replaceAll('{PLAYER}', who) }));
+  }, [stage, playerName]);
 
   const [idx, setIdx] = useState(0);
 
@@ -54,17 +46,40 @@ export default function StoryScreen() {
     );
   }
 
+  if (!stage) {
+    return (
+      <div className={styles.fallback}>
+        <div style={{ marginBottom: 10 }}>스토리 데이터를 찾을 수 없습니다. (stageId: {currentStageId})</div>
+        <button type="button" onClick={() => setAppPhase('MAP')}>
+          지도로 돌아가기
+        </button>
+      </div>
+    );
+  }
+
   const line = lines[idx] ?? lines[lines.length - 1];
 
   return (
     <div className={styles.root}>
       <div className={styles.header}>
         <div className={styles.stage}>
-          {currentStageId}. {stageTitle || '스토리'}
+          {stage.stageId}. {stage.title}
         </div>
         <button type="button" className={styles.skipBtn} onClick={() => setAppPhase('MINIGAME')}>
           건너뛰기
         </button>
+      </div>
+
+      <div className={styles.meta}>
+        <div className={styles.metaRow}>
+          <span className={styles.metaKey}>시대</span>
+          <span className={styles.metaVal}>{stage.era}</span>
+        </div>
+        <div className={styles.metaRow}>
+          <span className={styles.metaKey}>위치</span>
+          <span className={styles.metaVal}>{stage.location}</span>
+        </div>
+        <div className={styles.metaDesc}>{stage.description}</div>
       </div>
 
       <div className={styles.scene}>
@@ -98,4 +113,3 @@ export default function StoryScreen() {
     </div>
   );
 }
-
