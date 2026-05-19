@@ -149,8 +149,8 @@ export default function App() {
       {appPhase === 'STORY' && <StoryScreen />}
       {appPhase === 'MINIGAME' && <MiniGameManager />}
 
-      {/* 공통 HUD/모달 (인트로에선 숨김) */}
-      {appPhase !== 'INTRO' && (
+      {/* 공통 HUD/모달 (인트로/미니게임에선 숨김) */}
+      {appPhase !== 'INTRO' && appPhase !== 'MINIGAME' && (
         <>
           <GameHUD />
           <CollectionModal />

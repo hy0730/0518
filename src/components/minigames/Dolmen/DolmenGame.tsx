@@ -272,23 +272,28 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
 
             {/* 우측 작업 공간 */}
             <div className="absolute left-[34%] right-2 top-2 bottom-2">
+              {/* 떼돌(밧줄 묶기 전): 바위산 바로 옆에 고정 배치 */}
+              {phase === 'BIND' && rockFallen && !ropeBound && (
+                <img
+                  src="/assets/images/capstone_raw.png"
+                  alt="떼돌"
+                  className="absolute left-0 top-[18%] w-[min(260px,42vw)] md:w-[280px] select-none drop-shadow-[0_18px_40px_rgba(0,0,0,0.55)] fallFx"
+                  draggable={false}
+                />
+              )}
+
               {/* 떨어진 돌/밧줄 돌/통나무/이동 그룹 */}
               <div className="absolute left-[6%] right-[6%] top-[12%]">
                 <div
                   className="relative transition-transform duration-500 ease-out"
-                  style={{ transform: `translateX(${(progress / TARGET_PROGRESS) * 55}%)` }}
+                  style={{ transform: phase === 'MOVE' ? `translateX(${(progress / TARGET_PROGRESS) * 55}%)` : 'translateX(0%)' }}
                 >
-                  {/* 돌 이미지 */}
-                  {rockFallen && (
+                  {/* 돌 이미지(밧줄 묶인 이후: 이동 그룹에 포함) */}
+                  {ropeBound && (
                     <img
-                      src={ropeBound ? '/assets/images/capstone_rope.png' : '/assets/images/capstone_raw.png'}
+                      src="/assets/images/capstone_rope.png"
                       alt="떼돌"
-                      className={[
-                        'w-[min(260px,42vw)] md:w-[280px] select-none drop-shadow-[0_18px_40px_rgba(0,0,0,0.55)]',
-                        !ropeBound ? 'fallFx' : '',
-                      ].join(
-                        ' '
-                      )}
+                      className="w-[min(260px,42vw)] md:w-[280px] select-none drop-shadow-[0_18px_40px_rgba(0,0,0,0.55)]"
                       draggable={false}
                     />
                   )}

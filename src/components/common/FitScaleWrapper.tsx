@@ -46,7 +46,7 @@ export default function FitScaleWrapper({ baseWidth = 800, baseHeight = 450, cla
         style={{
           width: `${baseWidth}px`,
           height: `${baseHeight}px`,
-          transform: `translate(-50%, -50%) scale(${scale})`,
+          transform: `scale(${scale})`,
         }}
       >
         {children}
@@ -54,4 +54,3 @@ export default function FitScaleWrapper({ baseWidth = 800, baseHeight = 450, cla
     </div>
   );
 }
-
