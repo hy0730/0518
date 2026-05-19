@@ -3,12 +3,13 @@ import CollectionModal from './components/common/CollectionModal';
 import GameHUD from './components/common/GameHUD';
 import GameWrapper from './components/common/GameWrapper';
 import InstallBanner from './components/common/InstallBanner';
-import TitleScreen from './components/intro/TitleScreen';
+import IntroScreen from './components/intro/IntroScreen';
 import MapScreen from './components/map/MapScreen';
-import DialogBox from './components/story/DialogBox';
+import MiniGameManager from './components/minigames/MiniGameManager';
+import StoryScreen from './components/story/StoryScreen';
 import { useGameStore } from './store/useGameStore';
 import { audio } from './utils/audio';
-import { initGA, trackEvent } from './utils/analytics';
+import { initGA } from './utils/analytics';
 import { preloadImages } from './utils/preload';
 
 export default function App() {
@@ -17,10 +18,10 @@ export default function App() {
   const regionData = useGameStore((s) => s.regionData);
   const resetError = useGameStore((s) => s.resetError);
   const isMuted = useGameStore((s) => s.isMuted);
+  const appPhase = useGameStore((s) => s.appPhase);
 
   const [assetsReady, setAssetsReady] = useState(false);
   const [preloading, setPreloading] = useState(false);
-  const [hasStarted, setHasStarted] = useState(false);
 
   const assetUrls = useMemo(() => {
     if (!regionData) return [];
@@ -48,14 +49,14 @@ export default function App() {
       }
 
       // 포그라운드 복귀 시: 시작 상태 + 음소거 아님 => BGM 재생
-      if (hasStarted && !isMuted) {
+      if (appPhase !== 'INTRO' && !isMuted) {
         void audio.playBgm();
       }
     };
 
     document.addEventListener('visibilitychange', onVisibilityChange);
     return () => document.removeEventListener('visibilitychange', onVisibilityChange);
-  }, [hasStarted, isMuted]);
+  }, [appPhase, isMuted]);
 
   useEffect(() => {
     // 로딩/에러/초기 상태로 바뀌면 프리로드 플래그 초기화
@@ -138,25 +139,15 @@ export default function App() {
   return (
     <GameWrapper>
       <InstallBanner />
-      {!hasStarted ? (
-        <TitleScreen
-          title={regionData?.region.name ? `${regionData.region.name} 문화재 탐험` : '문화재 탐험'}
-          onStart={async () => {
-            // 사용자 제스처 내에서 오디오 제한 해제 + BGM 재생 시도
-            await audio.unlock();
-            audio.setMuted(useGameStore.getState().isMuted);
-            if (!useGameStore.getState().isMuted) {
-              await audio.playBgm();
-            }
-            trackEvent('game_start');
-            setHasStarted(true);
-          }}
-        />
-      ) : (
+      {appPhase === 'INTRO' && <IntroScreen />}
+      {appPhase === 'MAP' && <MapScreen />}
+      {appPhase === 'STORY' && <StoryScreen />}
+      {appPhase === 'MINIGAME' && <MiniGameManager />}
+
+      {/* 공통 HUD/모달 (인트로에선 숨김) */}
+      {appPhase !== 'INTRO' && (
         <>
-          <MapScreen />
           <GameHUD />
-          <DialogBox />
           <CollectionModal />
         </>
       )}

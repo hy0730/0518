@@ -17,6 +17,7 @@ function PinFallbackSvg() {
 export default function MapScreen() {
   const regionData = useGameStore((s) => s.regionData);
   const visitedNodes = useGameStore((s) => s.visitedNodes);
+  const unlockedStageId = useGameStore((s) => s.unlockedStageId);
   const [iconError, setIconError] = useState<Record<string, boolean>>({});
 
   if (!regionData) return null;
@@ -28,22 +29,27 @@ export default function MapScreen() {
       className={styles.map}
       style={mapBg ? ({ backgroundImage: `url(${mapBg})` } as React.CSSProperties) : undefined}
     >
-      {regionData.map.nodes.map((node) => {
+      {regionData.map.nodes.map((node, index) => {
+        const stageId = index + 1;
+        const locked = stageId > unlockedStageId;
         const visited = visitedNodes.includes(node.id);
 
         return (
           <button
             key={node.id}
             type="button"
-            className={`${styles.pin} ${visited ? styles.visited : ''}`}
+            className={`${styles.pin} ${visited ? styles.visited : ''} ${locked ? styles.locked : ''}`}
             style={{
               left: `${node.position.x}%`,
               top: `${node.position.y}%`,
             }}
+            disabled={locked}
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation(); // 상위 레이어(맵 등)로의 버블링 방지
-              useGameStore.getState().selectNode(node.id);
+              if (locked) return;
+              // 스테이지 진입 → STORY로 이동
+              useGameStore.getState().playStage(stageId);
             }}
             aria-label={node.title}
             title={node.title}
@@ -71,4 +77,3 @@ export default function MapScreen() {
     </div>
   );
 }
-

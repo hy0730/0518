@@ -47,6 +47,7 @@ type GameState = {
   unlockedStageId: number;
   currentStageId: number | null;
   playerName: string;
+  playerOrg: string;
 
   // data
   regionData: RegionData | null;
@@ -77,6 +78,7 @@ type GameState = {
   // flow actions
   setAppPhase: (phase: AppPhase) => void;
   setPlayerName: (name: string) => void;
+  setPlayerOrg: (org: string) => void;
   playStage: (stageId: number) => void;
   completeStage: (stageId: number) => void;
 
@@ -117,6 +119,7 @@ export const useGameStore = create<GameState>()(
       unlockedStageId: 1,
       currentStageId: null,
       playerName: '',
+      playerOrg: '',
 
       regionData: null,
       status: 'idle',
@@ -143,13 +146,20 @@ export const useGameStore = create<GameState>()(
 
       setAppPhase: (phase) => set({ appPhase: phase }),
       setPlayerName: (name) => set({ playerName: name }),
+      setPlayerOrg: (org) => set({ playerOrg: org }),
       playStage: (stageId) => set({ appPhase: 'STORY', currentStageId: stageId }),
       completeStage: (stageId) =>
-        set((state) => ({
-          appPhase: 'MAP',
-          currentStageId: null,
-          unlockedStageId: Math.max(state.unlockedStageId, stageId + 1),
-        })),
+        set((state) => {
+          const nodeId = get().regionData?.map.nodes[stageId - 1]?.id;
+          const nextVisited = nodeId && !state.visitedNodes.includes(nodeId) ? [...state.visitedNodes, nodeId] : state.visitedNodes;
+
+          return {
+            appPhase: 'MAP',
+            currentStageId: null,
+            unlockedStageId: Math.max(state.unlockedStageId, stageId + 1),
+            visitedNodes: nextVisited,
+          };
+        }),
 
       fetchRegionData: async (regionKey = 'anyang') => {
         set({ status: 'loading', error: null, regionData: null, currentNodeId: null, currentDialog: null, quizState: null });
@@ -330,12 +340,13 @@ export const useGameStore = create<GameState>()(
     {
       name: 'local-heritage-save',
       storage: createJSONStorage(() => localStorage),
-      version: 2,
+      version: 3,
       partialize: (state) => ({
         appPhase: state.appPhase,
         unlockedStageId: state.unlockedStageId,
         currentStageId: state.currentStageId,
         playerName: state.playerName,
+        playerOrg: state.playerOrg,
         visitedNodes: state.visitedNodes,
         isMuted: state.isMuted,
       }),
@@ -348,6 +359,7 @@ export const useGameStore = create<GameState>()(
           unlockedStageId?: unknown;
           currentStageId?: unknown;
           playerName?: unknown;
+          playerOrg?: unknown;
         };
 
         const appPhase =
@@ -358,12 +370,14 @@ export const useGameStore = create<GameState>()(
         const unlockedStageId = typeof obj.unlockedStageId === 'number' && obj.unlockedStageId >= 1 ? obj.unlockedStageId : 1;
         const currentStageId = typeof obj.currentStageId === 'number' && obj.currentStageId >= 1 ? obj.currentStageId : null;
         const playerName = typeof obj.playerName === 'string' ? obj.playerName : '';
+        const playerOrg = typeof obj.playerOrg === 'string' ? obj.playerOrg : '';
 
         return {
           appPhase,
           unlockedStageId,
           currentStageId,
           playerName,
+          playerOrg,
           visitedNodes: normalizeVisitedNodes(obj.visitedNodes),
           isMuted: typeof obj.isMuted === 'boolean' ? obj.isMuted : false,
         } as any;

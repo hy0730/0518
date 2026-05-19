@@ -20,6 +20,8 @@ export default defineConfig({
       workbox: {
         // 기본 캐싱 정책. 필요 시 런타임 캐시 규칙을 더 추가 가능.
         globPatterns: ['**/*.{js,css,html,ico,png,svg,jpg,jpeg,webp,mp3,json}'],
+        // 에셋(BGM/이미지) 용량이 커서 기본(2MiB) 제한을 초과할 수 있음
+        maximumFileSizeToCacheInBytes: 15 * 1024 * 1024,
       },
     }),
   ],
