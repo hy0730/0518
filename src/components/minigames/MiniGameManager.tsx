@@ -3,10 +3,12 @@ import { useGameStore } from '../../store/useGameStore';
 import type { MinigameProps } from '../../types/game';
 
 const BronzeAgeGame = lazy(() => import('./BronzeAge/BronzeAgeGame'));
+const DolmenGame = lazy(() => import('./Dolmen/DolmenGame'));
 const ManangyoGame = lazy(() => import('./Manangyo/ManangyoGame'));
 
 const MINIGAME_REGISTRY: Record<number, React.ComponentType<MinigameProps>> = {
   1: BronzeAgeGame,
+  2: DolmenGame,
   4: ManangyoGame,
 };
 
@@ -52,4 +54,3 @@ export default function MiniGameManager() {
     </Suspense>
   );
 }
-

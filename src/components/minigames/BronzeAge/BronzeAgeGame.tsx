@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { MinigameProps } from '../../../types/game';
+import { audio } from '../../../utils/audio';
 
 type IngredientId = 'clay' | 'fire' | 'stone' | 'wood' | 'straw' | 'copper' | 'tin' | 'rope';
 type RelicId = 'pottery' | 'sickle' | 'mirror' | 'arrow' | 'hut';
@@ -68,8 +69,10 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
 
   const [isOver, setIsOver] = useState(false);
   const [shake, setShake] = useState(false);
+  const [smoke, setSmoke] = useState(false);
   const [flash, setFlash] = useState<'success' | 'fail' | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [sparkle, setSparkle] = useState(false);
 
   const flashTimer = useRef<number | null>(null);
 
@@ -146,7 +149,11 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
     if (!relicId) {
       // 오답: 재료 되돌리고 흔들기
       setShake(true);
-      window.setTimeout(() => setShake(false), 420);
+      window.setTimeout(() => setShake(false), 520);
+      setSmoke(true);
+      window.setTimeout(() => setSmoke(false), 620);
+      audio.playSfx('wrong', 0.8);
+      audio.playUrl('/assets/sounds/sfx_negative_beep.mp3', 0.7);
       setFlashSafe('fail', '펑! 조합에 실패했어… 다시 해보자!');
       clearWorkbench(true);
       return;
@@ -162,6 +169,10 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
     setFlashSafe('success', '성공! 유물을 획득했어!');
     setWorkbench([]);
     setRelicModal(relicId);
+    setSparkle(true);
+    window.setTimeout(() => setSparkle(false), 900);
+    audio.playSfx('correct', 0.85);
+    audio.playUrl('/assets/sounds/sfx_fanfare.mp3', 0.8);
   };
 
   return (
@@ -170,19 +181,33 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
       <style>{`
         @keyframes shake {
           0% { transform: translateX(0); }
-          20% { transform: translateX(-8px); }
-          40% { transform: translateX(8px); }
-          60% { transform: translateX(-6px); }
-          80% { transform: translateX(6px); }
+          18% { transform: translateX(-14px) rotate(-1.5deg); }
+          36% { transform: translateX(14px) rotate(1.5deg); }
+          54% { transform: translateX(-10px) rotate(-1deg); }
+          72% { transform: translateX(10px) rotate(1deg); }
           100% { transform: translateX(0); }
         }
-        .shake { animation: shake 420ms ease-in-out; }
+        .shake { animation: shake 520ms ease-in-out; }
         @keyframes pop {
           0% { transform: scale(0.98); opacity: 0.0; }
           30% { transform: scale(1.02); opacity: 1; }
           100% { transform: scale(1); opacity: 1; }
         }
         .pop { animation: pop 220ms ease-out; }
+
+        @keyframes smoke {
+          0% { transform: translate(-50%, -50%) scale(0.7); opacity: 0; }
+          20% { opacity: 1; }
+          100% { transform: translate(-50%, -55%) scale(1.25); opacity: 0; }
+        }
+        .smokeFx { animation: smoke 620ms ease-out; }
+
+        @keyframes sparkle {
+          0% { transform: translate(-50%, -50%) scale(0.6); opacity: 0; }
+          30% { opacity: 1; }
+          100% { transform: translate(-50%, -50%) scale(1.15); opacity: 0; }
+        }
+        .sparkleFx { animation: sparkle 900ms ease-out; }
       `}</style>
 
       <div className="flex items-center justify-between gap-2">
@@ -262,6 +287,15 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
           >
             {/* 배경 위에 살짝 어둡게(가독성) */}
             <div className="absolute inset-0 rounded-2xl bg-black/35 pointer-events-none" />
+
+            {/* 오답 연기(펑!) */}
+            {smoke && (
+              <img
+                src="/assets/images/items/ink_splat_2.png"
+                alt=""
+                className="pointer-events-none absolute left-1/2 top-1/2 w-40 h-40 object-contain smokeFx"
+              />
+            )}
 
             <div className="relative text-xs font-bold opacity-90">
               재료 슬롯 ({workbench.length}/3)
@@ -380,7 +414,25 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
       {/* 유물 획득 팝업(정답 조합 시) */}
       {relicModal && (
         <div className="fixed inset-0 z-[10000] grid place-items-center bg-black/60 p-4">
-          <div className="w-full max-w-[440px] rounded-2xl border border-white/15 bg-zinc-950/95 text-white shadow-2xl">
+          <div className="relative overflow-hidden w-full max-w-[440px] rounded-2xl border border-white/15 bg-zinc-950/95 text-white shadow-2xl">
+            {/* 반짝 이펙트 */}
+            {sparkle && (
+              <div className="pointer-events-none absolute inset-0">
+                <div className="absolute left-1/2 top-1/2 w-[520px] h-[520px] sparkleFx">
+                  {Array.from({ length: 10 }).map((_, i) => (
+                    <span
+                      key={i}
+                      className="absolute block w-2 h-2 rounded-full bg-amber-200/90 shadow-[0_0_18px_rgba(251,191,36,0.9)]"
+                      style={{
+                        left: `${10 + ((i * 73) % 80)}%`,
+                        top: `${10 + ((i * 41) % 80)}%`,
+                        transform: `scale(${0.8 + (i % 3) * 0.25})`,
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
             <div className="p-4">
               <div className="text-lg font-black">유물 획득!</div>
               <div className="mt-1 text-xs opacity-80">완성된 유물을 확인하고 도감에 추가해보자.</div>
@@ -403,6 +455,7 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
                 type="button"
                 className="w-full rounded-xl bg-amber-400 text-black font-black py-3 hover:bg-amber-300"
                 onClick={() => {
+                  audio.playUrl('/assets/sounds/sfx_unlock.mp3', 0.8);
                   const now = Date.now();
                   const started = startedAt ?? now;
                   if (!startedAt) setStartedAt(started);

@@ -6,10 +6,11 @@ type AudioConfig = {
 };
 
 const DEFAULT_CONFIG: AudioConfig = {
-  bgmUrl: '/assets/audio/bgm.mp3',
+  // public/assets/sounds/ 기준
+  bgmUrl: '/assets/sounds/bgm_main.mp3',
   sfx: {
-    correct: '/assets/audio/correct.mp3',
-    wrong: '/assets/audio/wrong.mp3',
+    correct: '/assets/sounds/sfx_clear.mp3',
+    wrong: '/assets/sounds/sfx_error.mp3',
   },
 };
 
@@ -104,6 +105,21 @@ class AudioManager {
       base.preload = 'auto';
       base.volume = volume;
       // 동시에 여러번 눌러도 재생되도록 매번 새 인스턴스 사용
+      void base.play();
+    } catch {
+      // ignore
+    }
+  }
+
+  /** 임의의 파일을 SFX처럼 재생 (예: fanfare, stone_move 등) */
+  playUrl(url: string, volume = 0.7) {
+    if (!this.unlocked) return;
+    if (this.muted) return;
+
+    try {
+      const base = new Audio(url);
+      base.preload = 'auto';
+      base.volume = volume;
       void base.play();
     } catch {
       // ignore
