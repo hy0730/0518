@@ -49,9 +49,16 @@
   border-radius: 16px;
 }
 
+/* MAP/STORY/MINIGAME: 가로 화면 최적화(16:9) */
+.landscapeContainer {
+  width: min(900px, 100vw);
+  aspect-ratio: 16 / 9;
+  max-width: 900px;
+  max-height: 100dvh;
+}
+
 /* 컨테이너 내부 요소 박스모델 안전장치 */
 .gameContainer,
 .gameContainer * {
   box-sizing: border-box;
 }
-

@@ -5,6 +5,7 @@ import styles from './GameWrapper.module.css';
 
 export default function GameWrapper({ children }: PropsWithChildren) {
   const regionData = useGameStore((s) => s.regionData);
+  const appPhase = useGameStore((s) => s.appPhase);
   const bg = regionData?.assets.mainBackground;
 
   return (
@@ -18,8 +19,7 @@ export default function GameWrapper({ children }: PropsWithChildren) {
           : undefined
       }
     >
-      <div className={styles.gameContainer}>{children}</div>
+      <div className={`${styles.gameContainer} ${appPhase !== 'INTRO' ? styles.landscapeContainer : ''}`}>{children}</div>
     </div>
   );
 }
-
