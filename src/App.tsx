@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import GameWrapper from './components/GameWrapper';
-import CollectionModal from './components/CollectionModal';
-import DialogBox from './components/DialogBox';
-import GameHUD from './components/GameHUD';
-import InstallBanner from './components/InstallBanner';
-import MapScreen from './components/MapScreen';
-import TitleScreen from './components/TitleScreen';
+import CollectionModal from './components/common/CollectionModal';
+import GameHUD from './components/common/GameHUD';
+import GameWrapper from './components/common/GameWrapper';
+import InstallBanner from './components/common/InstallBanner';
+import TitleScreen from './components/intro/TitleScreen';
+import MapScreen from './components/map/MapScreen';
+import DialogBox from './components/story/DialogBox';
 import { useGameStore } from './store/useGameStore';
 import { audio } from './utils/audio';
 import { initGA, trackEvent } from './utils/analytics';

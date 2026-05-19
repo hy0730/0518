@@ -27,6 +27,8 @@ function applyRegionDataSafely(set: (fn: any) => void, nextRaw: unknown) {
 
 type LoadStatus = 'idle' | 'loading' | 'ready' | 'error';
 
+export type AppPhase = 'INTRO' | 'MAP' | 'STORY' | 'MINIGAME' | 'ENDING';
+
 type CurrentDialog = {
   dialogId: string;
   stepIndex: number;
@@ -40,6 +42,12 @@ type QuizRuntimeState = {
 };
 
 type GameState = {
+  // app flow (기획 흐름: 인트로 → 지도 → 대화 → 미니게임)
+  appPhase: AppPhase;
+  unlockedStageId: number;
+  currentStageId: number | null;
+  playerName: string;
+
   // data
   regionData: RegionData | null;
 
@@ -65,6 +73,13 @@ type GameState = {
   // actions
   fetchRegionData: (regionKey?: string) => Promise<void>;
   cleanupRealtime: () => void;
+
+  // flow actions
+  setAppPhase: (phase: AppPhase) => void;
+  setPlayerName: (name: string) => void;
+  playStage: (stageId: number) => void;
+  completeStage: (stageId: number) => void;
+
   selectNode: (nodeId: string) => void;
   closeDialog: () => void;
   nextDialogStep: () => void;
@@ -98,6 +113,11 @@ function normalizeVisitedNodes(input: unknown): string[] {
 export const useGameStore = create<GameState>()(
   persist(
     (set, get) => ({
+      appPhase: 'INTRO',
+      unlockedStageId: 1,
+      currentStageId: null,
+      playerName: '',
+
       regionData: null,
       status: 'idle',
       error: null,
@@ -120,6 +140,16 @@ export const useGameStore = create<GameState>()(
 
         return dialog.steps[currentDialog.stepIndex] ?? null;
       },
+
+      setAppPhase: (phase) => set({ appPhase: phase }),
+      setPlayerName: (name) => set({ playerName: name }),
+      playStage: (stageId) => set({ appPhase: 'STORY', currentStageId: stageId }),
+      completeStage: (stageId) =>
+        set((state) => ({
+          appPhase: 'MAP',
+          currentStageId: null,
+          unlockedStageId: Math.max(state.unlockedStageId, stageId + 1),
+        })),
 
       fetchRegionData: async (regionKey = 'anyang') => {
         set({ status: 'loading', error: null, regionData: null, currentNodeId: null, currentDialog: null, quizState: null });
@@ -300,15 +330,40 @@ export const useGameStore = create<GameState>()(
     {
       name: 'local-heritage-save',
       storage: createJSONStorage(() => localStorage),
-      version: 1,
+      version: 2,
       partialize: (state) => ({
+        appPhase: state.appPhase,
+        unlockedStageId: state.unlockedStageId,
+        currentStageId: state.currentStageId,
+        playerName: state.playerName,
         visitedNodes: state.visitedNodes,
         isMuted: state.isMuted,
       }),
       migrate: (persistedState) => {
-        // persistedState는 partialize 결과 형태({ visitedNodes, isMuted })만 들어옴
-        const obj = (persistedState ?? {}) as { visitedNodes?: unknown; isMuted?: unknown };
+        // persistedState는 partialize 결과 형태만 들어옴
+        const obj = (persistedState ?? {}) as {
+          visitedNodes?: unknown;
+          isMuted?: unknown;
+          appPhase?: unknown;
+          unlockedStageId?: unknown;
+          currentStageId?: unknown;
+          playerName?: unknown;
+        };
+
+        const appPhase =
+          obj.appPhase === 'INTRO' || obj.appPhase === 'MAP' || obj.appPhase === 'STORY' || obj.appPhase === 'MINIGAME' || obj.appPhase === 'ENDING'
+            ? (obj.appPhase as AppPhase)
+            : 'INTRO';
+
+        const unlockedStageId = typeof obj.unlockedStageId === 'number' && obj.unlockedStageId >= 1 ? obj.unlockedStageId : 1;
+        const currentStageId = typeof obj.currentStageId === 'number' && obj.currentStageId >= 1 ? obj.currentStageId : null;
+        const playerName = typeof obj.playerName === 'string' ? obj.playerName : '';
+
         return {
+          appPhase,
+          unlockedStageId,
+          currentStageId,
+          playerName,
           visitedNodes: normalizeVisitedNodes(obj.visitedNodes),
           isMuted: typeof obj.isMuted === 'boolean' ? obj.isMuted : false,
         } as any;
