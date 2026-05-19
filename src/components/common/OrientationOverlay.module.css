@@ -1,0 +1,101 @@
+.overlay {
+  display: none;
+}
+
+/* 세로 모드일 때만 전체 화면을 덮어서 “가로로 돌려달라” 안내 */
+@media (orientation: portrait) {
+  .overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: grid;
+    place-items: center;
+    padding: 20px;
+    background: rgba(3, 7, 18, 0.92);
+    color: #fff;
+  }
+}
+
+.card {
+  width: min(420px, 92vw);
+  border-radius: 18px;
+  padding: 18px 16px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  text-align: center;
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(8px);
+}
+
+.iconWrap {
+  width: 90px;
+  height: 90px;
+  margin: 0 auto 12px;
+  display: grid;
+  place-items: center;
+}
+
+/* 간단한 “폰 회전” 아이콘(이미지 라이브러리 없이 CSS로 구현) */
+.phoneIcon {
+  width: 44px;
+  height: 72px;
+  border-radius: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  position: relative;
+  transform: rotate(90deg);
+  animation: wobble 1.6s ease-in-out infinite;
+}
+
+.phoneIcon::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 6px;
+  width: 10px;
+  height: 4px;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.phoneIcon::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 8px;
+  width: 10px;
+  height: 10px;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  border: 2px solid rgba(255, 255, 255, 0.45);
+}
+
+@keyframes wobble {
+  0% {
+    transform: rotate(90deg) translateY(0);
+  }
+  50% {
+    transform: rotate(90deg) translateY(-6px);
+  }
+  100% {
+    transform: rotate(90deg) translateY(0);
+  }
+}
+
+.title {
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: -0.4px;
+}
+
+.desc {
+  margin-top: 10px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.86);
+}
+
+.desc b {
+  color: #fbbf24;
+}
+

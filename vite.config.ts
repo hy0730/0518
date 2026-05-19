@@ -14,6 +14,8 @@ export default defineConfig({
         theme_color: '#0b0b0b',
         background_color: '#0b0b0b',
         display: 'standalone',
+        // 설치(PWA) 실행 시 가로 화면을 우선 권장 (브라우저 정책에 따라 적용 여부는 다를 수 있음)
+        orientation: 'landscape',
         start_url: '/',
         scope: '/',
       },

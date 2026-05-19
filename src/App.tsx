@@ -3,6 +3,7 @@ import CollectionModal from './components/common/CollectionModal';
 import GameHUD from './components/common/GameHUD';
 import GameWrapper from './components/common/GameWrapper';
 import InstallBanner from './components/common/InstallBanner';
+import OrientationOverlay from './components/common/OrientationOverlay';
 import IntroScreen from './components/intro/IntroScreen';
 import MapScreen from './components/map/MapScreen';
 import MiniGameManager from './components/minigames/MiniGameManager';
@@ -139,6 +140,10 @@ export default function App() {
   return (
     <GameWrapper>
       <InstallBanner />
+
+      {/* 모바일 세로모드일 때: “가로모드 권장” 안내 (미니게임에서만) */}
+      <OrientationOverlay enabled={appPhase === 'MINIGAME'} />
+
       {appPhase === 'INTRO' && <IntroScreen />}
       {appPhase === 'MAP' && <MapScreen />}
       {appPhase === 'STORY' && <StoryScreen />}
