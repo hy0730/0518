@@ -3,10 +3,12 @@
   height: 100%;
   overflow: hidden;
   background: rgba(0, 0, 0, 0.12);
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .stage {
   transform-origin: center;
+  will-change: transform;
 }

@@ -48,51 +48,28 @@ export default function MiniGameManager() {
 
   return (
     <Suspense fallback={<div style={{ padding: 20 }}>게임 불러오는 중...</div>}>
-      <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
-        {/* 상단 바(게임 보드와 겹치지 않게 분리) */}
-        <div
-          style={{
-            flex: '0 0 56px',
-            display: 'flex',
-            alignItems: 'center',
-            padding: '10px',
-            gap: '8px',
-            background: 'rgba(0,0,0,0.35)',
-            borderBottom: '1px solid rgba(255,255,255,0.12)',
+      <div className="w-full h-full relative">
+        {/* 뒤로 버튼: 문서 흐름을 타지 않도록 완전 오버레이 */}
+        <button
+          type="button"
+          className="absolute top-4 left-4 z-50 px-3 py-2 rounded-xl border border-white/20 bg-black/50 text-white font-black"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setAppPhase('STORY');
           }}
         >
-          <button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setAppPhase('STORY');
-            }}
-            style={{
-              padding: '8px 10px',
-              borderRadius: 12,
-              border: '1px solid rgba(255,255,255,0.2)',
-              background: 'rgba(0,0,0,0.45)',
-              color: '#fff',
-              fontWeight: 900,
-              cursor: 'pointer',
-            }}
-          >
-            ← 뒤로
-          </button>
-        </div>
+          ← 뒤로
+        </button>
 
-        {/* 보드 영역 */}
-        <div style={{ flex: '1 1 auto', minHeight: 0 }}>
-          <FitScaleWrapper baseWidth={800} baseHeight={450}>
-            <CurrentMiniGame
-              stageId={currentStageId}
-              regionData={regionData}
-              onComplete={() => completeStage(currentStageId)}
-              onFail={() => setAppPhase('MAP')}
-            />
-          </FitScaleWrapper>
-        </div>
+        <FitScaleWrapper baseWidth={800} baseHeight={450}>
+          <CurrentMiniGame
+            stageId={currentStageId}
+            regionData={regionData}
+            onComplete={() => completeStage(currentStageId)}
+            onFail={() => setAppPhase('MAP')}
+          />
+        </FitScaleWrapper>
       </div>
     </Suspense>
   );
