@@ -9,6 +9,8 @@ export default function StoryScreen() {
   const playerName = useGameStore((s) => s.playerName);
   const playerOrg = useGameStore((s) => s.playerOrg);
   const setAppPhase = useGameStore((s) => s.setAppPhase);
+  const setStoryIndex = useGameStore((s) => s.setStoryIndex);
+  const storedIdx = useGameStore((s) => (currentStageId ? s.storyIndexByStage[currentStageId] ?? 0 : 0));
 
   const stage = useMemo<StageStory | null>(() => {
     if (!currentStageId) return null;
@@ -36,13 +38,17 @@ export default function StoryScreen() {
   const [isTyping, setIsTyping] = useState(false);
   const typingTimer = useRef<number | null>(null);
   const lastAdvanceAt = useRef(0);
-  const [isDescExpanded, setIsDescExpanded] = useState(false);
 
   // 스테이지가 바뀌면 대사 인덱스 초기화
   useEffect(() => {
-    setIdx(0);
-    setIsDescExpanded(false);
+    setIdx(storedIdx);
   }, [currentStageId]);
+
+  // idx 변화를 store에 저장 (미니게임 뒤로가기에서 복원하기 위함)
+  useEffect(() => {
+    if (!currentStageId) return;
+    setStoryIndex(currentStageId, idx);
+  }, [idx, currentStageId]);
 
   const advance = () => {
     if (!lines.length) return;
@@ -222,20 +228,7 @@ export default function StoryScreen() {
               <span className={styles.metaVal}>{stage.location}</span>
             </div>
 
-            <div className={`${styles.metaDesc} ${isDescExpanded ? styles.metaDescExpanded : ''}`}>{stage.description}</div>
-
-            {stage.description.length >= 85 && (
-              <button
-                type="button"
-                className={styles.moreBtn}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setIsDescExpanded((v) => !v);
-                }}
-              >
-                {isDescExpanded ? '접기' : '더보기'}
-              </button>
-            )}
+            <div className={styles.metaDesc}>{stage.description}</div>
           </div>
         </div>
       </div>

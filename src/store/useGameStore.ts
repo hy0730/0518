@@ -68,6 +68,9 @@ type GameState = {
   currentDialog: CurrentDialog | null;
   quizState: QuizRuntimeState | null;
 
+  // Story UI 진행도(미니게임 뒤로가기 등에서 직전 대사 복원)
+  storyIndexByStage: Record<number, number>;
+
   // selectors (store 내부 편의용: UI는 원하면 이 값들을 사용)
   getCurrentStep: () => DialogStep | null;
 
@@ -88,6 +91,8 @@ type GameState = {
   submitQuiz: (selectedOptionId: string) => void;
   toggleCollection: () => void;
   toggleMute: () => void;
+
+  setStoryIndex: (stageId: number, idx: number) => void;
 
   // utils
   markVisited: (nodeId: string) => void;
@@ -134,6 +139,8 @@ export const useGameStore = create<GameState>()(
       currentDialog: null,
       quizState: null,
 
+      storyIndexByStage: {},
+
       getCurrentStep: () => {
         const { regionData, currentDialog } = get();
         if (!regionData || !currentDialog) return null;
@@ -147,7 +154,12 @@ export const useGameStore = create<GameState>()(
       setAppPhase: (phase) => set({ appPhase: phase }),
       setPlayerName: (name) => set({ playerName: name }),
       setPlayerOrg: (org) => set({ playerOrg: org }),
-      playStage: (stageId) => set({ appPhase: 'STORY', currentStageId: stageId }),
+      playStage: (stageId) =>
+        set((state) => ({
+          appPhase: 'STORY',
+          currentStageId: stageId,
+          storyIndexByStage: state.storyIndexByStage[stageId] === undefined ? { ...state.storyIndexByStage, [stageId]: 0 } : state.storyIndexByStage,
+        })),
       completeStage: (stageId) =>
         set((state) => {
           const nodeId = get().regionData?.map.nodes[stageId - 1]?.id;
@@ -327,6 +339,11 @@ export const useGameStore = create<GameState>()(
         set({ isMuted: next });
         audio.setMuted(next);
       },
+
+      setStoryIndex: (stageId, idx) =>
+        set((state) => ({
+          storyIndexByStage: { ...state.storyIndexByStage, [stageId]: Math.max(0, idx) },
+        })),
 
       markVisited: (nodeId: string) => {
         set((state) => {

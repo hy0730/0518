@@ -48,14 +48,41 @@ export default function MiniGameManager() {
 
   return (
     <Suspense fallback={<div style={{ padding: 20 }}>게임 불러오는 중...</div>}>
-      <FitScaleWrapper baseWidth={800} baseHeight={450}>
-        <CurrentMiniGame
-          stageId={currentStageId}
-          regionData={regionData}
-          onComplete={() => completeStage(currentStageId)}
-          onFail={() => setAppPhase('MAP')}
-        />
-      </FitScaleWrapper>
+      <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+        {/* 미니게임에서도 뒤로가기 제공: 직전 상태(스토리)로 복귀 */}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setAppPhase('STORY');
+          }}
+          style={{
+            position: 'absolute',
+            left: 10,
+            top: 10,
+            zIndex: 50,
+            padding: '8px 10px',
+            borderRadius: 12,
+            border: '1px solid rgba(255,255,255,0.2)',
+            background: 'rgba(0,0,0,0.45)',
+            color: '#fff',
+            fontWeight: 900,
+            cursor: 'pointer',
+          }}
+        >
+          ← 뒤로
+        </button>
+
+        <FitScaleWrapper baseWidth={800} baseHeight={450}>
+          <CurrentMiniGame
+            stageId={currentStageId}
+            regionData={regionData}
+            onComplete={() => completeStage(currentStageId)}
+            onFail={() => setAppPhase('MAP')}
+          />
+        </FitScaleWrapper>
+      </div>
     </Suspense>
   );
 }

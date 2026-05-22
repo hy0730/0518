@@ -56,6 +56,9 @@
   background: rgba(0, 0, 0, 0.35);
   border: 1px solid rgba(255, 255, 255, 0.12);
   color: rgba(255, 255, 255, 0.9);
+  /* 설명은 모두 출력하되, 화면을 다 먹지 않도록 내부 스크롤 */
+  max-height: 190px;
+  overflow: auto;
 }
 
 .metaGrid {
@@ -125,26 +128,8 @@
   line-height: 1.55;
   color: rgba(255, 255, 255, 0.82);
   word-break: keep-all;
-  max-height: 44px;
-  overflow: hidden;
-}
-
-.metaDescExpanded {
-  max-height: 160px;
-  overflow: auto;
-  padding-right: 4px;
-}
-
-.moreBtn {
-  margin-top: 6px;
-  padding: 6px 10px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  background: rgba(0, 0, 0, 0.35);
-  color: rgba(255, 255, 255, 0.9);
-  font-size: 12px;
-  font-weight: 900;
-  cursor: pointer;
+  max-height: none;
+  overflow: visible;
 }
 
 .scene {
@@ -154,6 +139,8 @@
   margin-top: 10px;
   background: rgba(0, 0, 0, 0.22);
   border: 1px solid rgba(255, 255, 255, 0.12);
+  /* 메타가 커져도 대사 영역이 사라지지 않게 최소 높이 확보 */
+  min-height: 160px;
 }
 
 .dialogueBar {
@@ -169,6 +156,7 @@
   background: rgba(15, 23, 42, 0.92); /* slate-900 계열 */
   border: 1px solid rgba(255, 255, 255, 0.18);
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+  z-index: 2;
 }
 
 .dialoguePortrait {

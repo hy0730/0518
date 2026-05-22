@@ -1,6 +1,7 @@
 .hud {
   position: absolute;
-  top: 10px;
+  /* 스토리 상단(뒤로/건너뛰기) UI와 겹치지 않도록 아래로 내림 */
+  top: 64px;
   right: 10px;
   z-index: 30; /* DialogBox(20)보다 위, CollectionModal(60)보다 아래 */
   display: flex;
@@ -27,4 +28,3 @@
 .active {
   background: rgba(255, 255, 255, 0.16);
 }
-
