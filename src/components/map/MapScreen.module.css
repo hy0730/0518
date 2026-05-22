@@ -16,27 +16,6 @@
   transform-origin: center;
 }
 
-.routeSvg {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 1;
-}
-
-.routeAll {
-  fill: none;
-  stroke: rgba(255, 255, 255, 0.35);
-  stroke-width: 1.2;
-  stroke-dasharray: 2.5 2.5;
-}
-
-.routeDone {
-  fill: none;
-  stroke: rgba(34, 197, 94, 0.95);
-  stroke-width: 2.4;
-  filter: drop-shadow(0 0 8px rgba(34, 197, 94, 0.45));
-}
-
 .resetBtn {
   position: absolute;
   left: 12px;
