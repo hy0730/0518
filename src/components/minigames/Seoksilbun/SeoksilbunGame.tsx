@@ -759,12 +759,12 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
       {/* 결과 모달 */}
       {resultModal && (
         <div className="absolute inset-0 z-40 bg-black/75 grid place-items-center p-4" data-interactive="true">
-          <div className="w-full max-w-[820px] max-h-[86vh] overflow-auto rounded-2xl border border-white/15 bg-zinc-950/95 p-5">
-            <div className="rounded-2xl border border-white/10 bg-black/25 overflow-hidden">
+          <div className="w-full h-full bg-zinc-950/95 text-white shadow-2xl flex flex-col">
+            <div className="flex-1 min-h-0 overflow-hidden">
               <img
                 src={realImg}
                 alt=""
-                className="w-full h-[320px] object-cover"
+                className="w-full h-full object-cover"
                 draggable={false}
                 onError={(e) => {
                   const img = e.currentTarget;
@@ -772,26 +772,28 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
                 }}
               />
             </div>
-            <div className="text-xl font-black">아주 좋아요!</div>
-            <div className="mt-2 text-sm opacity-85 leading-relaxed">
-              자신의 생각을 아주 잘 담았어요! 왜 그렇게 생각했는지 친구들(또는 선생님)에게 자유롭게 발표해 보세요!
+            <div className="p-4 border-t border-white/10 bg-black/40">
+              <div className="text-lg font-black">아주 좋아요!</div>
+              <div className="mt-1 text-sm opacity-85 leading-relaxed">
+                자신의 생각을 아주 잘 담았어요! 왜 그렇게 생각했는지 친구들(또는 선생님)에게 자유롭게 발표해 보세요!
+              </div>
+              <div className="mt-2 text-sm font-black">
+                내 문장: <span className="text-amber-300">{blank1 ?? '___'}</span> 시대의{' '}
+                <span className="text-amber-300">{blank2 ?? '___'}</span>
+              </div>
+              <button
+                type="button"
+                className="mt-3 w-full rounded-xl bg-emerald-400 text-black font-black py-3 hover:bg-emerald-300"
+                onClick={() => {
+                  const now = Date.now();
+                  const started = startedAt ?? now;
+                  const clearTime = Math.max(0, Math.round(((now - started) / 1000) * 10) / 10);
+                  onComplete({ attempts: 1, clearTime });
+                }}
+              >
+                지도로 돌아가기
+              </button>
             </div>
-            <div className="mt-3 text-sm font-black">
-              내 문장: <span className="text-amber-300">{blank1 ?? '___'}</span> 시대의{' '}
-              <span className="text-amber-300">{blank2 ?? '___'}</span>
-            </div>
-            <button
-              type="button"
-              className="mt-5 w-full rounded-xl bg-emerald-400 text-black font-black py-3 hover:bg-emerald-300"
-              onClick={() => {
-                const now = Date.now();
-                const started = startedAt ?? now;
-                const clearTime = Math.max(0, Math.round(((now - started) / 1000) * 10) / 10);
-                onComplete({ attempts: 1, clearTime });
-              }}
-            >
-              지도로 돌아가기
-            </button>
           </div>
         </div>
       )}

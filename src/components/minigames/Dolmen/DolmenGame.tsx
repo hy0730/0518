@@ -757,30 +757,28 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
 
       {/* 결과창(수동 복귀) */}
       {resultModal && (
-        <div className="fixed inset-0 z-[10010] grid place-items-center bg-black/70 p-4">
-          <div className="w-full max-w-[820px] max-h-[86vh] overflow-auto rounded-2xl border border-white/15 bg-zinc-950/95 text-white shadow-2xl">
-            <div className="p-5">
-              <div className="rounded-2xl border border-white/10 bg-black/25 overflow-hidden">
-                <img
-                  src={realImg}
-                  alt=""
-                  className="w-full h-[320px] object-cover"
-                  draggable={false}
-                  onError={(e) => {
-                    const img = e.currentTarget;
-                    if (mainImg && img.src !== mainImg) img.src = mainImg;
-                  }}
-                />
-              </div>
-              <div className="text-xl font-black">성공! 고인돌 완성</div>
-              <div className="mt-2 text-sm opacity-85 leading-relaxed">
+        <div className="fixed inset-0 z-[10010] bg-black/80 p-0">
+          <div className="w-full h-full bg-zinc-950/95 text-white shadow-2xl flex flex-col">
+            <div className="flex-1 min-h-0 overflow-hidden">
+              <img
+                src={realImg}
+                alt=""
+                className="w-full h-full object-cover"
+                draggable={false}
+                onError={(e) => {
+                  const img = e.currentTarget;
+                  if (mainImg && img.src !== mainImg) img.src = mainImg;
+                }}
+              />
+            </div>
+            <div className="p-4 border-t border-white/10 bg-black/40">
+              <div className="text-lg font-black">성공! 고인돌 완성</div>
+              <div className="mt-1 text-sm opacity-85 leading-relaxed">
                 성공! 나무의 팽창하는 힘으로 바위를 쪼개고, 굴림대로 무거운 지석묘를 옮겨 무덤을 완성했어요!
               </div>
-            </div>
-            <div className="p-5 pt-0">
               <button
                 type="button"
-                className="w-full rounded-xl bg-emerald-400 text-black font-black py-3 hover:bg-emerald-300"
+                className="mt-3 w-full rounded-xl bg-emerald-400 text-black font-black py-3 hover:bg-emerald-300"
                 onClick={() => {
                   const now = Date.now();
                   const started = startedAt ?? now;

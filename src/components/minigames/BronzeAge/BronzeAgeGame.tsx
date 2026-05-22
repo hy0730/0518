@@ -680,32 +680,31 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
 
       {/* 최종 결과 감상창 (자동 전환 없이, 유저 클릭으로만 맵 복귀) */}
       {resultModal && (
-        <div className="absolute inset-0 z-[10010] grid place-items-center bg-black/75 p-4">
-          <div className="w-full max-w-[820px] max-h-[86vh] overflow-auto rounded-2xl border border-white/15 bg-zinc-950/95 text-white shadow-2xl">
-            <div className="p-5">
-              <div className="rounded-2xl border border-white/10 bg-black/25 overflow-hidden">
-                <img
-                  src={realImg}
-                  alt=""
-                  className="w-full h-[320px] object-cover"
-                  draggable={false}
-                  onError={(e) => {
-                    // real 이미지가 아직 없거나 로딩 실패 시 main으로 폴백
-                    const img = e.currentTarget;
-                    if (mainImg && img.src !== mainImg) img.src = mainImg;
-                  }}
-                />
-              </div>
-              <div className="text-xl font-black">축하해요! 유물 복원 완료</div>
-              <div className="mt-2 text-sm opacity-85 leading-relaxed">
-                {targetRelics}개의 유물을 완성해 문화유산 기록을 되살렸어요.
-              </div>
+        <div className="absolute inset-0 z-[10010] bg-black/80 p-0">
+          {/* 미니게임 테이블(캔버스)만큼 꽉 차게 */}
+          <div className="w-full h-full bg-zinc-950/95 text-white shadow-2xl flex flex-col">
+            <div className="flex-1 min-h-0 overflow-hidden">
+              <img
+                src={realImg}
+                alt=""
+                className="w-full h-full object-cover"
+                draggable={false}
+                onError={(e) => {
+                  // real 이미지가 아직 없거나 로딩 실패 시 main으로 폴백
+                  const img = e.currentTarget;
+                  if (mainImg && img.src !== mainImg) img.src = mainImg;
+                }}
+              />
             </div>
 
-            <div className="p-5 pt-0">
+            <div className="p-4 border-t border-white/10 bg-black/40">
+              <div className="text-lg font-black">축하해요! 유물 복원 완료</div>
+              <div className="mt-1 text-sm opacity-85 leading-relaxed">
+                {targetRelics}개의 유물을 완성해 문화유산 기록을 되살렸어요.
+              </div>
               <button
                 type="button"
-                className="w-full rounded-xl bg-emerald-400 text-black font-black py-3 hover:bg-emerald-300"
+                className="mt-3 w-full rounded-xl bg-emerald-400 text-black font-black py-3 hover:bg-emerald-300"
                 onClick={() => {
                   const now = Date.now();
                   const started = startedAt ?? now;
