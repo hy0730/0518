@@ -459,7 +459,10 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
                           key={i}
                           className={[
                             'rounded-xl border-2 border-dashed border-white/25 bg-black/25 h-12 md:h-14 grid place-items-center',
-                            tutorialMode === 'LOG' ? 'ring-2 ring-amber-300/60 animate-pulse' : '',
+                            // 튜토리얼(LOG)에서는 "비어있는 슬롯"만 더 강하게 하이라이트
+                            tutorialMode === 'LOG' && !s
+                              ? 'ring-4 ring-amber-300/80 bg-amber-300/10 shadow-[0_0_22px_rgba(251,191,36,0.35)] animate-pulse'
+                              : '',
                           ].join(' ')}
                           onDragOver={(e) => e.preventDefault()}
                           onDrop={(e) => {
@@ -493,7 +496,18 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
                             audio.playUrl('/assets/sounds/sfw_log_roll.mp3', 0.75);
                           }}
                         >
-                          {s ? <img src="/assets/images/log.png" alt="통나무" className="w-12 h-12 object-contain" /> : <span className="text-xs opacity-60">빈 틈</span>}
+                          {s ? (
+                            <img src="/assets/images/log.png" alt="통나무" className="w-12 h-12 object-contain" />
+                          ) : (
+                            <span
+                              className={[
+                                'text-xs opacity-70',
+                                tutorialMode === 'LOG' ? 'text-amber-200 font-black animate-pulse' : '',
+                              ].join(' ')}
+                            >
+                              빈 칸
+                            </span>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -522,7 +536,13 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
                   tutorialMode === 'PULL' ? 'animate-pulse' : '',
                   'rounded-full border border-white/20 bg-black/45 p-2 shadow-[0_18px_40px_rgba(0,0,0,0.55)]',
                 ].join(' ')}
-                title={phase === 'BIND' ? '밧줄 묶기' : '눌러서 옮기기'}
+                title={
+                  phase === 'BIND'
+                    ? '밧줄 묶기'
+                    : tutorialMode === 'PULL'
+                      ? '튜토리얼: 한 번 당기기'
+                      : '연타해서 당기기'
+                }
               >
                 <img src="/assets/images/hand.png" alt="손" className="w-14 h-14 object-contain" draggable={false} />
               </button>
@@ -616,7 +636,10 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
             {phase === 'QUARRY' && '나무쐐기 3개를 바위 틈에 꽂고, 물을 뿌려 바위를 쪼개보자! (드래그 또는 클릭)'}
             {phase === 'BIND' && '떼돌 옆의 손 아이콘을 눌러 밧줄로 묶어보자!'}
             {phase === 'PREPARE' && '통나무 3개를 돌 아래에 깔아주세요. (드래그 또는 클릭)'}
-            {phase === 'MOVE' && `손 아이콘을 연타해서 돌을 옮기자! 목표: ${TARGET_PROGRESS}%`}
+            {phase === 'MOVE' &&
+              (tutorialMode === 'PULL'
+                ? '튜토리얼: 손 아이콘을 한 번 눌러 “밧줄을 당기는 느낌”을 체험해보자!'
+                : `손 아이콘을 연타해서 돌을 옮기자! 목표: ${TARGET_PROGRESS}%`)}
           </div>
 
           {feedback && (
