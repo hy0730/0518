@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { MinigameProps } from '../../../types/game';
 import { audio } from '../../../utils/audio';
+import { storyDataByStageId } from '../../../data/storyData';
 
 type IngredientId = 'clay' | 'fire' | 'stone' | 'wood' | 'straw' | 'copper' | 'tin' | 'rope';
 type RelicId = 'pottery' | 'sickle' | 'mirror' | 'arrow' | 'hut';
@@ -74,12 +75,28 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
   const [flash, setFlash] = useState<'success' | 'fail' | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [sparkle, setSparkle] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+  const toastTimer = useRef<number | null>(null);
+
+  // 튜토리얼(첫 진입 시 청동 거울 제작 연습)
+  const [tutorialMode, setTutorialMode] = useState<'DIALOGUE' | 'MAKE_MIRROR' | 'DONE'>('DIALOGUE');
+  const [tutorialIdx, setTutorialIdx] = useState(0);
+  const [tText, setTText] = useState('');
+  const [tTyping, setTTyping] = useState(false);
+  const tTimer = useRef<number | null>(null);
 
   const flashTimer = useRef<number | null>(null);
 
-  // MVP: 3개 유물만 모으면 클리어(기획 반영)
-  const targetRelics = 3;
-  const title = useMemo(() => regionData?.map?.nodes?.[stageId - 1]?.title ?? '유물 조합', [regionData, stageId]);
+  // 기획: 5개 유물을 모두 조합해야 클리어
+  const targetRelics = RELICS.length;
+  const stageTitle = useMemo(() => storyDataByStageId[stageId]?.title ?? regionData?.map?.nodes?.[stageId - 1]?.title ?? `스테이지 ${stageId}`, [regionData, stageId]);
+  const title = `${stageTitle} · 유물 조합`;
+
+  const showToast = (msg: string) => {
+    setToast(msg);
+    if (toastTimer.current) window.clearTimeout(toastTimer.current);
+    toastTimer.current = window.setTimeout(() => setToast(null), 1100);
+  };
 
   const setFlashSafe = (next: 'success' | 'fail' | null, msg?: string) => {
     if (flashTimer.current) window.clearTimeout(flashTimer.current);
@@ -94,11 +111,66 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
   useEffect(() => {
     return () => {
       if (flashTimer.current) window.clearTimeout(flashTimer.current);
+      if (toastTimer.current) window.clearTimeout(toastTimer.current);
+      if (tTimer.current) window.clearInterval(tTimer.current);
     };
   }, []);
 
   const canDrop = workbench.length < 3;
   const canCombine = workbench.length >= 2; // 최소 2개부터 조합 가능
+
+  const tutorialLines = useMemo(
+    () => [
+      {
+        speaker: 'han' as const,
+        text: '여기는 관양동 선사 유적지야! 아주 먼 옛날, 안양에 처음 사람들이 살았던 흔적이 남아있는 곳이지.',
+      },
+      {
+        speaker: 'yang' as const,
+        text: '앗, 큰일이야! 데이터가 날아가면서 유물들이 전부 돌, 나무 같은 기본 재료로 쪼개져 버렸어.',
+      },
+      {
+        speaker: 'han' as const,
+        text: '우리가 직접 재료를 조합해서 원래 유물로 복원해야 해. 아래 재료를 클릭(또는 드래그)해서 작업대 빈칸에 올려놔 봐!',
+      },
+      {
+        speaker: 'yang' as const,
+        text: "오른쪽 아래 '레시피 힌트'를 보면 어떤 재료를 섞어야 하는지 알 수 있어.",
+      },
+      {
+        speaker: 'han' as const,
+        text: "연습으로 '구리' + '주석' + '불'을 넣어서 ‘청동 거울’을 만들어보자! 준비되면 시작!",
+      },
+    ],
+    []
+  );
+
+  // 튜토리얼 타입라이터
+  useEffect(() => {
+    if (tutorialMode !== 'DIALOGUE') return;
+    if (tTimer.current) window.clearInterval(tTimer.current);
+    const full = tutorialLines[tutorialIdx]?.text ?? '';
+    setTText('');
+    setTTyping(true);
+    let i = 0;
+    tTimer.current = window.setInterval(() => {
+      i += 1;
+      setTText(full.slice(0, i));
+      if (i >= full.length) {
+        if (tTimer.current) window.clearInterval(tTimer.current);
+        tTimer.current = null;
+        setTTyping(false);
+      }
+    }, 55);
+    return () => {
+      if (tTimer.current) window.clearInterval(tTimer.current);
+      tTimer.current = null;
+    };
+  }, [tutorialMode, tutorialIdx, tutorialLines]);
+
+  const tutorialHighlightInventory = tutorialMode !== 'DONE' && (tutorialMode === 'MAKE_MIRROR' || tutorialIdx >= 2);
+  const tutorialHighlightWorkbench = tutorialMode !== 'DONE' && (tutorialMode === 'MAKE_MIRROR' || tutorialIdx >= 2);
+  const tutorialHighlightHint = tutorialMode !== 'DONE' && (tutorialMode === 'MAKE_MIRROR' || tutorialIdx >= 3);
 
   const takeFromInventory = (id: IngredientId) => {
     setCounts((prev) => ({ ...prev, [id]: Math.max(0, (prev[id] ?? 0) - 1) }));
@@ -124,6 +196,7 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
   };
 
   const handleDropIngredient = (id: IngredientId) => {
+    if (tutorialMode === 'DIALOGUE') return;
     if (relicModal || resultModal) return;
     if (!canDrop) {
       setFlashSafe('fail', '작업대에는 최대 3개까지만 넣을 수 있어요!');
@@ -138,6 +211,7 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
 
   const combine = () => {
     if (!canCombine) return;
+    if (tutorialMode === 'DIALOGUE') return;
     if (relicModal || resultModal) return;
 
     const now = Date.now();
@@ -159,6 +233,16 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
       audio.playSfx('wrong', 0.8);
       audio.playUrl('/assets/sounds/sfx_negative_beep.mp3', 0.7);
       setFlashSafe('fail', '펑! 조합에 실패했어… 다시 해보자!');
+      clearWorkbench(true);
+      return;
+    }
+
+    // 튜토리얼에서는 청동 거울만 유도
+    if (tutorialMode === 'MAKE_MIRROR' && relicId !== 'mirror') {
+      setShake(true);
+      window.setTimeout(() => setShake(false), 520);
+      audio.playSfx('wrong', 0.75);
+      setFlashSafe('fail', '튜토리얼: 구리 + 주석 + 불로 청동 거울을 만들어보자!');
       clearWorkbench(true);
       return;
     }
@@ -227,7 +311,12 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
       <div className="mt-2 flex-1 min-h-0">
         <div className="grid grid-cols-12 gap-2 h-full">
         {/* 재료 */}
-        <div className="col-span-4 rounded-2xl border border-white/10 bg-black/40 p-2 flex flex-col min-h-0">
+        <div
+          className={[
+            'col-span-4 rounded-2xl border border-white/10 bg-black/40 p-2 flex flex-col min-h-0',
+            tutorialHighlightInventory ? 'ring-4 ring-amber-300/70' : '',
+          ].join(' ')}
+        >
           <div className="text-sm font-extrabold mb-2">재료</div>
           <div className="grid grid-cols-2 gap-1 flex-1 min-h-0">
             {INGREDIENTS.map((ing) => {
@@ -238,6 +327,7 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
                   key={ing.id}
                   draggable={!disabled}
                   onDragStart={(e) => {
+                    if (tutorialMode === 'DIALOGUE') return;
                     e.dataTransfer.setData('text/plain', ing.id);
                     e.dataTransfer.effectAllowed = 'move';
                   }}
@@ -271,7 +361,12 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
         </div>
 
         {/* 작업대(드롭존) */}
-        <div className="col-span-4 rounded-2xl border border-white/10 bg-black/40 p-2 relative flex flex-col min-h-0">
+        <div
+          className={[
+            'col-span-4 rounded-2xl border border-white/10 bg-black/40 p-2 relative flex flex-col min-h-0',
+            tutorialHighlightWorkbench ? 'ring-4 ring-amber-300/70' : '',
+          ].join(' ')}
+        >
           <div className="text-sm font-extrabold mb-2">작업대</div>
 
           <div
@@ -407,7 +502,12 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
             })}
           </div>
 
-          <div className="mt-2 rounded-xl border border-white/10 bg-black/30 p-2">
+          <div
+            className={[
+              'mt-2 rounded-xl border border-white/10 bg-black/30 p-2',
+              tutorialHighlightHint ? 'ring-4 ring-amber-300/60' : '',
+            ].join(' ')}
+          >
             <div className="text-[10px] font-black opacity-90 mb-1">레시피 힌트</div>
             <div className="text-[10px] opacity-85 leading-relaxed">
               흙+불 / 돌+돌 / 구리+주석+불 / 돌+나무+밧줄 / 밧줄+나무+짚
@@ -416,6 +516,70 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
         </div>
         </div>
       </div>
+
+      {/* 튜토리얼 대화(진입 직후) */}
+      {tutorialMode === 'DIALOGUE' && (
+        <div className="absolute inset-0 z-[11000] bg-black/70 grid place-items-center p-4">
+          <div className="w-full max-w-[560px] rounded-2xl border border-white/15 bg-zinc-950/95 text-white shadow-2xl">
+            <div className="p-5">
+              <div className="text-xs font-black opacity-85">튜토리얼 · 청동 거울 만들기</div>
+              <div className="mt-3 flex items-start gap-3">
+                <div className="w-14 h-14 rounded-2xl overflow-hidden border border-white/15 bg-white/5 flex-shrink-0">
+                  <img
+                    src={tutorialLines[tutorialIdx]?.speaker === 'han' ? '/assets/images/han_2.png' : '/assets/images/yang_2.png'}
+                    alt=""
+                    className="w-full h-full object-cover"
+                    draggable={false}
+                  />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-sm font-black">{tutorialLines[tutorialIdx]?.speaker === 'han' ? '한' : '양'}</div>
+                  <div className="mt-2 text-sm leading-relaxed opacity-95">{tText}</div>
+                  <div className="mt-2 text-[11px] opacity-70">{tTyping ? '탭하면 전체 표시' : '다음으로 진행'}</div>
+                </div>
+              </div>
+            </div>
+            <div className="p-5 pt-0 flex gap-2 justify-end">
+              <button
+                type="button"
+                className="rounded-xl px-3 py-2 text-xs font-black bg-white/10 hover:bg-white/15"
+                onClick={() => {
+                  // 타이핑 중이면 먼저 전체 출력
+                  if (tTyping) {
+                    if (tTimer.current) window.clearInterval(tTimer.current);
+                    tTimer.current = null;
+                    setTText(tutorialLines[tutorialIdx]?.text ?? '');
+                    setTTyping(false);
+                    return;
+                  }
+                  if (tutorialIdx < tutorialLines.length - 1) setTutorialIdx((v) => v + 1);
+                  else {
+                    setTutorialMode('MAKE_MIRROR');
+                    showToast('튜토리얼: 구리 + 주석 + 불로 ‘청동 거울’을 만들어보자!');
+                  }
+                }}
+              >
+                {tutorialIdx < tutorialLines.length - 1 ? '다음' : '연습 시작'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 튜토리얼 목표 안내 */}
+      {tutorialMode === 'MAKE_MIRROR' && (
+        <div className="absolute left-2 right-2 bottom-2 z-[9000] pointer-events-none">
+          <div className="rounded-xl border border-amber-300/30 bg-amber-300/10 p-2 text-center text-xs font-black">
+            튜토리얼: 구리 + 주석 + 불 → 청동 거울을 만들어보자!
+          </div>
+        </div>
+      )}
+
+      {toast && (
+        <div className="absolute left-1/2 top-2 -translate-x-1/2 z-[9000] pointer-events-none">
+          <div className="rounded-xl border border-white/10 bg-black/75 px-3 py-2 text-xs font-black shadow-2xl">{toast}</div>
+        </div>
+      )}
       {/* 유물 획득 팝업(정답 조합 시) */}
       {relicModal && (
         <div className="absolute inset-0 z-[10000] grid place-items-center bg-black/60 p-4">
@@ -469,7 +633,12 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
                     const next = prev.includes(relicModal) ? prev : [...prev, relicModal];
                     // 자동 화면 전환 금지: 목표 개수 달성 시 최종 결과창을 띄우고,
                     // 사용자가 직접 "지도" 버튼을 눌렀을 때만 onComplete 호출
-                    if (next.length >= targetRelics) setResultModal(true);
+                    if (tutorialMode === 'MAKE_MIRROR' && relicModal === 'mirror') {
+                      // 연습 완료 후 본게임 시작
+                      setTutorialMode('DONE');
+                      showToast('튜토리얼 완료! 이제 나머지 유물도 복원해보자!');
+                    }
+                    if (tutorialMode === 'DONE' && next.length >= targetRelics) setResultModal(true);
                     return next;
                   });
 

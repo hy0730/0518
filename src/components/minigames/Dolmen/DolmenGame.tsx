@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { MinigameProps } from '../../../types/game';
 import { audio } from '../../../utils/audio';
+import { storyDataByStageId } from '../../../data/storyData';
 
 type Phase = 'QUARRY' | 'BIND' | 'PREPARE' | 'MOVE';
 
@@ -15,7 +16,11 @@ const WEDGE_POS = [
 ] as const;
 
 export default function DolmenGame({ stageId, onComplete, regionData }: MinigameProps) {
-  const title = useMemo(() => regionData?.map?.nodes?.[stageId - 1]?.title ?? '고인돌 옮기기', [regionData, stageId]);
+  const stageTitle = useMemo(
+    () => storyDataByStageId[stageId]?.title ?? regionData?.map?.nodes?.[stageId - 1]?.title ?? `스테이지 ${stageId}`,
+    [regionData, stageId]
+  );
+  const title = `${stageTitle} · 고인돌 옮기기`;
 
   const [phase, setPhase] = useState<Phase>('QUARRY');
   const [attempts, setAttempts] = useState(0);
