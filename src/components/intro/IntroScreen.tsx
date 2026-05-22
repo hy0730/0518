@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { nudgeHideBrowserUI, tryEnterFullscreen } from '../../utils/fullscreen';
 import styles from './IntroScreen.module.css';
@@ -14,15 +14,52 @@ export default function IntroScreen() {
 
   const [step, setStep] = useState<IntroStep>(1);
   const [glitch, setGlitch] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
+  const [typedText, setTypedText] = useState('');
   const [org, setOrg] = useState('');
   const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const stepTimer = useRef<number | null>(null);
+  const typingTimer = useRef<number | null>(null);
+  const lastClickAt = useRef(0);
 
   const title = useMemo(() => (regionName ? `${regionName} 문화유산 수호대` : '문화유산 수호대'), [regionName]);
 
   const bgImage =
     step === 1 ? '/assets/images/thumnail_1.png' : step === 2 ? '/assets/images/map_real.png' : '/assets/images/map_main.png';
+
+  const typingSource = useMemo(() => {
+    if (step === 2) return '우리는 문화유산연구원이야.\n문화유산을 발굴하고 보존하는 일을 하지!';
+    if (step === 3) return '앗! 안양 문화유산의 기록이 사라지고 있어!';
+    return '';
+  }, [step]);
+
+  useEffect(() => {
+    if (typingTimer.current) window.clearInterval(typingTimer.current);
+    if (!typingSource) {
+      setIsTyping(false);
+      setTypedText('');
+      return;
+    }
+
+    setIsTyping(true);
+    setTypedText('');
+    let i = 0;
+    typingTimer.current = window.setInterval(() => {
+      i += 1;
+      setTypedText(typingSource.slice(0, i));
+      if (i >= typingSource.length) {
+        if (typingTimer.current) window.clearInterval(typingTimer.current);
+        typingTimer.current = null;
+        setIsTyping(false);
+      }
+    }, 22);
+
+    return () => {
+      if (typingTimer.current) window.clearInterval(typingTimer.current);
+      typingTimer.current = null;
+    };
+  }, [typingSource]);
 
   return (
     <div className={`${styles.root} ${glitch ? styles.glitch : ''}`} style={{ backgroundImage: `url(${bgImage})` }}>
@@ -107,9 +144,9 @@ export default function IntroScreen() {
           <>
             <div className={styles.title}>문화유산연구원</div>
             <div className={styles.desc}>
-              우리는 문화유산연구원이야.
-              <br />
-              문화유산을 발굴하고 보존하는 일을 하지!
+              {typedText.split('\n').map((l, i) => (
+                <div key={i}>{l}</div>
+              ))}
             </div>
 
             <div className={styles.characters3d}>
@@ -121,6 +158,20 @@ export default function IntroScreen() {
               type="button"
               className={styles.primaryBtn}
               onClick={() => {
+                // 타이핑 중이면 먼저 전체 표시
+                if (isTyping) {
+                  if (typingTimer.current) window.clearInterval(typingTimer.current);
+                  typingTimer.current = null;
+                  setTypedText(typingSource);
+                  setIsTyping(false);
+                  return;
+                }
+
+                // 연타 방지(중복 진행 방지)
+                const now = Date.now();
+                if (now - lastClickAt.current < 450) return;
+                lastClickAt.current = now;
+
                 // Step3: 글리치 → 2D 전환
                 setGlitch(true);
                 if (stepTimer.current) window.clearTimeout(stepTimer.current);
@@ -137,14 +188,30 @@ export default function IntroScreen() {
 
         {step === 3 && (
           <>
-            <div className={styles.warning}>앗! 안양 문화유산의 기록이 사라지고 있어!</div>
+            <div className={styles.warning}>{typedText}</div>
 
             <div className={styles.characters2d}>
               <img src="/assets/images/han_1.png" alt="한" />
               <img src="/assets/images/yang_1.png" alt="양" />
             </div>
 
-            <button type="button" className={styles.primaryBtn} onClick={() => setAppPhase('MAP')}>
+            <button
+              type="button"
+              className={styles.primaryBtn}
+              onClick={() => {
+                if (isTyping) {
+                  if (typingTimer.current) window.clearInterval(typingTimer.current);
+                  typingTimer.current = null;
+                  setTypedText(typingSource);
+                  setIsTyping(false);
+                  return;
+                }
+                const now = Date.now();
+                if (now - lastClickAt.current < 450) return;
+                lastClickAt.current = now;
+                setAppPhase('MAP');
+              }}
+            >
               지도 화면으로 이동
             </button>
           </>

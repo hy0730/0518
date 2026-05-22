@@ -105,46 +105,60 @@
   transform: scaleX(-1);
 }
 
-.bubble {
+.dialogueBar {
   position: absolute;
-  bottom: 22%;
-  max-width: 78%;
-  padding: 12px 12px;
-  border-radius: 14px;
-  background: rgba(0, 0, 0, 0.78);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  color: #fff;
-  font-size: 14px;
-  line-height: 1.5;
-  word-break: keep-all;
-}
-
-.bubbleLeft {
   left: 10px;
-}
-
-.bubbleRight {
   right: 10px;
-}
-
-.portrait {
-  position: absolute;
-  left: 12px;
-  top: 12px;
-  width: 72px;
-  height: 72px;
+  bottom: 10px;
+  display: flex;
+  gap: 10px;
+  padding: 12px;
   border-radius: 16px;
-  overflow: hidden;
-  background: rgba(0, 0, 0, 0.45);
+  background: rgba(0, 0, 0, 0.72);
   border: 1px solid rgba(255, 255, 255, 0.16);
-  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
 }
 
-.portrait img {
+.dialoguePortrait {
+  width: 64px;
+  height: 64px;
+  border-radius: 14px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  flex: 0 0 auto;
+}
+
+.dialoguePortrait img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
+}
+
+.dialogueContent {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.dialogueName {
+  font-size: 12px;
+  font-weight: 900;
+  opacity: 0.9;
+  margin-bottom: 4px;
+}
+
+.dialogueText {
+  font-size: 14px;
+  line-height: 1.5;
+  word-break: keep-all;
+  min-height: 42px;
+}
+
+.dialogueHint {
+  margin-top: 6px;
+  font-size: 11px;
+  opacity: 0.7;
 }
 
 .footer {

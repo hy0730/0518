@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { storyDataByStageId, type StoryDialogueLine, type StageStory } from '../../data/storyData';
 import styles from './StoryScreen.module.css';
@@ -32,6 +32,10 @@ export default function StoryScreen() {
   }, [stage, playerName, playerOrg]);
 
   const [idx, setIdx] = useState(0);
+  const [displayText, setDisplayText] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+  const typingTimer = useRef<number | null>(null);
+  const lastAdvanceAt = useRef(0);
 
   // 스테이지가 바뀌면 대사 인덱스 초기화
   useEffect(() => {
@@ -83,6 +87,48 @@ export default function StoryScreen() {
 
   const line = lines[idx] ?? lines[lines.length - 1];
 
+  // 타입라이터(읽는 시간 확보) - 탭하면 즉시 전체 출력, 다음 탭에 넘어감
+  useEffect(() => {
+    if (typingTimer.current) window.clearInterval(typingTimer.current);
+    setDisplayText('');
+    setIsTyping(true);
+
+    const full = line.text;
+    let i = 0;
+    typingTimer.current = window.setInterval(() => {
+      i += 1;
+      setDisplayText(full.slice(0, i));
+      if (i >= full.length) {
+        if (typingTimer.current) window.clearInterval(typingTimer.current);
+        typingTimer.current = null;
+        setIsTyping(false);
+      }
+    }, 22);
+
+    return () => {
+      if (typingTimer.current) window.clearInterval(typingTimer.current);
+      typingTimer.current = null;
+    };
+  }, [line.text]);
+
+  const handleTapToAdvance = () => {
+    // 1) 타이핑 중이면 전체 표시
+    if (isTyping) {
+      if (typingTimer.current) window.clearInterval(typingTimer.current);
+      typingTimer.current = null;
+      setDisplayText(line.text);
+      setIsTyping(false);
+      return;
+    }
+
+    // 2) 연속 탭 방지(중복 진행)
+    const now = Date.now();
+    if (now - lastAdvanceAt.current < 450) return;
+    lastAdvanceAt.current = now;
+
+    advance();
+  };
+
   return (
     <div
       className={styles.root}
@@ -91,14 +137,14 @@ export default function StoryScreen() {
         const t = e.target as HTMLElement | null;
         const isInteractive = !!t?.closest?.('button, a, input, textarea, select, [role="button"]');
         if (isInteractive) return;
-        advance();
+        handleTapToAdvance();
       }}
       onClick={(e) => {
         // 일부 환경에서 pointer 이벤트가 없을 수 있어 click도 보조로 유지
         const t = e.target as HTMLElement | null;
         const isInteractive = !!t?.closest?.('button, a, input, textarea, select, [role="button"]');
         if (isInteractive) return;
-        advance();
+        handleTapToAdvance();
       }}
     >
       <div className={styles.header}>
@@ -137,15 +183,18 @@ export default function StoryScreen() {
           <img src="/assets/images/yang_1.png" alt="양" />
         </div>
 
-        <div className={styles.portrait}>
-          <img
-            src={line.speaker === 'han' ? '/assets/images/han_2.png' : '/assets/images/yang_2.png'}
-            alt={line.speaker === 'han' ? '한' : '양'}
-          />
-        </div>
-
-        <div className={`${styles.bubble} ${line.speaker === 'han' ? styles.bubbleLeft : styles.bubbleRight}`}>
-          {line.text}
+        <div className={styles.dialogueBar} data-interactive="true">
+          <div className={styles.dialoguePortrait}>
+            <img
+              src={line.speaker === 'han' ? '/assets/images/han_2.png' : '/assets/images/yang_2.png'}
+              alt={line.speaker === 'han' ? '한' : '양'}
+            />
+          </div>
+          <div className={styles.dialogueContent}>
+            <div className={styles.dialogueName}>{line.speaker === 'han' ? '한' : '양'}</div>
+            <div className={styles.dialogueText}>{displayText}</div>
+            <div className={styles.dialogueHint}>{isTyping ? '탭하면 전체 표시' : '탭하여 계속'}</div>
+          </div>
         </div>
       </div>
 
@@ -155,7 +204,7 @@ export default function StoryScreen() {
           className={styles.nextBtn}
           onClick={(e) => {
             e.stopPropagation();
-            advance();
+            handleTapToAdvance();
           }}
         >
           {idx < lines.length - 1 ? '다음' : '미니게임 시작'}

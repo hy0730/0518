@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { MinigameProps } from '../../../types/game';
 import { storyDataByStageId } from '../../../data/storyData';
 
@@ -70,6 +70,13 @@ const ARTIFACTS: ArtifactDef[] = [
 const WORD_CARDS = ['고구려', '백제', '신라', '농부', '상인', '귀족'] as const;
 type WordCard = (typeof WORD_CARDS)[number];
 
+const NATION_CARDS = new Set<WordCard>(['고구려', '백제', '신라']);
+const CLASS_CARDS = new Set<WordCard>(['농부', '상인', '귀족']);
+
+function wordType(w: WordCard) {
+  return NATION_CARDS.has(w) ? 'NATION' : 'CLASS';
+}
+
 function clamp01(v: number) {
   return Math.min(1, Math.max(0, v));
 }
@@ -123,6 +130,17 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
 
   const [dragHint, setDragHint] = useState<string | null>(null);
 
+  // 피드백(툭 튕기기/잘못된 드롭 등)
+  const [toast, setToast] = useState<string | null>(null);
+  const [shakeSlot, setShakeSlot] = useState<1 | 2 | null>(null);
+  const toastTimer = useRef<number | null>(null);
+
+  const showToast = (msg: string) => {
+    setToast(msg);
+    if (toastTimer.current) window.clearTimeout(toastTimer.current);
+    toastTimer.current = window.setTimeout(() => setToast(null), 900);
+  };
+
   const bg = useMemo(() => {
     if (phase === 'INTRO') {
       if (introStep === 1) return ASSETS.tombTop;
@@ -131,6 +149,27 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
     }
     return ASSETS.tomb2;
   }, [phase, introStep]);
+
+  // 배경 페이드 전환(phase1 사진 전환이 훅훅 바뀌지 않게)
+  const [bgA, setBgA] = useState(bg);
+  const [bgB, setBgB] = useState<string | null>(null);
+  const [fadeIn, setFadeIn] = useState(false);
+
+  useEffect(() => {
+    if (bg === bgA) return;
+    setBgB(bg);
+    // 다음 tick에서 opacity transition 시작
+    const t1 = window.setTimeout(() => setFadeIn(true), 10);
+    const t2 = window.setTimeout(() => {
+      setBgA(bg);
+      setBgB(null);
+      setFadeIn(false);
+    }, 520);
+    return () => {
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+    };
+  }, [bg, bgA]);
 
   const introText = useMemo(() => {
     if (introStep === 1) {
@@ -217,18 +256,16 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
   };
 
   const getTombRect = () => {
-    const board = boardRef.current;
-    if (!board) return null;
-    const rect = board.getBoundingClientRect();
-    // 좌/우 인벤토리 폭(132px) + 여유(약간)만큼 제외하고 중앙을 "무덤 영역"으로 취급
-    const sidePad = 156; // px
+    const tomb = tombRef.current;
+    if (!tomb) return null;
+    const rect = tomb.getBoundingClientRect();
     return {
-      left: rect.left + sidePad,
-      right: rect.right - sidePad,
+      left: rect.left,
+      right: rect.right,
       top: rect.top,
       bottom: rect.bottom,
-      width: Math.max(1, rect.width - sidePad * 2),
-      height: rect.height,
+      width: Math.max(1, rect.width),
+      height: Math.max(1, rect.height),
     };
   };
 
@@ -272,8 +309,25 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
         openPlacedArtifact(ended.id);
       } else if (ended.kind === 'word') {
         const w = ended.label as WordCard;
-        if (!blank1) setBlank1(w);
-        else if (!blank2) setBlank2(w);
+        if (!blank1) {
+          if (wordType(w) !== 'NATION') {
+            showToast('첫 번째 빈칸에는 나라 카드만 넣을 수 있어요!');
+            setShakeSlot(1);
+            window.setTimeout(() => setShakeSlot(null), 420);
+          } else {
+            setBlank1(w);
+          }
+        } else if (!blank2) {
+          if (wordType(w) !== 'CLASS') {
+            showToast('두 번째 빈칸에는 계급 카드만 넣을 수 있어요!');
+            setShakeSlot(2);
+            window.setTimeout(() => setShakeSlot(null), 420);
+          } else {
+            setBlank2(w);
+          }
+        } else {
+          showToast('이미 빈칸이 모두 채워졌어요. (클릭해서 비울 수 있어요)');
+        }
       } else if (ended.kind === 'muddoll') {
         // 튜토리얼: 클릭 시 중앙 배치
         setMuddollPlaced(true);
@@ -341,8 +395,25 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
       const t = e.target as HTMLElement | null;
       const slot = t?.closest?.('[data-slot]')?.getAttribute('data-slot');
       const w = ended.label as WordCard;
-      if (slot === '1') setBlank1(w);
-      else if (slot === '2') setBlank2(w);
+      if (slot === '1') {
+        if (wordType(w) !== 'NATION') {
+          showToast('첫 번째 빈칸에는 나라 카드만!');
+          setShakeSlot(1);
+          window.setTimeout(() => setShakeSlot(null), 420);
+          return;
+        }
+        setBlank1(w);
+      } else if (slot === '2') {
+        if (wordType(w) !== 'CLASS') {
+          showToast('두 번째 빈칸에는 계급 카드만!');
+          setShakeSlot(2);
+          window.setTimeout(() => setShakeSlot(null), 420);
+          return;
+        }
+        setBlank2(w);
+      } else {
+        // 빈칸이 아닌 곳에 떨어뜨린 경우는 무시
+      }
     }
   };
 
@@ -353,13 +424,29 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
 
   return (
     <div className="w-full h-full relative text-white select-none">
+      <style>{`
+        @keyframes slotShake {
+          0% { transform: translateY(0); }
+          20% { transform: translateY(-2px); }
+          40% { transform: translateY(2px); }
+          60% { transform: translateY(-2px); }
+          80% { transform: translateY(2px); }
+          100% { transform: translateY(0); }
+        }
+        .slotShake { animation: slotShake 420ms ease-in-out; }
+      `}</style>
+
       {/* 배경 */}
       <div
         className="absolute inset-0 bg-cover bg-center"
-        style={{
-          backgroundImage: `linear-gradient(rgba(0,0,0,0.22), rgba(0,0,0,0.55)), url('${bg}')`,
-        }}
+        style={{ backgroundImage: `linear-gradient(rgba(0,0,0,0.22), rgba(0,0,0,0.55)), url('${bgA}')` }}
       />
+      {bgB && (
+        <div
+          className={`absolute inset-0 bg-cover bg-center transition-opacity duration-500 ${fadeIn ? 'opacity-100' : 'opacity-0'}`}
+          style={{ backgroundImage: `linear-gradient(rgba(0,0,0,0.22), rgba(0,0,0,0.55)), url('${bgB}')` }}
+        />
+      )}
 
       {/* 상단 바 */}
       <div className="absolute left-0 right-0 top-0 z-10 px-3 py-2 flex items-center justify-between">
@@ -380,56 +467,48 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
         }}
       >
         {/* 중앙 "무덤" 영역 (좌/우 인벤토리를 제외한 자유 배치 영역) */}
-        <div ref={tombRef} className="absolute left-[156px] right-[156px] top-0 bottom-0" />
+        <div ref={tombRef} className="absolute left-[156px] right-[156px] top-0 bottom-0 relative">
+          {/* 튜토리얼 드롭존(빛나는 영역) */}
+          {phase === 'TUTORIAL' && (
+            <div className="absolute left-1/2 top-[52%] -translate-x-1/2 -translate-y-1/2 w-[140px] h-[110px] rounded-2xl border-2 border-amber-300/70 bg-amber-300/10 shadow-[0_0_30px_rgba(251,191,36,0.35)] animate-pulse" />
+          )}
 
-        {/* 튜토리얼 드롭존(빛나는 영역) */}
-        {phase === 'TUTORIAL' && (
-          <div className="absolute left-1/2 top-[52%] -translate-x-1/2 -translate-y-1/2 w-[140px] h-[110px] rounded-2xl border-2 border-amber-300/70 bg-amber-300/10 shadow-[0_0_30px_rgba(251,191,36,0.35)] animate-pulse" />
-        )}
+          {/* 토우 배치 */}
+          {(phase === 'TUTORIAL' || phase === 'MAIN' || phase === 'QUIZ') && muddollPlaced && muddollPos && (
+            <img
+              src={ASSETS.muddoll}
+              alt="토우"
+              className="absolute w-16 h-16 object-contain drop-shadow-[0_12px_26px_rgba(0,0,0,0.55)]"
+              style={{ left: `${muddollPos.xPct}%`, top: `${muddollPos.yPct}%`, transform: 'translate(-50%, -50%)' }}
+              draggable={false}
+            />
+          )}
 
-        {/* 토우 배치 */}
-        {(phase === 'TUTORIAL' || phase === 'MAIN' || phase === 'QUIZ') && muddollPlaced && muddollPos && (
-          <img
-            src={ASSETS.muddoll}
-            alt="토우"
-            className="absolute w-16 h-16 object-contain drop-shadow-[0_12px_26px_rgba(0,0,0,0.55)]"
-            style={{
-              left: `calc(156px + (${muddollPos.xPct}% * (100% - 312px) / 100))`,
-              top: `${muddollPos.yPct}%`,
-              transform: 'translate(-50%, -50%)',
-            }}
-            draggable={false}
-          />
-        )}
-
-        {/* 부장품 배치 결과 */}
-        {phase !== 'INTRO' &&
-          placed.map((p) => (
-            <div
-              key={p.id}
-              data-interactive="true"
-              className="absolute cursor-move"
-              style={{
-                left: `calc(156px + (${p.xPct}% * (100% - 312px) / 100))`,
-                top: `${p.yPct}%`,
-                transform: 'translate(-50%, -50%)',
-              }}
-              onPointerDown={(e) => {
-                if (phase !== 'MAIN') return;
-                startDrag(e, { kind: 'placed', id: p.id, label: p.name, img: p.img });
-              }}
-              onPointerMove={updateDrag}
-              onPointerUp={endDrag}
-              title="드래그해서 위치 수정 / 클릭해서 설명"
-            >
-              <img
-                src={p.img}
-                alt={p.name}
-                className="w-16 h-16 object-contain drop-shadow-[0_12px_26px_rgba(0,0,0,0.55)]"
-                draggable={false}
-              />
-            </div>
-          ))}
+          {/* 부장품 배치 결과 */}
+          {phase !== 'INTRO' &&
+            placed.map((p) => (
+              <div
+                key={p.id}
+                data-interactive="true"
+                className="absolute cursor-move"
+                style={{ left: `${p.xPct}%`, top: `${p.yPct}%`, transform: 'translate(-50%, -50%)' }}
+                onPointerDown={(e) => {
+                  if (phase !== 'MAIN') return;
+                  startDrag(e, { kind: 'placed', id: p.id, label: p.name, img: p.img });
+                }}
+                onPointerMove={updateDrag}
+                onPointerUp={endDrag}
+                title="드래그해서 위치 수정 / 클릭해서 설명"
+              >
+                <img
+                  src={p.img}
+                  alt={p.name}
+                  className="w-16 h-16 object-contain drop-shadow-[0_12px_26px_rgba(0,0,0,0.55)]"
+                  draggable={false}
+                />
+              </div>
+            ))}
+        </div>
 
         {/* Phase3 좌우 인벤토리 (보드 안에 배치) */}
         {phase === 'MAIN' && (
@@ -491,7 +570,9 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
                 <span
                   data-slot="1"
                   data-interactive="true"
-                  className="inline-flex items-center justify-center min-w-[110px] px-2 py-1 rounded-xl border-2 border-dashed border-amber-300/60 bg-amber-300/10"
+                  className={`inline-flex items-center justify-center min-w-[110px] px-2 py-1 rounded-xl border-2 border-dashed border-amber-300/60 bg-amber-300/10 ${
+                    shakeSlot === 1 ? 'slotShake' : ''
+                  }`}
                   onClick={() => setBlank1(null)}
                   title="클릭하면 비울 수 있어요"
                 >
@@ -501,7 +582,9 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
                 <span
                   data-slot="2"
                   data-interactive="true"
-                  className="inline-flex items-center justify-center min-w-[110px] px-2 py-1 rounded-xl border-2 border-dashed border-amber-300/60 bg-amber-300/10"
+                  className={`inline-flex items-center justify-center min-w-[110px] px-2 py-1 rounded-xl border-2 border-dashed border-amber-300/60 bg-amber-300/10 ${
+                    shakeSlot === 2 ? 'slotShake' : ''
+                  }`}
                   onClick={() => setBlank2(null)}
                   title="클릭하면 비울 수 있어요"
                 >
@@ -710,6 +793,13 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
             {drag.img ? <img src={drag.img} alt="" className="w-10 h-10 object-contain mx-auto mb-1" /> : null}
             {drag.label}
           </div>
+        </div>
+      )}
+
+      {/* 토스트(잘못된 드롭 등) */}
+      {toast && (
+        <div className="absolute left-1/2 bottom-[74px] -translate-x-1/2 z-50 pointer-events-none">
+          <div className="rounded-xl border border-white/10 bg-black/75 px-3 py-2 text-xs font-black shadow-2xl">{toast}</div>
         </div>
       )}
     </div>
