@@ -5,7 +5,7 @@
   display: grid;
   place-items: center;
   overflow: hidden;
-  background: #000;
+  background: var(--paper);
 }
 
 /* 배경 이미지 + 블러 */
@@ -16,8 +16,8 @@
   background-image: var(--bg-image);
   background-size: cover;
   background-position: center;
-  filter: blur(15px);
-  transform: scale(1.08); /* 블러 가장자리 빈틈 방지 */
+  filter: blur(10px);
+  transform: scale(1.06); /* 블러 가장자리 빈틈 방지 */
   z-index: 0;
 }
 
@@ -26,7 +26,8 @@
   content: '';
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  /* 종이 위에 살짝 그늘(가독성) */
+  background: rgba(244, 235, 217, 0.55);
   z-index: 1;
 }
 
@@ -44,8 +45,9 @@
   overflow: hidden;
   box-sizing: border-box;
 
-  background: #fff;
-  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+  background: var(--paper2);
+  box-shadow: 0 18px 50px rgba(74, 55, 40, 0.25);
+  border: 2px solid rgba(74, 55, 40, 0.35);
   border-radius: 16px;
 }
 

@@ -2,6 +2,31 @@
 @tailwind components;
 @tailwind utilities;
 
+@font-face {
+  font-family: 'ExplorerNote';
+  src: url('/assets/fonts/GOTHIC.TTF') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'ExplorerNote';
+  src: url('/assets/fonts/GOTHICB.TTF') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* 탐험가의 비밀 노트(역사 일기장) 테마 토큰 */
+:root {
+  --paper: #f4ebd9;
+  --paper2: #f8f1e3;
+  --ink: #4a3728;
+  --stamp: #d9534f;
+  --olive: #6b705c;
+}
+
 /* 프로젝트 전역(최소) */
 html,
 body,
@@ -15,5 +40,41 @@ body {
   overscroll-behavior: none;
   /* 안전영역(노치) 고려 */
   padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
-  background: #000;
+  font-family: ExplorerNote, ui-sans-serif, system-ui, sans-serif;
+  color: var(--ink);
+  background-color: var(--paper);
+  /* 은은한 종이 질감 */
+  background-image:
+    radial-gradient(rgba(74, 55, 40, 0.06) 1px, transparent 1px),
+    radial-gradient(rgba(74, 55, 40, 0.035) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0));
+  background-size: 28px 28px, 18px 18px, 100% 100%;
+  background-position: 0 0, 10px 12px, 0 0;
+}
+
+@layer components {
+  /* 공통 패널/모달/버튼: 다이어리(종이) 스타일 */
+  .note-panel {
+    @apply rounded-3xl border border-ink/40 bg-paper2 text-ink shadow-paper;
+  }
+
+  .note-card {
+    @apply rounded-3xl border border-ink/35 bg-paper text-ink shadow-paper;
+  }
+
+  .note-btn {
+    @apply rounded-2xl border border-ink/40 bg-paper2 px-4 py-3 font-bold text-ink shadow-md;
+  }
+
+  .note-btn:active {
+    transform: translateY(1px);
+  }
+
+  .note-btn-primary {
+    @apply rounded-2xl border border-ink/40 bg-stamp px-4 py-3 font-black text-white shadow-lg;
+  }
+
+  .note-btn-primary:active {
+    transform: translateY(1px);
+  }
 }

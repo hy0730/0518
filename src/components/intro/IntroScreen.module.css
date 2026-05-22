@@ -7,7 +7,7 @@
   position: relative;
   overflow: hidden;
 
-  background-color: #000;
+  background-color: var(--paper);
   background-size: cover;
   background-position: center;
 }
@@ -16,19 +16,19 @@
   content: '';
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.45);
+  background: rgba(244, 235, 217, 0.65);
   z-index: 0;
 }
 
 .card {
   width: min(420px, 100%);
-  border-radius: 18px;
+  border-radius: 24px;
   padding: 18px 16px;
-  background: rgba(0, 0, 0, 0.62);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  color: #fff;
-  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(8px);
+  background: rgba(248, 241, 227, 0.96); /* paper2 */
+  border: 2px solid rgba(74, 55, 40, 0.45); /* ink */
+  color: var(--ink);
+  box-shadow: 0 18px 50px rgba(74, 55, 40, 0.22);
+  backdrop-filter: blur(2px);
   position: relative;
   z-index: 2;
 }
@@ -37,13 +37,14 @@
   font-size: 22px;
   font-weight: 900;
   letter-spacing: -0.4px;
+  color: var(--ink);
 }
 
 .desc {
   margin-top: 10px;
   font-size: 13px;
   line-height: 1.5;
-  color: rgba(255, 255, 255, 0.88);
+  color: rgba(74, 55, 40, 0.86);
 }
 
 .form {
@@ -57,26 +58,26 @@
   gap: 6px;
   font-size: 12px;
   font-weight: 800;
-  color: rgba(255, 255, 255, 0.92);
+  color: rgba(74, 55, 40, 0.92);
 }
 
 .input {
   width: 100%;
   border-radius: 12px;
   padding: 12px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
+  border: 2px solid rgba(74, 55, 40, 0.25);
+  background: rgba(244, 235, 217, 0.65);
+  color: var(--ink);
   outline: none;
 }
 
 .input::placeholder {
-  color: rgba(255, 255, 255, 0.55);
+  color: rgba(74, 55, 40, 0.55);
 }
 
 .error {
   font-size: 12px;
-  color: #ff7b7b;
+  color: var(--stamp);
   font-weight: 800;
 }
 
@@ -85,12 +86,13 @@
   width: 100%;
   border-radius: 14px;
   padding: 12px 14px;
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  background: rgba(255, 255, 255, 0.16);
+  border: 2px solid rgba(74, 55, 40, 0.35);
+  background: var(--stamp);
   color: #fff;
   cursor: pointer;
   font-weight: 900;
   letter-spacing: -0.2px;
+  box-shadow: 0 10px 24px rgba(217, 83, 79, 0.18), 0 14px 30px rgba(74, 55, 40, 0.18);
 }
 
 .primaryBtn:active {
@@ -109,7 +111,7 @@
   width: 100%;
   height: auto;
   display: block;
-  filter: drop-shadow(0 20px 30px rgba(0, 0, 0, 0.55));
+  filter: drop-shadow(0 18px 26px rgba(74, 55, 40, 0.25));
 }
 
 .characters2d {
@@ -124,15 +126,15 @@
   width: 100%;
   height: auto;
   display: block;
-  filter: drop-shadow(0 18px 26px rgba(0, 0, 0, 0.55));
+  filter: drop-shadow(0 18px 26px rgba(74, 55, 40, 0.25));
 }
 
 .warning {
   font-size: 16px;
   font-weight: 900;
   letter-spacing: -0.2px;
-  color: #ffd1d1;
-  text-shadow: 0 10px 30px rgba(255, 0, 0, 0.22);
+  color: var(--stamp);
+  text-shadow: 0 10px 24px rgba(217, 83, 79, 0.18);
   line-height: 1.4;
 }
 

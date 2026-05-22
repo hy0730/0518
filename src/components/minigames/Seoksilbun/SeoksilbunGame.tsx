@@ -426,7 +426,7 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
   };
 
   return (
-    <div className="w-full h-full relative text-white select-none">
+    <div className="w-full h-full relative text-ink select-none">
       <style>{`
         @keyframes slotShake {
           0% { transform: translateY(0); }
@@ -442,12 +442,12 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
       {/* 배경 */}
       <div
         className="absolute inset-0 bg-cover bg-center"
-        style={{ backgroundImage: `linear-gradient(rgba(0,0,0,0.22), rgba(0,0,0,0.55)), url('${bgA}')` }}
+        style={{ backgroundImage: `linear-gradient(rgba(244,235,217,0.35), rgba(244,235,217,0.78)), url('${bgA}')` }}
       />
       {bgB && (
         <div
           className={`absolute inset-0 bg-cover bg-center transition-opacity duration-500 ${fadeIn ? 'opacity-100' : 'opacity-0'}`}
-          style={{ backgroundImage: `linear-gradient(rgba(0,0,0,0.22), rgba(0,0,0,0.55)), url('${bgB}')` }}
+          style={{ backgroundImage: `linear-gradient(rgba(244,235,217,0.35), rgba(244,235,217,0.78)), url('${bgB}')` }}
         />
       )}
 
@@ -462,7 +462,7 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
       {/* 보드(드롭 영역) */}
       <div
         ref={boardRef}
-        className="absolute inset-x-0 top-[38px] bottom-[64px] z-10 mx-3 rounded-2xl border border-white/10 overflow-hidden"
+        className="absolute inset-x-0 top-[38px] bottom-[64px] z-10 mx-3 rounded-3xl border border-ink/25 overflow-hidden shadow-paper"
         onPointerDown={(e) => {
           if (showIntroOverlay && !interactiveGuard(e.target)) {
             advanceIntro();
@@ -524,8 +524,8 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
                   key={a.id}
                   data-interactive="true"
                   className={[
-                    'rounded-xl border border-white/10 bg-black/40 p-2 flex items-center gap-2',
-                    placedIds[a.id] ? 'opacity-35' : 'hover:bg-white/10',
+                    'rounded-xl border border-ink/25 bg-paper/70 p-2 flex items-center gap-2 shadow-md',
+                    placedIds[a.id] ? 'opacity-35' : 'hover:bg-paper/90',
                   ].join(' ')}
                   onPointerDown={(e) => {
                     if (placedIds[a.id]) return;
@@ -547,8 +547,8 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
                   key={a.id}
                   data-interactive="true"
                   className={[
-                    'rounded-xl border border-white/10 bg-black/40 p-2 flex items-center gap-2',
-                    placedIds[a.id] ? 'opacity-35' : 'hover:bg-white/10',
+                    'rounded-xl border border-ink/25 bg-paper/70 p-2 flex items-center gap-2 shadow-md',
+                    placedIds[a.id] ? 'opacity-35' : 'hover:bg-paper/90',
                   ].join(' ')}
                   onPointerDown={(e) => {
                     if (placedIds[a.id]) return;
@@ -569,7 +569,7 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
         {/* Phase4 퀴즈 오버레이 */}
         {phase === 'QUIZ' && (
           <div className="absolute left-1/2 top-3 -translate-x-1/2 w-[520px] max-w-[92%]">
-            <div className="rounded-2xl border border-white/10 bg-black/55 p-3">
+            <div className="rounded-3xl border border-ink/25 bg-paper2/90 p-3 shadow-paper">
               <div className="text-sm font-black">이 무덤의 주인은</div>
               <div className="mt-2 text-sm font-black leading-relaxed">
                 <span
@@ -619,7 +619,7 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
               disabled={!muddollPlaced}
               className={[
                 'rounded-xl px-3 py-2 text-xs font-black',
-                muddollPlaced ? 'bg-emerald-400 text-black hover:bg-emerald-300' : 'bg-white/10 text-white/40 cursor-not-allowed',
+                muddollPlaced ? 'bg-olive text-white border border-ink/25 shadow-md hover:opacity-95' : 'bg-paper/50 text-ink/40 cursor-not-allowed border border-ink/20',
               ].join(' ')}
               onClick={() => {
                 startIfNeeded();
@@ -637,7 +637,7 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
                 disabled={!canGoQuiz}
                 className={[
                   'rounded-xl px-3 py-2 text-xs font-black',
-                  canGoQuiz ? 'bg-amber-400 text-black hover:bg-amber-300' : 'bg-white/10 text-white/40 cursor-not-allowed',
+                canGoQuiz ? 'bg-stamp text-white border border-ink/25 shadow-md hover:opacity-95' : 'bg-paper/50 text-ink/40 cursor-not-allowed border border-ink/20',
                 ].join(' ')}
                 onClick={() => {
                   startIfNeeded();
@@ -656,7 +656,7 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
                   <div
                     key={w}
                     data-interactive="true"
-                    className="rounded-xl border border-white/10 bg-black/45 px-2 py-2 text-[11px] font-black hover:bg-white/10 cursor-grab active:cursor-grabbing"
+                    className="rounded-xl border border-ink/25 bg-paper/70 px-2 py-2 text-[11px] font-black hover:bg-paper/90 cursor-grab active:cursor-grabbing shadow-md"
                     onPointerDown={(e) => startDrag(e, { kind: 'word', id: w, label: w })}
                     onPointerMove={updateDrag}
                     onPointerUp={endDrag}
@@ -672,7 +672,7 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
                 disabled={!canSubmit}
                 className={[
                   'rounded-xl px-3 py-2 text-xs font-black',
-                  canSubmit ? 'bg-emerald-400 text-black hover:bg-emerald-300' : 'bg-white/10 text-white/40 cursor-not-allowed',
+                  canSubmit ? 'bg-olive text-white border border-ink/25 shadow-md hover:opacity-95' : 'bg-paper/50 text-ink/40 cursor-not-allowed border border-ink/20',
                 ].join(' ')}
                 onClick={() => {
                   startIfNeeded();
@@ -691,7 +691,7 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
         <div className="absolute left-1/2 bottom-[54px] -translate-x-1/2 z-20">
           <div
             data-interactive="true"
-            className="rounded-2xl border border-white/10 bg-black/55 p-2 flex items-center gap-2 hover:bg-white/10 cursor-grab active:cursor-grabbing"
+            className="rounded-3xl border border-ink/25 bg-paper2/90 p-2 flex items-center gap-2 hover:bg-paper/90 cursor-grab active:cursor-grabbing shadow-paper"
             onPointerDown={(e) => startDrag(e, { kind: 'muddoll', id: 'muddoll', label: '토우', img: ASSETS.muddoll })}
             onPointerMove={updateDrag}
             onPointerUp={endDrag}
@@ -705,13 +705,13 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
 
       {/* 부장품 설명 모달 */}
       {artifactModal && (
-        <div className="absolute inset-0 z-30 bg-black/70 grid place-items-center p-4" data-interactive="true">
-          <div className="w-full max-w-[520px] rounded-2xl border border-white/15 bg-zinc-950/95 p-4">
+        <div className="absolute inset-0 z-30 bg-ink/35 grid place-items-center p-4" data-interactive="true">
+          <div className="w-full max-w-[520px] rounded-3xl border-2 border-ink/35 bg-paper2 p-4 shadow-paper">
             <div className="flex items-start gap-3">
               <img
                 src={artifactModal.artifact.img}
                 alt=""
-                className="w-16 h-16 object-contain rounded-xl bg-white/5 border border-white/10"
+                className="w-16 h-16 object-contain rounded-xl bg-paper/60 border border-ink/20"
               />
               <div className="min-w-0">
                 <div className="text-sm font-black">{artifactModal.artifact.name}</div>
@@ -721,7 +721,7 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
             <div className="mt-4 flex gap-2 justify-end">
               <button
                 type="button"
-                className="rounded-xl px-3 py-2 text-xs font-black bg-white/10 hover:bg-white/15"
+                className="rounded-xl px-3 py-2 text-xs font-black bg-paper/70 border border-ink/25 shadow-md hover:bg-paper/90"
                 onClick={() => setArtifactModal(null)}
               >
                 닫기
@@ -729,7 +729,7 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
               {artifactModal.mode === 'ADD' ? (
                 <button
                   type="button"
-                  className="rounded-xl px-3 py-2 text-xs font-black bg-amber-400 text-black hover:bg-amber-300"
+                  className="rounded-xl px-3 py-2 text-xs font-black bg-stamp text-white border border-ink/25 shadow-md hover:opacity-95"
                   onClick={() => {
                     startIfNeeded();
                     addPlacedCenter(artifactModal.artifact);
@@ -741,7 +741,7 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
               ) : (
                 <button
                   type="button"
-                  className="rounded-xl px-3 py-2 text-xs font-black bg-rose-400 text-black hover:bg-rose-300"
+                  className="rounded-xl px-3 py-2 text-xs font-black bg-olive text-white border border-ink/25 shadow-md hover:opacity-95"
                   onClick={() => {
                     startIfNeeded();
                     removePlaced(artifactModal.artifact.id);
@@ -758,8 +758,8 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
 
       {/* 결과 모달 */}
       {resultModal && (
-        <div className="absolute inset-0 z-40 bg-black/75 grid place-items-center p-4" data-interactive="true">
-          <div className="w-full h-full bg-zinc-950/95 text-white shadow-2xl flex flex-col">
+        <div className="absolute inset-0 z-40 bg-ink/35 grid place-items-center p-0" data-interactive="true">
+          <div className="w-full h-full bg-paper2 text-ink shadow-paper flex flex-col">
             <div className="flex-1 min-h-0 overflow-hidden">
               <img
                 src={realImg}
@@ -772,7 +772,7 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
                 }}
               />
             </div>
-            <div className="p-4 border-t border-white/10 bg-black/40">
+            <div className="p-4 border-t border-ink/20 bg-paper/70">
               <div className="text-lg font-black">아주 좋아요!</div>
               <div className="mt-1 text-sm opacity-85 leading-relaxed">
                 자신의 생각을 아주 잘 담았어요! 왜 그렇게 생각했는지 친구들(또는 선생님)에게 자유롭게 발표해 보세요!
@@ -783,7 +783,7 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
               </div>
               <button
                 type="button"
-                className="mt-3 w-full rounded-xl bg-emerald-400 text-black font-black py-3 hover:bg-emerald-300"
+                className="mt-3 w-full rounded-xl bg-olive text-white border border-ink/25 font-black py-3 shadow-md hover:opacity-95"
                 onClick={() => {
                   const now = Date.now();
                   const started = startedAt ?? now;
@@ -808,7 +808,7 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
             transform: 'translate(-50%, -50%)',
           }}
         >
-          <div className="rounded-xl border border-white/15 bg-black/70 px-3 py-2 text-xs font-black shadow-2xl">
+          <div className="rounded-xl border border-ink/25 bg-paper2 px-3 py-2 text-xs font-black shadow-paper">
             {drag.img ? <img src={drag.img} alt="" className="w-10 h-10 object-contain mx-auto mb-1" /> : null}
             {drag.label}
           </div>
@@ -818,7 +818,7 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
       {/* 토스트(잘못된 드롭 등) */}
       {toast && (
         <div className="absolute left-1/2 bottom-[74px] -translate-x-1/2 z-50 pointer-events-none">
-          <div className="rounded-xl border border-white/10 bg-black/75 px-3 py-2 text-xs font-black shadow-2xl">{toast}</div>
+          <div className="rounded-xl border border-ink/25 bg-paper2 px-3 py-2 text-xs font-black shadow-paper">{toast}</div>
         </div>
       )}
     </div>

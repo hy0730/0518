@@ -269,7 +269,7 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
   };
 
   return (
-    <div className="w-full h-full text-white flex flex-col relative p-2">
+    <div className="w-full h-full text-ink flex flex-col relative p-2">
       {/* 커스텀 애니메이션(무거운 라이브러리 없이) */}
       <style>{`
         @keyframes shake {
@@ -307,7 +307,7 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
         <div className="text-sm font-black tracking-tight">
           스테이지 {stageId} · {title}
         </div>
-        <div className="text-xs font-bold opacity-90">
+        <div className="text-xs font-bold opacity-80">
           도감 {Math.min(collected.length, targetRelics)}/{targetRelics} · 시도 {attempts}
         </div>
       </div>
@@ -318,7 +318,7 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
         {/* 재료 */}
         <div
           className={[
-            'col-span-4 rounded-2xl border border-white/10 bg-black/40 p-2 flex flex-col min-h-0',
+            'col-span-4 rounded-3xl border border-ink/30 bg-paper2/90 p-2 flex flex-col min-h-0 shadow-paper',
             tutorialHighlightInventory ? 'ring-4 ring-amber-300/70' : '',
           ].join(' ')}
         >
@@ -344,7 +344,7 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
                   }}
                   className={[
                     'select-none rounded-xl border p-1.5',
-                    'bg-white/5 border-white/10',
+                    'bg-paper/70 border-ink/25',
                     isTutorialTarget ? 'ring-2 ring-amber-300/80 shadow-[0_0_18px_rgba(251,191,36,0.35)] animate-pulse' : '',
                     disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-grab active:cursor-grabbing hover:bg-white/10',
                   ].join(' ')}
@@ -377,7 +377,7 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
         {/* 작업대(드롭존) */}
         <div
           className={[
-            'col-span-4 rounded-2xl border border-white/10 bg-black/40 p-2 relative flex flex-col min-h-0',
+            'col-span-4 rounded-3xl border border-ink/30 bg-paper2/90 p-2 relative flex flex-col min-h-0 shadow-paper',
             tutorialHighlightWorkbench ? 'ring-4 ring-amber-300/70' : '',
           ].join(' ')}
         >
@@ -404,7 +404,7 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
             }}
           >
             {/* 배경 위에 살짝 어둡게(가독성) */}
-            <div className="absolute inset-0 rounded-2xl bg-black/35 pointer-events-none" />
+            <div className="absolute inset-0 rounded-2xl bg-paper/55 pointer-events-none" />
 
             {/* 오답 연기(펑!) */}
             {smoke && (
@@ -424,7 +424,7 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
                 const id = workbench[i];
                 if (!id) {
                   return (
-                    <div key={i} className="rounded-xl border border-white/10 bg-black/30 h-14 grid place-items-center text-xs opacity-60">
+                    <div key={i} className="rounded-xl border border-ink/20 bg-paper/60 h-14 grid place-items-center text-xs opacity-70">
                       비어있음
                     </div>
                   );
@@ -435,7 +435,7 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
                     key={i}
                     type="button"
                     onClick={() => removeFromWorkbench(i)}
-                    className="rounded-xl border border-white/10 bg-white/5 h-14 flex items-center justify-center hover:bg-white/10"
+                    className="rounded-xl border border-ink/20 bg-paper/60 h-14 flex items-center justify-center hover:bg-paper/80"
                     title="클릭해서 빼기"
                   >
                     <img src={def.img} alt={def.name} className="w-10 h-10 object-contain" />
@@ -448,7 +448,7 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
               <button
                 type="button"
                 onClick={() => clearWorkbench(true)}
-                className="px-3 py-2 rounded-xl border border-white/15 bg-white/5 hover:bg-white/10 text-xs font-black"
+                className="px-3 py-2 rounded-xl border border-ink/25 bg-paper/70 hover:bg-paper/90 text-xs font-black"
               >
                 비우기
               </button>
@@ -457,8 +457,8 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
                 disabled={!canCombine}
                 onClick={combine}
                 className={[
-                  'px-3 py-2 rounded-xl text-xs font-black',
-                  canCombine ? 'bg-amber-400 text-black hover:bg-amber-300' : 'bg-white/10 text-white/40 cursor-not-allowed',
+                  'px-3 py-2 rounded-xl text-xs font-black border',
+                  canCombine ? 'bg-stamp text-white hover:opacity-95 border-ink/25' : 'bg-paper/50 text-ink/40 cursor-not-allowed border-ink/20',
                 ].join(' ')}
               >
                 조합하기
@@ -487,7 +487,7 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
         </div>
 
         {/* 내 유물 도감 */}
-        <div className="col-span-4 rounded-2xl border border-white/10 bg-black/40 p-2 flex flex-col min-h-0">
+        <div className="col-span-4 rounded-3xl border border-ink/30 bg-paper2/90 p-2 flex flex-col min-h-0 shadow-paper">
           <div className="text-sm font-extrabold mb-2">내 유물 도감</div>
           <div className="grid grid-cols-2 gap-1">
             {RELICS.map((r) => {
@@ -504,15 +504,15 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
                   }}
                   className={[
                     'rounded-xl border p-1.5',
-                    got ? 'border-emerald-400/40 bg-emerald-400/10' : 'border-white/10 bg-white/5 opacity-70',
-                    got ? 'text-left hover:bg-emerald-400/15 cursor-pointer' : 'cursor-not-allowed',
+                    got ? 'border-olive/55 bg-olive/10' : 'border-ink/20 bg-paper/60 opacity-70',
+                    got ? 'text-left hover:bg-olive/15 cursor-pointer' : 'cursor-not-allowed',
                   ].join(' ')}
                 >
                   <div className="flex items-center gap-2">
                     <img
                       src={r.img}
                       alt={r.name}
-                      className={['w-8 h-8 object-contain', got ? '' : 'grayscale opacity-60'].join(' ')}
+                    className={['w-8 h-8 object-contain', got ? '' : 'grayscale opacity-60'].join(' ')}
                     />
                     <div className="min-w-0">
                       <div className="text-xs font-black">{got ? r.name : '???'}</div>
@@ -526,7 +526,7 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
 
           <div
             className={[
-              'mt-2 rounded-xl border border-white/10 bg-black/30 p-2',
+              'mt-2 rounded-xl border border-ink/20 bg-paper/60 p-2',
               tutorialHighlightHint ? 'ring-4 ring-amber-300/60' : '',
             ].join(' ')}
           >
@@ -541,12 +541,12 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
 
       {/* 튜토리얼 대화(진입 직후) */}
       {tutorialMode === 'DIALOGUE' && (
-        <div className="absolute inset-0 z-[11000] bg-black/70 grid place-items-center p-4">
-          <div className="w-full max-w-[560px] rounded-2xl border border-white/15 bg-zinc-950/95 text-white shadow-2xl">
+        <div className="absolute inset-0 z-[11000] bg-ink/35 grid place-items-center p-4">
+          <div className="w-full max-w-[560px] rounded-3xl border-2 border-ink/35 bg-paper2 text-ink shadow-paper">
             <div className="p-5">
               <div className="text-xs font-black opacity-85">튜토리얼 · 청동 거울 만들기</div>
               <div className="mt-3 flex items-start gap-3">
-                <div className="w-14 h-14 rounded-2xl overflow-hidden border border-white/15 bg-white/5 flex-shrink-0">
+                <div className="w-14 h-14 rounded-2xl overflow-hidden border border-ink/25 bg-paper/60 flex-shrink-0">
                   <img
                     src={tutorialLines[tutorialIdx]?.speaker === 'han' ? '/assets/images/han_2.png' : '/assets/images/yang_2.png'}
                     alt=""
@@ -564,7 +564,7 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
             <div className="p-5 pt-0 flex gap-2 justify-end">
               <button
                 type="button"
-                className="rounded-xl px-3 py-2 text-xs font-black bg-white/10 hover:bg-white/15"
+                className="rounded-xl px-3 py-2 text-xs font-black bg-stamp text-white border border-ink/25 shadow-md hover:opacity-95"
                 onClick={() => {
                   // 타이핑 중이면 먼저 전체 출력
                   if (tTyping) {
@@ -599,13 +599,13 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
 
       {toast && (
         <div className="absolute left-1/2 top-2 -translate-x-1/2 z-[9000] pointer-events-none">
-          <div className="rounded-xl border border-white/10 bg-black/75 px-3 py-2 text-xs font-black shadow-2xl">{toast}</div>
+          <div className="rounded-xl border border-ink/25 bg-paper2 px-3 py-2 text-xs font-black shadow-paper">{toast}</div>
         </div>
       )}
       {/* 유물 획득 팝업(정답 조합 시) */}
       {relicModal && (
-        <div className="absolute inset-0 z-[10000] grid place-items-center bg-black/60 p-4">
-          <div className="relative overflow-hidden w-full max-w-[440px] rounded-2xl border border-white/15 bg-zinc-950/95 text-white shadow-2xl">
+        <div className="absolute inset-0 z-[10000] grid place-items-center bg-ink/35 p-4">
+          <div className="relative overflow-hidden w-full max-w-[440px] rounded-3xl border-2 border-ink/35 bg-paper2 text-ink shadow-paper">
             {/* 반짝 이펙트 */}
             {sparkle && (
               <div className="pointer-events-none absolute inset-0">
@@ -634,7 +634,7 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
                 <img
                   src={RELICS.find((r) => r.id === relicModal.id)?.img}
                   alt=""
-                  className="w-20 h-20 object-contain rounded-xl bg-white/5 border border-white/10"
+                  className="w-20 h-20 object-contain rounded-xl bg-paper/60 border border-ink/20"
                 />
                 <div className="min-w-0">
                   <div className="text-sm font-black">{RELICS.find((r) => r.id === relicModal.id)?.name}</div>
@@ -646,7 +646,7 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
             <div className="p-4 pt-0">
               <button
                 type="button"
-                className="w-full rounded-xl bg-amber-400 text-black font-black py-3 hover:bg-amber-300"
+                className="w-full rounded-xl bg-stamp text-white border border-ink/25 font-black py-3 shadow-md hover:opacity-95"
                 onClick={() => {
                   audio.playUrl('/assets/sounds/sfx_unlock.mp3', 0.8);
                   const now = Date.now();
@@ -680,9 +680,9 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
 
       {/* 최종 결과 감상창 (자동 전환 없이, 유저 클릭으로만 맵 복귀) */}
       {resultModal && (
-        <div className="absolute inset-0 z-[10010] bg-black/80 p-0">
+        <div className="absolute inset-0 z-[10010] bg-ink/35 p-0">
           {/* 미니게임 테이블(캔버스)만큼 꽉 차게 */}
-          <div className="w-full h-full bg-zinc-950/95 text-white shadow-2xl flex flex-col">
+          <div className="w-full h-full bg-paper2 text-ink shadow-paper flex flex-col">
             <div className="flex-1 min-h-0 overflow-hidden">
               <img
                 src={realImg}
@@ -704,7 +704,7 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
               </div>
               <button
                 type="button"
-                className="mt-3 w-full rounded-xl bg-emerald-400 text-black font-black py-3 hover:bg-emerald-300"
+                className="mt-3 w-full rounded-xl bg-olive text-white border border-ink/25 font-black py-3 shadow-md hover:opacity-95"
                 onClick={() => {
                   const now = Date.now();
                   const started = startedAt ?? now;

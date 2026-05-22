@@ -26,8 +26,8 @@
 .leftPane {
   border-radius: 16px;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(0, 0, 0, 0.22);
+  border: 2px solid rgba(74, 55, 40, 0.28);
+  background: rgba(248, 241, 227, 0.9);
 }
 
 .leftPane img {
@@ -54,18 +54,18 @@
 .backBtn {
   padding: 8px 10px;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(0, 0, 0, 0.35);
-  color: rgba(255, 255, 255, 0.92);
+  border: 2px solid rgba(74, 55, 40, 0.28);
+  background: rgba(248, 241, 227, 0.95);
+  color: rgba(74, 55, 40, 0.95);
   cursor: pointer;
   font-weight: 900;
 }
 
 .stage {
   font-weight: 900;
-  color: rgba(255, 255, 255, 0.92);
-  background: rgba(0, 0, 0, 0.45);
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: rgba(74, 55, 40, 0.95);
+  background: rgba(248, 241, 227, 0.95);
+  border: 2px solid rgba(74, 55, 40, 0.28);
   padding: 8px 10px;
   border-radius: 12px;
 }
@@ -73,9 +73,9 @@
 .skipBtn {
   padding: 8px 10px;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(0, 0, 0, 0.35);
-  color: rgba(255, 255, 255, 0.9);
+  border: 2px solid rgba(74, 55, 40, 0.28);
+  background: rgba(248, 241, 227, 0.95);
+  color: rgba(74, 55, 40, 0.9);
   cursor: pointer;
   font-weight: 900;
 }
@@ -83,9 +83,9 @@
 .meta {
   padding: 10px 10px;
   border-radius: 14px;
-  background: rgba(0, 0, 0, 0.35);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: rgba(255, 255, 255, 0.9);
+  background: rgba(248, 241, 227, 0.95);
+  border: 2px solid rgba(74, 55, 40, 0.28);
+  color: rgba(74, 55, 40, 0.95);
   /* 우측 패널: 설명 영역을 아래로 충분히 확장 */
   flex: 1 1 auto;
   min-height: 0;
@@ -117,11 +117,11 @@
 
 .metaKey {
   font-weight: 900;
-  color: rgba(255, 255, 255, 0.82);
+  color: rgba(74, 55, 40, 0.78);
 }
 
 .metaVal {
-  color: rgba(255, 255, 255, 0.92);
+  color: rgba(74, 55, 40, 0.92);
   font-weight: 800;
 }
 
@@ -129,7 +129,7 @@
   margin-top: 8px;
   font-size: 14px;
   line-height: 1.55;
-  color: rgba(255, 255, 255, 0.82);
+  color: rgba(74, 55, 40, 0.86);
   word-break: keep-all;
   max-height: none;
   overflow: visible;
@@ -141,10 +141,9 @@
   gap: 10px;
   padding: 12px;
   border-radius: 16px;
-  /* 가독성 강화: 진한 네이비 + 살짝 밝은 테두리 */
-  background: rgba(15, 23, 42, 0.92); /* slate-900 계열 */
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+  background: rgba(248, 241, 227, 0.98);
+  border: 2px solid rgba(74, 55, 40, 0.32);
+  box-shadow: 0 16px 40px rgba(74, 55, 40, 0.18);
   z-index: 2;
   flex: 0 0 148px; /* 우측 하단 고정 높이 */
 }
@@ -154,8 +153,8 @@
   height: 68px;
   border-radius: 14px;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(244, 235, 217, 0.65);
+  border: 2px solid rgba(74, 55, 40, 0.22);
   flex: 0 0 auto;
 }
 
@@ -183,7 +182,7 @@
   line-height: 1.6;
   word-break: keep-all;
   min-height: 46px;
-  color: rgba(255, 255, 255, 0.96);
+  color: rgba(74, 55, 40, 0.95);
 }
 
 .dialogueHint {
@@ -197,8 +196,8 @@
   align-self: stretch;
   padding: 10px 12px;
   border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  background: rgba(255, 255, 255, 0.14);
+  border: 2px solid rgba(74, 55, 40, 0.28);
+  background: var(--stamp);
   color: #fff;
   cursor: pointer;
   font-weight: 900;
@@ -213,5 +212,5 @@
   height: 100%;
   display: grid;
   place-items: center;
-  color: #fff;
+  color: var(--ink);
 }

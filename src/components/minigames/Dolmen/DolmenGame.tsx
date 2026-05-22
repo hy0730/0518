@@ -297,7 +297,7 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
   };
 
   return (
-    <div className="w-full h-full p-2 text-white flex flex-col">
+    <div className="w-full h-full p-2 text-ink flex flex-col">
       <style>{`
         @keyframes shake {
           0% { transform: translate(0,0) rotate(0); }
@@ -338,7 +338,7 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
 
       {/* 스크롤 없이 화면 내에 맞추기: flex 레이아웃으로 높이를 분배 */}
       <div className="mt-2 flex-1 min-h-0">
-        <div className="h-full rounded-2xl border border-white/10 bg-black/35 p-2 flex flex-col min-h-0">
+        <div className="h-full rounded-3xl border border-ink/30 bg-paper2/90 p-2 flex flex-col min-h-0 shadow-paper">
           <div className="text-sm font-extrabold mb-2">
             {phase === 'QUARRY' && 'Phase 1: 채석 (나무쐐기 + 물의 팽창)'}
             {phase === 'BIND' && 'Phase 2: 밧줄 묶기'}
@@ -348,7 +348,7 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
 
           {/* 실제 플레이 영역(게임 보드) - 배경은 여기만 적용 */}
           <div
-            className="relative flex-1 min-h-0 rounded-2xl border border-white/10 overflow-hidden bg-cover bg-center bg-no-repeat"
+            className="relative flex-1 min-h-0 rounded-3xl border border-ink/25 overflow-hidden bg-cover bg-center bg-no-repeat"
             style={{
               backgroundImage: "linear-gradient(rgba(0,0,0,0.25),rgba(0,0,0,0.65)), url('/assets/images/capstone_map.png')",
             }}
@@ -374,7 +374,7 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
                 {[0, 1, 2].map((i) => (
                   <div
                     key={i}
-                    className="absolute w-12 h-12 rounded-xl border-2 border-dashed border-white/35 bg-black/35 grid place-items-center"
+                    className="absolute w-12 h-12 rounded-xl border-2 border-dashed border-ink/30 bg-paper/55 grid place-items-center"
                     style={{
                       left: WEDGE_POS[i].left,
                       top: WEDGE_POS[i].top,
@@ -461,7 +461,7 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
                         <div
                           key={i}
                           className={[
-                            'rounded-xl border-2 border-dashed border-white/25 bg-black/25 h-12 md:h-14 grid place-items-center',
+                            'rounded-xl border-2 border-dashed border-ink/25 bg-paper/55 h-12 md:h-14 grid place-items-center',
                             // 튜토리얼(LOG)에서는 "비어있는 슬롯"만 더 강하게 하이라이트
                             tutorialMode === 'LOG' && !s
                               ? 'ring-4 ring-amber-300/80 bg-amber-300/10 shadow-[0_0_22px_rgba(251,191,36,0.35)] animate-pulse'
@@ -537,7 +537,7 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
                 className={[
                   'absolute right-3 bottom-[15%] z-50',
                   tutorialMode === 'PULL' ? 'animate-pulse' : '',
-                  'rounded-full border border-white/20 bg-black/45 p-2 shadow-[0_18px_40px_rgba(0,0,0,0.55)]',
+                  'rounded-full border border-ink/25 bg-paper/70 p-2 shadow-paper',
                 ].join(' ')}
                 title={
                   phase === 'BIND'
@@ -555,7 +555,7 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
           {/* 인벤토리(배경 밖) */}
           <div className="mt-2 grid grid-cols-2 gap-2">
             {/* 쐐기 + 물 */}
-            <div className="rounded-2xl border border-white/10 bg-black/40 p-2">
+            <div className="rounded-3xl border border-ink/30 bg-paper2/90 p-2 shadow-paper">
               <div className="text-[11px] font-black opacity-90 mb-2">도구</div>
               <div className="flex items-center gap-2">
                 <div
@@ -571,7 +571,7 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
                     placeWedgeToFirstEmpty();
                   }}
                   className={[
-                    'rounded-xl border border-white/10 bg-white/5 p-2 flex items-center gap-2',
+                    'rounded-xl border border-ink/25 bg-paper/70 p-2 flex items-center gap-2',
                     phase === 'QUARRY' ? 'cursor-grab active:cursor-grabbing hover:bg-white/10' : 'opacity-50 cursor-not-allowed',
                     tutorialMode === 'WEDGE' ? 'ring-2 ring-amber-300/80 shadow-[0_0_18px_rgba(251,191,36,0.30)] animate-pulse' : '',
                   ].join(' ')}
@@ -589,13 +589,13 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
                     'ml-auto rounded-xl px-3 py-2 font-black text-[11px] flex items-center gap-1.5 border',
                     allWedgesPlaced && phase === 'QUARRY' && !wedgeSwelling && !mountainShake
                       ? [
-                          'bg-sky-400 text-black hover:bg-sky-300 active:translate-y-[1px]',
-                          'border-sky-300/60',
+                          'bg-olive text-white hover:opacity-95 active:translate-y-[1px]',
+                          'border-ink/25',
                           tutorialMode === 'WEDGE'
                             ? 'ring-2 ring-amber-300/70 shadow-[0_0_18px_rgba(251,191,36,0.25)] animate-pulse'
                             : '',
                         ].join(' ')
-                      : 'bg-white/10 text-white/40 cursor-not-allowed border-white/10',
+                      : 'bg-paper/50 text-ink/40 cursor-not-allowed border-ink/20',
                   ].join(' ')}
                 >
                   <img src="/assets/images/icon_water.png" alt="" className="w-5 h-5 object-contain" />
@@ -605,7 +605,7 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
             </div>
 
             {/* 통나무 */}
-            <div className="rounded-2xl border border-white/10 bg-black/40 p-2">
+            <div className="rounded-3xl border border-ink/30 bg-paper2/90 p-2 shadow-paper">
               <div className="text-[11px] font-black opacity-90 mb-2">통나무</div>
               <div className="flex items-center gap-2">
                 <div
@@ -621,7 +621,7 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
                     placeLogToFirstEmpty();
                   }}
                   className={[
-                    'rounded-xl border border-white/10 bg-white/5 p-2 flex items-center gap-2',
+                    'rounded-xl border border-ink/25 bg-paper/70 p-2 flex items-center gap-2',
                     phase === 'PREPARE' && logsCount > 0 ? 'cursor-grab active:cursor-grabbing hover:bg-white/10' : 'opacity-50 cursor-not-allowed',
                     tutorialMode === 'LOG' ? 'ring-2 ring-amber-300/80 shadow-[0_0_18px_rgba(251,191,36,0.30)] animate-pulse' : '',
                   ].join(' ')}
@@ -635,7 +635,7 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
           </div>
 
           {/* 안내 메시지(배경 밖) */}
-          <div className="mt-2 rounded-xl border border-white/10 bg-black/35 p-2 text-[12px] leading-relaxed">
+          <div className="mt-2 rounded-2xl border border-ink/25 bg-paper/70 p-2 text-[12px] leading-relaxed shadow-md">
             {phase === 'QUARRY' && '나무쐐기 3개를 바위 틈에 꽂고, 물을 뿌려 바위를 쪼개보자! (드래그 또는 클릭)'}
             {phase === 'BIND' && '떼돌 옆의 손 아이콘을 눌러 밧줄로 묶어보자!'}
             {phase === 'PREPARE' && '통나무 3개를 돌 아래에 깔아주세요. (드래그 또는 클릭)'}
@@ -646,7 +646,7 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
           </div>
 
           {feedback && (
-            <div className="mt-2 rounded-xl border border-white/10 bg-black/35 p-2 text-center text-sm font-black">
+            <div className="mt-2 rounded-2xl border border-ink/25 bg-paper/70 p-2 text-center text-sm font-black shadow-md">
               {feedback}
             </div>
           )}
@@ -655,12 +655,12 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
 
       {/* 튜토리얼: 시작 대사(첫 진입) */}
       {tutorialMode === 'DIALOGUE' && (
-        <div className="absolute inset-0 z-[11000] bg-black/70 grid place-items-center p-4">
-          <div className="w-full max-w-[560px] rounded-2xl border border-white/15 bg-zinc-950/95 text-white shadow-2xl">
+        <div className="absolute inset-0 z-[11000] bg-ink/35 grid place-items-center p-4">
+          <div className="w-full max-w-[560px] rounded-3xl border-2 border-ink/35 bg-paper2 text-ink shadow-paper">
             <div className="p-5">
               <div className="text-xs font-black opacity-85">튜토리얼 · 고인돌 옮기기</div>
               <div className="mt-3 flex items-start gap-3">
-                <div className="w-14 h-14 rounded-2xl overflow-hidden border border-white/15 bg-white/5 flex-shrink-0">
+                <div className="w-14 h-14 rounded-2xl overflow-hidden border border-ink/25 bg-paper/60 flex-shrink-0">
                   <img
                     src={tutorialLines[tutorialIdx]?.speaker === 'han' ? '/assets/images/han_2.png' : '/assets/images/yang_2.png'}
                     alt=""
@@ -678,7 +678,7 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
             <div className="p-5 pt-0 flex gap-2 justify-end">
               <button
                 type="button"
-                className="rounded-xl px-3 py-2 text-xs font-black bg-white/10 hover:bg-white/15"
+                className="rounded-xl px-3 py-2 text-xs font-black bg-stamp text-white border border-ink/25 shadow-md hover:opacity-95"
                 onClick={() => {
                   if (tTyping) {
                     if (tTimer.current) window.clearInterval(tTimer.current);
@@ -703,12 +703,12 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
 
       {/* 튜토리얼: 통나무 배치 후 당기기 안내 */}
       {postModalOpen && (
-        <div className="absolute inset-0 z-[11000] bg-black/70 grid place-items-center p-4">
-          <div className="w-full max-w-[560px] rounded-2xl border border-white/15 bg-zinc-950/95 text-white shadow-2xl">
+        <div className="absolute inset-0 z-[11000] bg-ink/35 grid place-items-center p-4">
+          <div className="w-full max-w-[560px] rounded-3xl border-2 border-ink/35 bg-paper2 text-ink shadow-paper">
             <div className="p-5">
               <div className="text-xs font-black opacity-85">튜토리얼 · 협동으로 당기기</div>
               <div className="mt-3 flex items-start gap-3">
-                <div className="w-14 h-14 rounded-2xl overflow-hidden border border-white/15 bg-white/5 flex-shrink-0">
+                <div className="w-14 h-14 rounded-2xl overflow-hidden border border-ink/25 bg-paper/60 flex-shrink-0">
                   <img
                     src={postLines[postIdx]?.speaker === 'han' ? '/assets/images/han_2.png' : '/assets/images/yang_2.png'}
                     alt=""
@@ -726,7 +726,7 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
             <div className="p-5 pt-0 flex gap-2 justify-end">
               <button
                 type="button"
-                className="rounded-xl px-3 py-2 text-xs font-black bg-white/10 hover:bg-white/15"
+                className="rounded-xl px-3 py-2 text-xs font-black bg-stamp text-white border border-ink/25 shadow-md hover:opacity-95"
                 onClick={() => {
                   if (postTyping) {
                     if (postTimer.current) window.clearInterval(postTimer.current);
@@ -751,14 +751,14 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
 
       {toast && (
         <div className="absolute left-1/2 top-2 -translate-x-1/2 z-[9000] pointer-events-none">
-          <div className="rounded-xl border border-white/10 bg-black/75 px-3 py-2 text-xs font-black shadow-2xl">{toast}</div>
+          <div className="rounded-xl border border-ink/25 bg-paper2 px-3 py-2 text-xs font-black shadow-paper">{toast}</div>
         </div>
       )}
 
       {/* 결과창(수동 복귀) */}
       {resultModal && (
-        <div className="fixed inset-0 z-[10010] bg-black/80 p-0">
-          <div className="w-full h-full bg-zinc-950/95 text-white shadow-2xl flex flex-col">
+        <div className="fixed inset-0 z-[10010] bg-ink/35 p-0">
+          <div className="w-full h-full bg-paper2 text-ink shadow-paper flex flex-col">
             <div className="flex-1 min-h-0 overflow-hidden">
               <img
                 src={realImg}
@@ -771,14 +771,14 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
                 }}
               />
             </div>
-            <div className="p-4 border-t border-white/10 bg-black/40">
+            <div className="p-4 border-t border-ink/20 bg-paper/70">
               <div className="text-lg font-black">성공! 고인돌 완성</div>
               <div className="mt-1 text-sm opacity-85 leading-relaxed">
                 성공! 나무의 팽창하는 힘으로 바위를 쪼개고, 굴림대로 무거운 지석묘를 옮겨 무덤을 완성했어요!
               </div>
               <button
                 type="button"
-                className="mt-3 w-full rounded-xl bg-emerald-400 text-black font-black py-3 hover:bg-emerald-300"
+                className="mt-3 w-full rounded-xl bg-olive text-white border border-ink/25 font-black py-3 shadow-md hover:opacity-95"
                 onClick={() => {
                   const now = Date.now();
                   const started = startedAt ?? now;
