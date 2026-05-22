@@ -86,8 +86,18 @@ export default function StoryScreen() {
   return (
     <div
       className={styles.root}
-      onClick={() => {
-        // 화면 아무 곳이나 터치하면 다음 대사로 진행
+      onPointerDown={(e) => {
+        // 모바일에서 click 이벤트가 지연/누락되는 경우가 있어 pointer 기반으로 처리
+        const t = e.target as HTMLElement | null;
+        const isInteractive = !!t?.closest?.('button, a, input, textarea, select, [role="button"]');
+        if (isInteractive) return;
+        advance();
+      }}
+      onClick={(e) => {
+        // 일부 환경에서 pointer 이벤트가 없을 수 있어 click도 보조로 유지
+        const t = e.target as HTMLElement | null;
+        const isInteractive = !!t?.closest?.('button, a, input, textarea, select, [role="button"]');
+        if (isInteractive) return;
         advance();
       }}
     >
