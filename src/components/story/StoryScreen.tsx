@@ -36,10 +36,12 @@ export default function StoryScreen() {
   const [isTyping, setIsTyping] = useState(false);
   const typingTimer = useRef<number | null>(null);
   const lastAdvanceAt = useRef(0);
+  const [isDescExpanded, setIsDescExpanded] = useState(false);
 
   // 스테이지가 바뀌면 대사 인덱스 초기화
   useEffect(() => {
     setIdx(0);
+    setIsDescExpanded(false);
   }, [currentStageId]);
 
   const advance = () => {
@@ -86,6 +88,21 @@ export default function StoryScreen() {
   }
 
   const line = lines[idx] ?? lines[lines.length - 1];
+
+  const relicMainImage = useMemo(() => {
+    const map: Record<number, string> = {
+      1: '/assets/images/relic_gwanyang_main.png',
+      2: '/assets/images/relic_pyeongchon_main.png',
+      3: '/assets/images/relic_seoksu_main.png',
+      4: '/assets/images/relic_jungcho_main.png',
+      5: '/assets/images/relic_bell_main.png',
+      6: '/assets/images/relic_turtle_main.png',
+      7: '/assets/images/relic_bisan_main.png',
+      8: '/assets/images/relic_bridge_main.png',
+      9: '/assets/images/relic_seoimyeon_main.png',
+    };
+    return map[currentStageId] ?? '';
+  }, [currentStageId]);
 
   // 타입라이터(읽는 시간 확보) - 탭하면 즉시 전체 출력, 다음 탭에 넘어감
   useEffect(() => {
@@ -164,25 +181,40 @@ export default function StoryScreen() {
       </div>
 
       <div className={styles.meta}>
-        <div className={styles.metaRow}>
-          <span className={styles.metaKey}>시대</span>
-          <span className={styles.metaVal}>{stage.era}</span>
+        <div className={styles.metaGrid}>
+          <div className={styles.metaThumb}>
+            {relicMainImage ? <img src={relicMainImage} alt="" draggable={false} /> : <div className={styles.thumbFallback} />}
+          </div>
+
+          <div className={styles.metaBody}>
+            <div className={styles.metaRow}>
+              <span className={styles.metaKey}>시대</span>
+              <span className={styles.metaVal}>{stage.era}</span>
+            </div>
+            <div className={styles.metaRow}>
+              <span className={styles.metaKey}>위치</span>
+              <span className={styles.metaVal}>{stage.location}</span>
+            </div>
+
+            <div className={`${styles.metaDesc} ${isDescExpanded ? styles.metaDescExpanded : ''}`}>{stage.description}</div>
+
+            {stage.description.length >= 85 && (
+              <button
+                type="button"
+                className={styles.moreBtn}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsDescExpanded((v) => !v);
+                }}
+              >
+                {isDescExpanded ? '접기' : '더보기'}
+              </button>
+            )}
+          </div>
         </div>
-        <div className={styles.metaRow}>
-          <span className={styles.metaKey}>위치</span>
-          <span className={styles.metaVal}>{stage.location}</span>
-        </div>
-        <div className={styles.metaDesc}>{stage.description}</div>
       </div>
 
       <div className={styles.scene}>
-        <div className={`${styles.character} ${styles.left}`}>
-          <img src="/assets/images/han_1.png" alt="한" />
-        </div>
-        <div className={`${styles.character} ${styles.right}`}>
-          <img src="/assets/images/yang_1.png" alt="양" />
-        </div>
-
         <div className={styles.dialogueBar} data-interactive="true">
           <div className={styles.dialoguePortrait}>
             <img
