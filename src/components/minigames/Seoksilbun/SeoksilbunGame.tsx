@@ -466,8 +466,10 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
           }
         }}
       >
-        {/* 중앙 "무덤" 영역 (좌/우 인벤토리를 제외한 자유 배치 영역) */}
-        <div ref={tombRef} className="absolute left-[156px] right-[156px] top-0 bottom-0 relative">
+        {/* 중앙 "무덤" 영역 (좌/우 인벤토리를 제외한 자유 배치 영역)
+            주의: Tailwind에서 `relative`/`absolute`를 같이 쓰면 뒤의 class가 position을 덮어써서
+            높이/너비가 0이 되어 배치 좌표가 한 곳에 몰릴 수 있음. */}
+        <div ref={tombRef} className="absolute left-[156px] right-[156px] top-0 bottom-0">
           {/* 튜토리얼 드롭존(빛나는 영역) */}
           {phase === 'TUTORIAL' && (
             <div className="absolute left-1/2 top-[52%] -translate-x-1/2 -translate-y-1/2 w-[140px] h-[110px] rounded-2xl border-2 border-amber-300/70 bg-amber-300/10 shadow-[0_0_30px_rgba(251,191,36,0.35)] animate-pulse" />
