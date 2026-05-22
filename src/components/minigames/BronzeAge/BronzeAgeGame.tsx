@@ -31,6 +31,8 @@ const INGREDIENTS: IngredientDef[] = [
   { id: 'tin', name: '주석', img: '/assets/images/items/item_tin.png', initial: 1 },
 ];
 
+const TUTORIAL_TARGETS: IngredientId[] = ['copper', 'tin', 'fire'];
+
 const RELICS: RelicDef[] = [
   { id: 'pottery', name: '민무늬 토기', img: '/assets/images/items/item_pottery.png', recipe: ['clay', 'fire'] },
   { id: 'sickle', name: '반달 돌칼', img: '/assets/images/items/item_knife.png', recipe: ['stone', 'stone'] },
@@ -322,6 +324,7 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
             {INGREDIENTS.map((ing) => {
               const left = counts[ing.id] ?? 0;
               const disabled = left <= 0;
+              const isTutorialTarget = tutorialMode === 'MAKE_MIRROR' && TUTORIAL_TARGETS.includes(ing.id);
               return (
                 <div
                   key={ing.id}
@@ -339,12 +342,20 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
                   className={[
                     'select-none rounded-xl border p-1.5',
                     'bg-white/5 border-white/10',
+                    isTutorialTarget ? 'ring-2 ring-amber-300/80 shadow-[0_0_18px_rgba(251,191,36,0.35)] animate-pulse' : '',
                     disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-grab active:cursor-grabbing hover:bg-white/10',
                   ].join(' ')}
                   title={disabled ? '재료가 부족해요' : '드래그해서 작업대에 넣기'}
                 >
                   <div className="flex items-center gap-2">
-                    <img src={ing.img} alt={ing.name} className="w-8 h-8 object-contain" />
+                    <img
+                      src={ing.img}
+                      alt={ing.name}
+                      className={[
+                        'w-8 h-8 object-contain',
+                        isTutorialTarget ? 'drop-shadow-[0_0_10px_rgba(251,191,36,0.55)]' : '',
+                      ].join(' ')}
+                    />
                     <div className="min-w-0">
                       <div className="text-xs font-black">{ing.name}</div>
                       <div className="text-[10px] opacity-80">x {left}</div>
