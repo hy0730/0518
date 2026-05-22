@@ -118,7 +118,7 @@ export default function StoryScreen() {
 
     const full = line.text;
     let i = 0;
-    // 타이핑 속도(읽기 쉬운 속도)
+    // 타이핑 속도(천천히, 읽기 쉬운 속도)
     typingTimer.current = window.setInterval(() => {
       i += 1;
       setDisplayText(full.slice(0, i));
@@ -127,7 +127,7 @@ export default function StoryScreen() {
         typingTimer.current = null;
         setIsTyping(false);
       }
-    }, 45);
+    }, 70);
 
     return () => {
       if (typingTimer.current) window.clearInterval(typingTimer.current);
@@ -213,41 +213,38 @@ export default function StoryScreen() {
         </div>
       </div>
 
-      {/* 본문: 50:50 세로 분할(설명/대사) */}
+      {/* 본문: 빨간 선 기준(좌: 문화유산 이미지 / 우: 설명+대사) 50:50 세로 분할 */}
       <div className={styles.content}>
-        <div className={styles.meta}>
-          <div className={styles.metaGrid}>
-            <div className={styles.metaThumb}>
-              {relicMainImage ? <img src={relicMainImage} alt="" draggable={false} /> : <div className={styles.thumbFallback} />}
-            </div>
-
-            <div className={styles.metaBody}>
-              <div className={styles.metaRow}>
-                <span className={styles.metaKey}>시대</span>
-                <span className={styles.metaVal}>{stage.era}</span>
-              </div>
-              <div className={styles.metaRow}>
-                <span className={styles.metaKey}>위치</span>
-                <span className={styles.metaVal}>{stage.location}</span>
-              </div>
-
-              <div className={styles.metaDesc}>{stage.description}</div>
-            </div>
-          </div>
+        <div className={styles.leftPane}>
+          {relicMainImage ? <img src={relicMainImage} alt="" draggable={false} /> : <div className={styles.thumbFallback} />}
         </div>
-
-        <div className={styles.scene}>
-          <div className={styles.dialogueBar} data-interactive="true">
-            <div className={styles.dialoguePortrait}>
-              <img
-                src={line.speaker === 'han' ? '/assets/images/han_2.png' : '/assets/images/yang_2.png'}
-                alt={line.speaker === 'han' ? '한' : '양'}
-              />
+        <div className={styles.divider} aria-hidden="true" />
+        <div className={styles.rightPane}>
+          <div className={styles.meta} data-interactive="true">
+            <div className={styles.metaRow}>
+              <span className={styles.metaKey}>시대</span>
+              <span className={styles.metaVal}>{stage.era}</span>
             </div>
-            <div className={styles.dialogueContent}>
-              <div className={styles.dialogueName}>{line.speaker === 'han' ? '한' : '양'}</div>
-              <div className={styles.dialogueText}>{displayText}</div>
-              <div className={styles.dialogueHint}>{isTyping ? '탭하면 전체 표시' : '탭하여 계속'}</div>
+            <div className={styles.metaRow}>
+              <span className={styles.metaKey}>위치</span>
+              <span className={styles.metaVal}>{stage.location}</span>
+            </div>
+            <div className={styles.metaDesc}>{stage.description}</div>
+          </div>
+
+          <div className={styles.scene}>
+            <div className={styles.dialogueBar} data-interactive="true">
+              <div className={styles.dialoguePortrait}>
+                <img
+                  src={line.speaker === 'han' ? '/assets/images/han_2.png' : '/assets/images/yang_2.png'}
+                  alt={line.speaker === 'han' ? '한' : '양'}
+                />
+              </div>
+              <div className={styles.dialogueContent}>
+                <div className={styles.dialogueName}>{line.speaker === 'han' ? '한' : '양'}</div>
+                <div className={styles.dialogueText}>{displayText}</div>
+                <div className={styles.dialogueHint}>{isTyping ? '탭하면 전체 표시' : '탭하여 계속'}</div>
+              </div>
             </div>
           </div>
         </div>

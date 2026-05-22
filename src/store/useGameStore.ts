@@ -93,6 +93,7 @@ type GameState = {
   toggleMute: () => void;
 
   setStoryIndex: (stageId: number, idx: number) => void;
+  resetGameData: () => void;
 
   // utils
   markVisited: (nodeId: string) => void;
@@ -343,6 +344,21 @@ export const useGameStore = create<GameState>()(
       setStoryIndex: (stageId, idx) =>
         set((state) => ({
           storyIndexByStage: { ...state.storyIndexByStage, [stageId]: Math.max(0, idx) },
+        })),
+
+      resetGameData: () =>
+        set(() => ({
+          appPhase: 'INTRO',
+          unlockedStageId: 1,
+          currentStageId: null,
+          playerName: '',
+          playerOrg: '',
+          currentNodeId: null,
+          visitedNodes: [],
+          currentDialog: null,
+          quizState: null,
+          storyIndexByStage: {},
+          isCollectionOpen: false,
         })),
 
       markVisited: (nodeId: string) => {

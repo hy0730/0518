@@ -26,6 +26,7 @@ const NODES: MapNode[] = [
 export default function MapScreen() {
   const regionData = useGameStore((s) => s.regionData);
   const unlockedStageId = useGameStore((s) => s.unlockedStageId);
+  const resetGameData = useGameStore((s) => s.resetGameData);
 
   if (!regionData) return null;
 
@@ -37,6 +38,20 @@ export default function MapScreen() {
       className={styles.map}
       style={mapBg ? ({ backgroundImage: `url(${mapBg})` } as React.CSSProperties) : undefined}
     >
+      <button
+        type="button"
+        className={styles.resetBtn}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const ok = window.confirm('정말로 게임 데이터를 초기화할까요?\n(진행도/방문 기록/이름·학교가 초기화됩니다)');
+          if (!ok) return;
+          resetGameData();
+        }}
+      >
+        게임 데이터 초기화
+      </button>
+
       {NODES.map((node) => {
         const stageId = node.stageId;
         const locked = stageId > unlockedStageId;
