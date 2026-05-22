@@ -4,6 +4,7 @@ import { audio } from '../../../utils/audio';
 import { storyDataByStageId } from '../../../data/storyData';
 
 type Phase = 'QUARRY' | 'BIND' | 'PREPARE' | 'MOVE';
+type TutorialMode = 'DIALOGUE' | 'WEDGE' | 'LOG' | 'PULL' | 'DONE';
 
 const TARGET_PROGRESS = 85;
 const QUARRY_SWELL_MS = 1500;
@@ -43,10 +44,122 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
   const [feedback, setFeedback] = useState<string | null>(null);
   const [resultModal, setResultModal] = useState(false);
 
+  // 튜토리얼(첫 진입): 쐐기+물 → 굴림대 → 당기기
+  const [tutorialMode, setTutorialMode] = useState<TutorialMode>('DIALOGUE');
+  const [tutorialIdx, setTutorialIdx] = useState(0);
+  const [tText, setTText] = useState('');
+  const [tTyping, setTTyping] = useState(false);
+  const tTimer = useRef<number | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+  const toastTimer = useRef<number | null>(null);
+
+  // 통나무 배치 이후(당기기 안내) 대사 모달
+  const [postModalOpen, setPostModalOpen] = useState(false);
+  const [postIdx, setPostIdx] = useState(0);
+  const [postText, setPostText] = useState('');
+  const [postTyping, setPostTyping] = useState(false);
+  const postTimer = useRef<number | null>(null);
+
   const allWedgesPlaced = wedgeSlots.every((s) => s === 'wedge');
   const allLogsPlaced = logSlots.every((s) => s === 'log');
 
   const showHand = (phase === 'BIND' && rockFallen && !ropeBound) || (phase === 'MOVE' && allLogsPlaced);
+
+  const showToast = (msg: string) => {
+    setToast(msg);
+    if (toastTimer.current) window.clearTimeout(toastTimer.current);
+    toastTimer.current = window.setTimeout(() => setToast(null), 1200);
+  };
+
+  const tutorialLines = useMemo(
+    () => [
+      {
+        speaker: 'han' as const,
+        text: '여기는 평촌동 지석묘야! 청동기 시대의 무덤인 커다란 고인돌이 있는 곳이지.',
+      },
+      {
+        speaker: 'yang' as const,
+        text: '앗, 덮개돌이 아직 제자리에 올라가지 못했어. 무거운 돌을 목적지까지 옮기려면 당시 사람들의 지혜가 필요해!',
+      },
+      {
+        speaker: 'han' as const,
+        text: '먼저 덮개돌을 분리해야 해. 나무쐐기를 돌 틈에 끼우고 물을 뿌려보자!',
+      },
+      {
+        speaker: 'yang' as const,
+        text: '아래에 반짝이는 나무쐐기를 클릭해 줘!',
+      },
+    ],
+    []
+  );
+
+  // 튜토리얼 타입라이터
+  useEffect(() => {
+    if (tutorialMode !== 'DIALOGUE') return;
+    if (tTimer.current) window.clearInterval(tTimer.current);
+    const full = tutorialLines[tutorialIdx]?.text ?? '';
+    setTText('');
+    setTTyping(true);
+    let i = 0;
+    tTimer.current = window.setInterval(() => {
+      i += 1;
+      setTText(full.slice(0, i));
+      if (i >= full.length) {
+        if (tTimer.current) window.clearInterval(tTimer.current);
+        tTimer.current = null;
+        setTTyping(false);
+      }
+    }, 55);
+    return () => {
+      if (tTimer.current) window.clearInterval(tTimer.current);
+      tTimer.current = null;
+    };
+  }, [tutorialMode, tutorialIdx, tutorialLines]);
+
+  useEffect(() => {
+    return () => {
+      if (tTimer.current) window.clearInterval(tTimer.current);
+      if (toastTimer.current) window.clearTimeout(toastTimer.current);
+      if (postTimer.current) window.clearInterval(postTimer.current);
+    };
+  }, []);
+
+  const postLines = useMemo(
+    () => [
+      {
+        speaker: 'han' as const,
+        text: '완벽해! 통나무 위로 돌이 굴러가면 훨씬 적은 힘으로도 무거운 돌을 옮길 수 있어.',
+      },
+      {
+        speaker: 'yang' as const,
+        text: '이제 화면의 협동(손) 버튼을 눌러서 밧줄을 당겨보자. 목적지까지 다 같이 영차! 영차!',
+      },
+    ],
+    []
+  );
+
+  // 통나무 배치 완료 후 "당기기" 안내 모달 타입라이터
+  useEffect(() => {
+    if (!postModalOpen) return;
+    if (postTimer.current) window.clearInterval(postTimer.current);
+    const full = postLines[postIdx]?.text ?? '';
+    setPostText('');
+    setPostTyping(true);
+    let i = 0;
+    postTimer.current = window.setInterval(() => {
+      i += 1;
+      setPostText(full.slice(0, i));
+      if (i >= full.length) {
+        if (postTimer.current) window.clearInterval(postTimer.current);
+        postTimer.current = null;
+        setPostTyping(false);
+      }
+    }, 55);
+    return () => {
+      if (postTimer.current) window.clearInterval(postTimer.current);
+      postTimer.current = null;
+    };
+  }, [postModalOpen, postIdx, postLines]);
 
   const placeWedgeToFirstEmpty = () => {
     setWedgeSlots((prev) => {
@@ -81,8 +194,31 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
     return () => window.clearTimeout(t);
   }, [phase, allLogsPlaced]);
 
+  // 튜토리얼: 쐐기+물 성공(떼돌 낙하) 후, 밧줄 묶기는 자동 처리하고 통나무 안내로 전환
+  useEffect(() => {
+    if (tutorialMode !== 'WEDGE') return;
+    if (phase !== 'BIND') return;
+    if (!rockFallen) return;
+    if (ropeBound) return;
+    startIfNeeded();
+    setRopeBound(true);
+    setPhase('PREPARE');
+    setTutorialMode('LOG');
+    showToast('좋아요! 이제 통나무(굴림대)를 깔아보자!');
+  }, [tutorialMode, phase, rockFallen, ropeBound]);
+
+  // 튜토리얼: 통나무 배치 완료 후 당기기 안내 모달
+  useEffect(() => {
+    if (tutorialMode !== 'LOG') return;
+    if (phase !== 'MOVE') return;
+    setTutorialMode('PULL');
+    setPostIdx(0);
+    setPostModalOpen(true);
+  }, [tutorialMode, phase]);
+
   const water = () => {
     if (phase !== 'QUARRY') return;
+    if (tutorialMode !== 'DONE' && tutorialMode !== 'WEDGE') return;
     if (!allWedgesPlaced) return;
     if (wedgeSwelling || mountainShake || rockFallen) return;
 
@@ -117,6 +253,7 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
 
   const bindRope = () => {
     if (phase !== 'BIND') return;
+    if (tutorialMode === 'LOG' || tutorialMode === 'PULL') return;
     if (!rockFallen || ropeBound) return;
     startIfNeeded();
     setAttempts((a) => a + 1);
@@ -129,8 +266,15 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
 
   const moveOnce = () => {
     if (phase !== 'MOVE') return;
+    if (postModalOpen) return;
+    if (tutorialMode !== 'DONE' && tutorialMode !== 'PULL') return;
     if (!allLogsPlaced) return;
     if (resultModal) return;
+
+    if (tutorialMode === 'PULL') {
+      setTutorialMode('DONE');
+      showToast('이제 계속 눌러서 목적지까지 옮겨보자!');
+    }
 
     startIfNeeded();
     setAttempts((a) => a + 1);
@@ -209,8 +353,10 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
             {/* 좌측 바위산 */}
             <div
               className={[
-                'absolute left-2 top-2 bottom-2 w-[30%] max-w-[200px]',
+                // mountain 이미지를 더 왼쪽에 딱 붙게
+                'absolute left-0 top-0 bottom-0 w-[30%] max-w-[210px]',
                 mountainShake ? 'shakeStrongFx' : '',
+                tutorialMode === 'WEDGE' ? 'ring-4 ring-amber-300/25' : '',
               ].join(' ')}
             >
               <img
@@ -234,6 +380,7 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
                     onDrop={(e) => {
                       e.preventDefault();
                       if (phase !== 'QUARRY') return;
+                      if (tutorialMode !== 'DONE' && tutorialMode !== 'WEDGE') return;
                       const raw = e.dataTransfer.getData('text/plain');
                       if (raw !== 'wedge') return;
                       setWedgeSlots((prev) => {
@@ -246,6 +393,7 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
                     }}
                     onClick={() => {
                       if (phase !== 'QUARRY') return;
+                      if (tutorialMode !== 'DONE' && tutorialMode !== 'WEDGE') return;
                       if (wedgeSlots[i]) return;
                       startIfNeeded();
                       setWedgeSlots((prev) => {
@@ -309,11 +457,15 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
                       {logSlots.map((s, i) => (
                         <div
                           key={i}
-                          className="rounded-xl border-2 border-dashed border-white/25 bg-black/25 h-12 md:h-14 grid place-items-center"
+                          className={[
+                            'rounded-xl border-2 border-dashed border-white/25 bg-black/25 h-12 md:h-14 grid place-items-center',
+                            tutorialMode === 'LOG' ? 'ring-2 ring-amber-300/60 animate-pulse' : '',
+                          ].join(' ')}
                           onDragOver={(e) => e.preventDefault()}
                           onDrop={(e) => {
                             e.preventDefault();
                             if (phase !== 'PREPARE') return;
+                            if (tutorialMode !== 'DONE' && tutorialMode !== 'LOG') return;
                             const raw = e.dataTransfer.getData('text/plain');
                             if (raw !== 'log') return;
                             if (logSlots[i]) return;
@@ -328,6 +480,7 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
                           }}
                           onClick={() => {
                             if (phase !== 'PREPARE') return;
+                            if (tutorialMode !== 'DONE' && tutorialMode !== 'LOG') return;
                             if (logSlots[i]) return;
                             if (logsCount <= 0) return;
                             startIfNeeded();
@@ -364,7 +517,11 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
                   if (phase === 'BIND') bindRope();
                   if (phase === 'MOVE') moveOnce();
                 }}
-                className="absolute right-3 bottom-[15%] z-50 animate-pulse"
+                className={[
+                  'absolute right-3 bottom-[15%] z-50',
+                  tutorialMode === 'PULL' ? 'animate-pulse' : '',
+                  'rounded-full border border-white/20 bg-black/45 p-2 shadow-[0_18px_40px_rgba(0,0,0,0.55)]',
+                ].join(' ')}
                 title={phase === 'BIND' ? '밧줄 묶기' : '눌러서 옮기기'}
               >
                 <img src="/assets/images/hand.png" alt="손" className="w-14 h-14 object-contain" draggable={false} />
@@ -375,8 +532,8 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
           {/* 인벤토리(배경 밖) */}
           <div className="mt-2 grid grid-cols-2 gap-2">
             {/* 쐐기 + 물 */}
-            <div className="rounded-xl border border-white/10 bg-black/25 p-2">
-              <div className="text-[11px] font-black opacity-90 mb-1">도구</div>
+            <div className="rounded-2xl border border-white/10 bg-black/40 p-2">
+              <div className="text-[11px] font-black opacity-90 mb-2">도구</div>
               <div className="flex items-center gap-2">
                 <div
                   draggable={phase === 'QUARRY'}
@@ -386,12 +543,14 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
                   }}
                   onClick={() => {
                     if (phase !== 'QUARRY') return;
+                    if (tutorialMode !== 'DONE' && tutorialMode !== 'WEDGE') return;
                     startIfNeeded();
                     placeWedgeToFirstEmpty();
                   }}
                   className={[
-                    'rounded-lg border border-white/10 bg-white/5 p-2 flex items-center gap-2',
+                    'rounded-xl border border-white/10 bg-white/5 p-2 flex items-center gap-2',
                     phase === 'QUARRY' ? 'cursor-grab active:cursor-grabbing hover:bg-white/10' : 'opacity-50 cursor-not-allowed',
+                    tutorialMode === 'WEDGE' ? 'ring-2 ring-amber-300/80 shadow-[0_0_18px_rgba(251,191,36,0.30)] animate-pulse' : '',
                   ].join(' ')}
                   title="드래그 또는 클릭해서 틈에 꽂기"
                 >
@@ -404,10 +563,16 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
                   disabled={!allWedgesPlaced || phase !== 'QUARRY' || wedgeSwelling || mountainShake}
                   onClick={water}
                   className={[
-                    'ml-auto rounded-lg px-2 py-2 font-black text-[11px] flex items-center gap-1.5',
+                    'ml-auto rounded-xl px-3 py-2 font-black text-[11px] flex items-center gap-1.5 border',
                     allWedgesPlaced && phase === 'QUARRY' && !wedgeSwelling && !mountainShake
-                      ? 'bg-sky-400 text-black hover:bg-sky-300 active:translate-y-[1px]'
-                      : 'bg-white/10 text-white/40 cursor-not-allowed',
+                      ? [
+                          'bg-sky-400 text-black hover:bg-sky-300 active:translate-y-[1px]',
+                          'border-sky-300/60',
+                          tutorialMode === 'WEDGE'
+                            ? 'ring-2 ring-amber-300/70 shadow-[0_0_18px_rgba(251,191,36,0.25)] animate-pulse'
+                            : '',
+                        ].join(' ')
+                      : 'bg-white/10 text-white/40 cursor-not-allowed border-white/10',
                   ].join(' ')}
                 >
                   <img src="/assets/images/icon_water.png" alt="" className="w-5 h-5 object-contain" />
@@ -417,8 +582,8 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
             </div>
 
             {/* 통나무 */}
-            <div className="rounded-xl border border-white/10 bg-black/25 p-2">
-              <div className="text-[11px] font-black opacity-90 mb-1">통나무</div>
+            <div className="rounded-2xl border border-white/10 bg-black/40 p-2">
+              <div className="text-[11px] font-black opacity-90 mb-2">통나무</div>
               <div className="flex items-center gap-2">
                 <div
                   draggable={phase === 'PREPARE'}
@@ -428,12 +593,14 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
                   }}
                   onClick={() => {
                     if (phase !== 'PREPARE') return;
+                    if (tutorialMode !== 'DONE' && tutorialMode !== 'LOG') return;
                     startIfNeeded();
                     placeLogToFirstEmpty();
                   }}
                   className={[
-                    'rounded-lg border border-white/10 bg-white/5 p-2 flex items-center gap-2',
+                    'rounded-xl border border-white/10 bg-white/5 p-2 flex items-center gap-2',
                     phase === 'PREPARE' && logsCount > 0 ? 'cursor-grab active:cursor-grabbing hover:bg-white/10' : 'opacity-50 cursor-not-allowed',
+                    tutorialMode === 'LOG' ? 'ring-2 ring-amber-300/80 shadow-[0_0_18px_rgba(251,191,36,0.30)] animate-pulse' : '',
                   ].join(' ')}
                   title="드래그 또는 클릭해서 통나무 배치"
                 >
@@ -459,6 +626,108 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
           )}
         </div>
       </div>
+
+      {/* 튜토리얼: 시작 대사(첫 진입) */}
+      {tutorialMode === 'DIALOGUE' && (
+        <div className="absolute inset-0 z-[11000] bg-black/70 grid place-items-center p-4">
+          <div className="w-full max-w-[560px] rounded-2xl border border-white/15 bg-zinc-950/95 text-white shadow-2xl">
+            <div className="p-5">
+              <div className="text-xs font-black opacity-85">튜토리얼 · 고인돌 옮기기</div>
+              <div className="mt-3 flex items-start gap-3">
+                <div className="w-14 h-14 rounded-2xl overflow-hidden border border-white/15 bg-white/5 flex-shrink-0">
+                  <img
+                    src={tutorialLines[tutorialIdx]?.speaker === 'han' ? '/assets/images/han_2.png' : '/assets/images/yang_2.png'}
+                    alt=""
+                    className="w-full h-full object-cover"
+                    draggable={false}
+                  />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-sm font-black">{tutorialLines[tutorialIdx]?.speaker === 'han' ? '한' : '양'}</div>
+                  <div className="mt-2 text-sm leading-relaxed opacity-95">{tText}</div>
+                  <div className="mt-2 text-[11px] opacity-70">{tTyping ? '탭하면 전체 표시' : '다음으로 진행'}</div>
+                </div>
+              </div>
+            </div>
+            <div className="p-5 pt-0 flex gap-2 justify-end">
+              <button
+                type="button"
+                className="rounded-xl px-3 py-2 text-xs font-black bg-white/10 hover:bg-white/15"
+                onClick={() => {
+                  if (tTyping) {
+                    if (tTimer.current) window.clearInterval(tTimer.current);
+                    tTimer.current = null;
+                    setTText(tutorialLines[tutorialIdx]?.text ?? '');
+                    setTTyping(false);
+                    return;
+                  }
+                  if (tutorialIdx < tutorialLines.length - 1) setTutorialIdx((v) => v + 1);
+                  else {
+                    setTutorialMode('WEDGE');
+                    showToast('튜토리얼: 나무쐐기 3개를 꽂고 물을 뿌려보자!');
+                  }
+                }}
+              >
+                {tutorialIdx < tutorialLines.length - 1 ? '다음' : '연습 시작'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 튜토리얼: 통나무 배치 후 당기기 안내 */}
+      {postModalOpen && (
+        <div className="absolute inset-0 z-[11000] bg-black/70 grid place-items-center p-4">
+          <div className="w-full max-w-[560px] rounded-2xl border border-white/15 bg-zinc-950/95 text-white shadow-2xl">
+            <div className="p-5">
+              <div className="text-xs font-black opacity-85">튜토리얼 · 협동으로 당기기</div>
+              <div className="mt-3 flex items-start gap-3">
+                <div className="w-14 h-14 rounded-2xl overflow-hidden border border-white/15 bg-white/5 flex-shrink-0">
+                  <img
+                    src={postLines[postIdx]?.speaker === 'han' ? '/assets/images/han_2.png' : '/assets/images/yang_2.png'}
+                    alt=""
+                    className="w-full h-full object-cover"
+                    draggable={false}
+                  />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-sm font-black">{postLines[postIdx]?.speaker === 'han' ? '한' : '양'}</div>
+                  <div className="mt-2 text-sm leading-relaxed opacity-95">{postText}</div>
+                  <div className="mt-2 text-[11px] opacity-70">{postTyping ? '탭하면 전체 표시' : '다음으로 진행'}</div>
+                </div>
+              </div>
+            </div>
+            <div className="p-5 pt-0 flex gap-2 justify-end">
+              <button
+                type="button"
+                className="rounded-xl px-3 py-2 text-xs font-black bg-white/10 hover:bg-white/15"
+                onClick={() => {
+                  if (postTyping) {
+                    if (postTimer.current) window.clearInterval(postTimer.current);
+                    postTimer.current = null;
+                    setPostText(postLines[postIdx]?.text ?? '');
+                    setPostTyping(false);
+                    return;
+                  }
+                  if (postIdx < postLines.length - 1) setPostIdx((v) => v + 1);
+                  else {
+                    setPostModalOpen(false);
+                    showToast('손 버튼을 눌러서 밧줄을 당겨보자!');
+                  }
+                }}
+              >
+                {postIdx < postLines.length - 1 ? '다음' : '시작'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {toast && (
+        <div className="absolute left-1/2 top-2 -translate-x-1/2 z-[9000] pointer-events-none">
+          <div className="rounded-xl border border-white/10 bg-black/75 px-3 py-2 text-xs font-black shadow-2xl">{toast}</div>
+        </div>
+      )}
 
       {/* 결과창(수동 복귀) */}
       {resultModal && (
