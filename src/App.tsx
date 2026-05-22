@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import CollectionModal from './components/common/CollectionModal';
 import GameHUD from './components/common/GameHUD';
 import GameWrapper from './components/common/GameWrapper';
 import InstallBanner from './components/common/InstallBanner';
@@ -153,7 +152,6 @@ export default function App() {
       {appPhase !== 'INTRO' && appPhase !== 'MINIGAME' && (
         <>
           <GameHUD />
-          <CollectionModal />
         </>
       )}
     </GameWrapper>

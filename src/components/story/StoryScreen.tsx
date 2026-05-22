@@ -168,16 +168,42 @@ export default function StoryScreen() {
         <div className={styles.stage}>
           {stage.stageId}. {stage.title}
         </div>
-        <button
-          type="button"
-          className={styles.skipBtn}
-          onClick={(e) => {
-            e.stopPropagation();
-            setAppPhase('MINIGAME');
-          }}
-        >
-          건너뛰기
-        </button>
+        <div className={styles.headerBtns}>
+          <button
+            type="button"
+            className={styles.backBtn}
+            onClick={(e) => {
+              e.stopPropagation();
+              // 타이핑 중이면 먼저 전체 표시
+              if (isTyping) {
+                if (typingTimer.current) window.clearInterval(typingTimer.current);
+                typingTimer.current = null;
+                setDisplayText(line.text);
+                setIsTyping(false);
+                return;
+              }
+              // 직전 대사로
+              if (idx > 0) {
+                setIdx((v) => Math.max(0, v - 1));
+                return;
+              }
+              // 첫 대사면 지도(이전 상태)로
+              setAppPhase('MAP');
+            }}
+          >
+            ← 뒤로
+          </button>
+          <button
+            type="button"
+            className={styles.skipBtn}
+            onClick={(e) => {
+              e.stopPropagation();
+              setAppPhase('MINIGAME');
+            }}
+          >
+            건너뛰기
+          </button>
+        </div>
       </div>
 
       <div className={styles.meta}>

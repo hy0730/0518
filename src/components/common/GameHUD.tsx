@@ -3,8 +3,6 @@ import { useGameStore } from '../../store/useGameStore';
 import styles from './GameHUD.module.css';
 
 export default function GameHUD() {
-  const toggleCollection = useGameStore((s) => s.toggleCollection);
-  const isCollectionOpen = useGameStore((s) => s.isCollectionOpen);
   const isMuted = useGameStore((s) => s.isMuted);
 
   return (
@@ -28,18 +26,6 @@ export default function GameHUD() {
       >
         {isMuted ? '🔇' : '🔈'}
       </button>
-      <button
-        type="button"
-        className={`${styles.btn} ${isCollectionOpen ? styles.active : ''}`}
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          toggleCollection();
-        }}
-      >
-        🏆 도감
-      </button>
     </div>
   );
 }
-
