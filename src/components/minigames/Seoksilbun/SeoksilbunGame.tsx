@@ -320,10 +320,11 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
       if (phase !== 'MAIN') return;
       const t = e.target as HTMLElement | null;
       const droppedOnInventory = !!t?.closest?.('[data-inventory="true"]');
-      const droppedOnReclaim = !!t?.closest?.('[data-reclaim="true"]');
 
       // 회수 조건: 보드 밖 / 인벤토리 영역 / 회수함
-      if (!insideBoard || droppedOnInventory || droppedOnReclaim || !insideTomb) {
+      // (UX) “원래 있던 곳으로 되돌리기”가 직관적이므로 별도 회수함 UI는 제거.
+      // 회수는 보드 밖 또는 좌/우 인벤토리 위로 드롭했을 때만 동작.
+      if (!insideBoard || droppedOnInventory || !insideTomb) {
         removePlaced(ended.id);
         return;
       }
@@ -543,14 +544,6 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
 
           {phase === 'MAIN' && (
             <>
-              <div
-                data-reclaim="true"
-                data-interactive="true"
-                className="rounded-xl px-3 py-2 text-xs font-black border border-white/10 bg-black/45"
-                title="부장품을 여기로 드롭하면 회수할 수 있어요"
-              >
-                회수함
-              </div>
               <button
                 type="button"
                 disabled={!canGoQuiz}
