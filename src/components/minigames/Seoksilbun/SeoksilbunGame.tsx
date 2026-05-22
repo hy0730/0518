@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { MinigameProps } from '../../../types/game';
 import { storyDataByStageId } from '../../../data/storyData';
+import { getRelicMainImage, getRelicRealImage } from '../../../utils/relicImages';
 
 type Phase = 'INTRO' | 'TUTORIAL' | 'MAIN' | 'QUIZ';
 
@@ -90,6 +91,8 @@ function getRelativePct(el: HTMLElement, clientX: number, clientY: number) {
 
 export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
   const stageTitle = useMemo(() => storyDataByStageId[stageId]?.title ?? '석수동 석실분', [stageId]);
+  const realImg = useMemo(() => getRelicRealImage(stageId), [stageId]);
+  const mainImg = useMemo(() => getRelicMainImage(stageId), [stageId]);
 
   const [phase, setPhase] = useState<Phase>('INTRO');
   const [introStep, setIntroStep] = useState<IntroStep>(1);
@@ -756,7 +759,19 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
       {/* 결과 모달 */}
       {resultModal && (
         <div className="absolute inset-0 z-40 bg-black/75 grid place-items-center p-4" data-interactive="true">
-          <div className="w-full max-w-[560px] rounded-2xl border border-white/15 bg-zinc-950/95 p-5">
+          <div className="w-full max-w-[640px] max-h-[82vh] overflow-auto rounded-2xl border border-white/15 bg-zinc-950/95 p-5">
+            <div className="rounded-2xl border border-white/10 bg-black/25 overflow-hidden">
+              <img
+                src={realImg}
+                alt=""
+                className="w-full h-48 object-cover"
+                draggable={false}
+                onError={(e) => {
+                  const img = e.currentTarget;
+                  if (mainImg && img.src !== mainImg) img.src = mainImg;
+                }}
+              />
+            </div>
             <div className="text-xl font-black">아주 좋아요!</div>
             <div className="mt-2 text-sm opacity-85 leading-relaxed">
               자신의 생각을 아주 잘 담았어요! 왜 그렇게 생각했는지 친구들(또는 선생님)에게 자유롭게 발표해 보세요!

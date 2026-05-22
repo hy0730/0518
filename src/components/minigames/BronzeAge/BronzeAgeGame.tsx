@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { MinigameProps } from '../../../types/game';
 import { audio } from '../../../utils/audio';
 import { storyDataByStageId } from '../../../data/storyData';
+import { getRelicMainImage, getRelicRealImage } from '../../../utils/relicImages';
 
 type IngredientId = 'clay' | 'fire' | 'stone' | 'wood' | 'straw' | 'copper' | 'tin' | 'rope';
 type RelicId = 'pottery' | 'sickle' | 'mirror' | 'arrow' | 'hut';
@@ -93,6 +94,8 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
   const targetRelics = RELICS.length;
   const stageTitle = useMemo(() => storyDataByStageId[stageId]?.title ?? regionData?.map?.nodes?.[stageId - 1]?.title ?? `스테이지 ${stageId}`, [regionData, stageId]);
   const title = `${stageTitle} · 유물 조합`;
+  const realImg = useMemo(() => getRelicRealImage(stageId), [stageId]);
+  const mainImg = useMemo(() => getRelicMainImage(stageId), [stageId]);
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -666,8 +669,21 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
       {/* 최종 결과 감상창 (자동 전환 없이, 유저 클릭으로만 맵 복귀) */}
       {resultModal && (
         <div className="absolute inset-0 z-[10010] grid place-items-center bg-black/75 p-4">
-          <div className="w-full max-w-[520px] rounded-2xl border border-white/15 bg-zinc-950/95 text-white shadow-2xl">
+          <div className="w-full max-w-[640px] max-h-[82vh] overflow-auto rounded-2xl border border-white/15 bg-zinc-950/95 text-white shadow-2xl">
             <div className="p-5">
+              <div className="rounded-2xl border border-white/10 bg-black/25 overflow-hidden">
+                <img
+                  src={realImg}
+                  alt=""
+                  className="w-full h-48 object-cover"
+                  draggable={false}
+                  onError={(e) => {
+                    // real 이미지가 아직 없거나 로딩 실패 시 main으로 폴백
+                    const img = e.currentTarget;
+                    if (mainImg && img.src !== mainImg) img.src = mainImg;
+                  }}
+                />
+              </div>
               <div className="text-xl font-black">축하해요! 유물 복원 완료</div>
               <div className="mt-2 text-sm opacity-85 leading-relaxed">
                 {targetRelics}개의 유물을 완성해 문화유산 기록을 되살렸어요.

@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { MinigameProps } from '../../../types/game';
 import { audio } from '../../../utils/audio';
 import { storyDataByStageId } from '../../../data/storyData';
+import { getRelicMainImage, getRelicRealImage } from '../../../utils/relicImages';
 
 type Phase = 'QUARRY' | 'BIND' | 'PREPARE' | 'MOVE';
 type TutorialMode = 'DIALOGUE' | 'WEDGE' | 'LOG' | 'PULL' | 'DONE';
@@ -22,6 +23,8 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
     [regionData, stageId]
   );
   const title = `${stageTitle} · 고인돌 옮기기`;
+  const realImg = useMemo(() => getRelicRealImage(stageId), [stageId]);
+  const mainImg = useMemo(() => getRelicMainImage(stageId), [stageId]);
 
   const [phase, setPhase] = useState<Phase>('QUARRY');
   const [attempts, setAttempts] = useState(0);
@@ -755,8 +758,20 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
       {/* 결과창(수동 복귀) */}
       {resultModal && (
         <div className="fixed inset-0 z-[10010] grid place-items-center bg-black/70 p-4">
-          <div className="w-full max-w-[520px] rounded-2xl border border-white/15 bg-zinc-950/95 text-white shadow-2xl">
+          <div className="w-full max-w-[640px] max-h-[82vh] overflow-auto rounded-2xl border border-white/15 bg-zinc-950/95 text-white shadow-2xl">
             <div className="p-5">
+              <div className="rounded-2xl border border-white/10 bg-black/25 overflow-hidden">
+                <img
+                  src={realImg}
+                  alt=""
+                  className="w-full h-48 object-cover"
+                  draggable={false}
+                  onError={(e) => {
+                    const img = e.currentTarget;
+                    if (mainImg && img.src !== mainImg) img.src = mainImg;
+                  }}
+                />
+              </div>
               <div className="text-xl font-black">성공! 고인돌 완성</div>
               <div className="mt-2 text-sm opacity-85 leading-relaxed">
                 성공! 나무의 팽창하는 힘으로 바위를 쪼개고, 굴림대로 무거운 지석묘를 옮겨 무덤을 완성했어요!
