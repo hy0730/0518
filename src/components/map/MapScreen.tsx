@@ -47,6 +47,11 @@ export default function MapScreen() {
     return { total, completed, pct: total ? Math.round((completed / total) * 100) : 0 };
   }, [unlockedStageId]);
 
+  const nodesSorted = useMemo(() => [...NODES].sort((a, b) => a.stageId - b.stageId), []);
+  const routePoints = useMemo(() => nodesSorted.map((n) => `${n.left},${n.top}`).join(' '), [nodesSorted]);
+  const completedCount = useMemo(() => Math.max(0, Math.min(NODES.length, unlockedStageId - 1)), [unlockedStageId]);
+  const completedPoints = useMemo(() => nodesSorted.slice(0, completedCount).map((n) => `${n.left},${n.top}`).join(' '), [nodesSorted, completedCount]);
+
   return (
     <div ref={viewportRef} className={styles.map}>
       {/* 확대/이동이 적용되는 실제 지도 레이어 */}
@@ -78,10 +83,19 @@ export default function MapScreen() {
           setScale(next);
         }}
       >
+        {/* 탐험 경로 라인(기획안 2) - 지도 확대/이동과 함께 움직임 */}
+        <svg className={styles.routeSvg} viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+          {/* 전체 경로(점선) */}
+          <polyline className={styles.routeAll} points={routePoints} />
+          {/* 완료 경로(실선/발광) - 완료 노드가 2개 이상일 때 의미 있음 */}
+          {completedCount >= 2 && <polyline className={styles.routeDone} points={completedPoints} />}
+        </svg>
+
         {NODES.map((node) => {
           const stageId = node.stageId;
           const locked = stageId > unlockedStageId;
           const completed = stageId < unlockedStageId;
+          const active = stageId === unlockedStageId;
           const title = storyDataByStageId[stageId]?.title ?? `스테이지 ${stageId}`;
 
           return (
@@ -105,7 +119,14 @@ export default function MapScreen() {
               aria-label={locked ? '미지의 유산' : title}
               title={locked ? '미지의 유산' : title}
             >
-              <span className={`${styles.pinInner} ${!completed && !locked ? styles.floating : ''}`}>
+              <span
+                className={[
+                  styles.pinInner,
+                  completed ? styles.pinInnerCompleted : locked ? styles.pinInnerLocked : styles.pinInnerAvailable,
+                  active ? styles.pinInnerActive : '',
+                  !completed && !locked ? styles.floating : '',
+                ].join(' ')}
+              >
                 {locked ? (
                   <img className={`${styles.pinIcon} ${styles.question}`} src="/assets/images/question_mark.png" alt="" draggable={false} />
                 ) : (
