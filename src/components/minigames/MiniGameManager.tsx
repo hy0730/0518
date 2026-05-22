@@ -48,40 +48,51 @@ export default function MiniGameManager() {
 
   return (
     <Suspense fallback={<div style={{ padding: 20 }}>게임 불러오는 중...</div>}>
-      <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-        {/* 미니게임에서도 뒤로가기 제공: 직전 상태(스토리)로 복귀 */}
-        <button
-          type="button"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            setAppPhase('STORY');
-          }}
+      <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
+        {/* 상단 바(게임 보드와 겹치지 않게 분리) */}
+        <div
           style={{
-            position: 'absolute',
-            left: 10,
-            top: 10,
-            zIndex: 50,
-            padding: '8px 10px',
-            borderRadius: 12,
-            border: '1px solid rgba(255,255,255,0.2)',
-            background: 'rgba(0,0,0,0.45)',
-            color: '#fff',
-            fontWeight: 900,
-            cursor: 'pointer',
+            flex: '0 0 56px',
+            display: 'flex',
+            alignItems: 'center',
+            padding: '10px',
+            gap: '8px',
+            background: 'rgba(0,0,0,0.35)',
+            borderBottom: '1px solid rgba(255,255,255,0.12)',
           }}
         >
-          ← 뒤로
-        </button>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setAppPhase('STORY');
+            }}
+            style={{
+              padding: '8px 10px',
+              borderRadius: 12,
+              border: '1px solid rgba(255,255,255,0.2)',
+              background: 'rgba(0,0,0,0.45)',
+              color: '#fff',
+              fontWeight: 900,
+              cursor: 'pointer',
+            }}
+          >
+            ← 뒤로
+          </button>
+        </div>
 
-        <FitScaleWrapper baseWidth={800} baseHeight={450}>
-          <CurrentMiniGame
-            stageId={currentStageId}
-            regionData={regionData}
-            onComplete={() => completeStage(currentStageId)}
-            onFail={() => setAppPhase('MAP')}
-          />
-        </FitScaleWrapper>
+        {/* 보드 영역 */}
+        <div style={{ flex: '1 1 auto', minHeight: 0 }}>
+          <FitScaleWrapper baseWidth={800} baseHeight={450}>
+            <CurrentMiniGame
+              stageId={currentStageId}
+              regionData={regionData}
+              onComplete={() => completeStage(currentStageId)}
+              onFail={() => setAppPhase('MAP')}
+            />
+          </FitScaleWrapper>
+        </div>
       </div>
     </Suspense>
   );

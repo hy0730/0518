@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import GameHUD from './components/common/GameHUD';
 import GameWrapper from './components/common/GameWrapper';
 import InstallBanner from './components/common/InstallBanner';
 import OrientationOverlay from './components/common/OrientationOverlay';
@@ -148,12 +147,7 @@ export default function App() {
       {appPhase === 'STORY' && <StoryScreen />}
       {appPhase === 'MINIGAME' && <MiniGameManager />}
 
-      {/* 공통 HUD/모달 (인트로/미니게임에선 숨김) */}
-      {appPhase !== 'INTRO' && appPhase !== 'MINIGAME' && (
-        <>
-          <GameHUD />
-        </>
-      )}
+      {/* 사운드 토글 UI 제거(모든 화면에서 숨김) */}
     </GameWrapper>
   );
 }
