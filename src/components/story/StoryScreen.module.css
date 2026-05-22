@@ -2,16 +2,24 @@
   width: 100%;
   height: 100%;
   position: relative;
-  display: grid;
-  /* 상단 헤더/하단 버튼은 고정, 본문은 "메타:대사 = 50:50" */
-  grid-template-rows: auto 1fr 1fr auto;
+  display: flex;
+  flex-direction: column;
   padding: 12px;
+  gap: 10px;
 }
 
 .header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 10px;
+}
+
+.content {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: 1fr 1fr; /* 50:50 세로 분할 */
   gap: 10px;
 }
 
@@ -51,7 +59,6 @@
 }
 
 .meta {
-  margin-top: 10px;
   padding: 10px 10px;
   border-radius: 14px;
   background: rgba(0, 0, 0, 0.35);
@@ -59,6 +66,7 @@
   color: rgba(255, 255, 255, 0.9);
   /* 50% 영역 안에서 스크롤 */
   height: 100%;
+  min-height: 0;
   overflow: auto;
 }
 
@@ -138,7 +146,6 @@
   position: relative;
   overflow: hidden;
   border-radius: 16px;
-  margin-top: 10px;
   background: rgba(0, 0, 0, 0.22);
   border: 1px solid rgba(255, 255, 255, 0.12);
   /* 메타가 커져도 대사 영역이 사라지지 않게 최소 높이 확보 */
@@ -206,7 +213,6 @@
 }
 
 .footer {
-  margin-top: 12px;
 }
 
 .nextBtn {
