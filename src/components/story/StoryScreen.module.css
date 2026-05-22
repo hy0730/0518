@@ -6,8 +6,6 @@
   flex-direction: column;
   padding: 12px;
   gap: 10px;
-  /* 하단 대사창이 내용을 덮지 않도록 여백 확보 */
-  padding-bottom: 104px;
 }
 
 .header {
@@ -138,10 +136,7 @@
 }
 
 .dialogueBar {
-  position: absolute;
-  left: 12px;
-  right: 12px;
-  bottom: 12px;
+  position: relative;
   display: flex;
   gap: 10px;
   padding: 12px;
@@ -151,6 +146,7 @@
   border: 1px solid rgba(255, 255, 255, 0.18);
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
   z-index: 2;
+  flex: 0 0 148px; /* 우측 하단 고정 높이 */
 }
 
 .dialoguePortrait {

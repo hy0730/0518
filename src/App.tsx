@@ -6,6 +6,7 @@ import IntroScreen from './components/intro/IntroScreen';
 import MapScreen from './components/map/MapScreen';
 import MiniGameManager from './components/minigames/MiniGameManager';
 import StoryScreen from './components/story/StoryScreen';
+import FitScaleWrapper from './components/common/FitScaleWrapper';
 import { useGameStore } from './store/useGameStore';
 import { audio } from './utils/audio';
 import { initGA } from './utils/analytics';
@@ -144,7 +145,11 @@ export default function App() {
 
       {appPhase === 'INTRO' && <IntroScreen />}
       {appPhase === 'MAP' && <MapScreen />}
-      {appPhase === 'STORY' && <StoryScreen />}
+      {appPhase === 'STORY' && (
+        <FitScaleWrapper baseWidth={800} baseHeight={450}>
+          <StoryScreen />
+        </FitScaleWrapper>
+      )}
       {appPhase === 'MINIGAME' && <MiniGameManager />}
 
       {/* 사운드 토글 UI 제거(모든 화면에서 숨김) */}

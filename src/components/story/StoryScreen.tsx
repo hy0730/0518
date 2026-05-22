@@ -159,14 +159,14 @@ export default function StoryScreen() {
       onPointerDown={(e) => {
         // 모바일에서 click 이벤트가 지연/누락되는 경우가 있어 pointer 기반으로 처리
         const t = e.target as HTMLElement | null;
-        const isInteractive = !!t?.closest?.('button, a, input, textarea, select, [role="button"]');
+        const isInteractive = !!t?.closest?.('button, a, input, textarea, select, [role="button"], [data-interactive="true"]');
         if (isInteractive) return;
         handleTapToAdvance();
       }}
       onClick={(e) => {
         // 일부 환경에서 pointer 이벤트가 없을 수 있어 click도 보조로 유지
         const t = e.target as HTMLElement | null;
-        const isInteractive = !!t?.closest?.('button, a, input, textarea, select, [role="button"]');
+        const isInteractive = !!t?.closest?.('button, a, input, textarea, select, [role="button"], [data-interactive="true"]');
         if (isInteractive) return;
         handleTapToAdvance();
       }}
@@ -213,7 +213,7 @@ export default function StoryScreen() {
         </div>
       </div>
 
-      {/* 본문: 좌(문화유산 이미지) / 우(설명) 50:50 */}
+      {/* 본문: 기획안 C (좌 50% 이미지 / 우 50% 설명 + 하단 대사창) */}
       <div className={styles.content}>
         <div className={styles.leftPane}>
           {relicMainImage ? <img src={relicMainImage} alt="" draggable={false} /> : <div className={styles.thumbFallback} />}
@@ -230,32 +230,32 @@ export default function StoryScreen() {
             </div>
             <div className={styles.metaDesc}>{stage.description}</div>
           </div>
-        </div>
-      </div>
 
-      {/* 하단 고정 대사창(얼굴 + 대사) */}
-      <div className={styles.dialogueBar} data-interactive="true">
-        <div className={styles.dialoguePortrait}>
-          <img
-            src={line.speaker === 'han' ? '/assets/images/han_2.png' : '/assets/images/yang_2.png'}
-            alt={line.speaker === 'han' ? '한' : '양'}
-          />
+          {/* 우측 하단 고정 대사창(얼굴 + 대사) */}
+          <div className={styles.dialogueBar} data-interactive="true">
+            <div className={styles.dialoguePortrait}>
+              <img
+                src={line.speaker === 'han' ? '/assets/images/han_2.png' : '/assets/images/yang_2.png'}
+                alt={line.speaker === 'han' ? '한' : '양'}
+              />
+            </div>
+            <div className={styles.dialogueContent}>
+              <div className={styles.dialogueName}>{line.speaker === 'han' ? '한' : '양'}</div>
+              <div className={styles.dialogueText}>{displayText}</div>
+              <div className={styles.dialogueHint}>{isTyping ? '탭하면 전체 표시' : '탭하여 계속'}</div>
+            </div>
+            <button
+              type="button"
+              className={styles.nextBtn}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleTapToAdvance();
+              }}
+            >
+              {idx < lines.length - 1 ? '다음' : '미니게임'}
+            </button>
+          </div>
         </div>
-        <div className={styles.dialogueContent}>
-          <div className={styles.dialogueName}>{line.speaker === 'han' ? '한' : '양'}</div>
-          <div className={styles.dialogueText}>{displayText}</div>
-          <div className={styles.dialogueHint}>{isTyping ? '탭하면 전체 표시' : '탭하여 계속'}</div>
-        </div>
-        <button
-          type="button"
-          className={styles.nextBtn}
-          onClick={(e) => {
-            e.stopPropagation();
-            handleTapToAdvance();
-          }}
-        >
-          {idx < lines.length - 1 ? '다음' : '미니게임'}
-        </button>
       </div>
     </div>
   );
