@@ -687,7 +687,7 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
                 <img
                   src={realImg}
                   alt=""
-                  className="w-full h-[320px] object-contain bg-black/30"
+                  className="w-full h-[320px] object-cover"
                   draggable={false}
                   onError={(e) => {
                     // real 이미지가 아직 없거나 로딩 실패 시 main으로 폴백

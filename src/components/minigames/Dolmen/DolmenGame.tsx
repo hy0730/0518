@@ -764,7 +764,7 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
                 <img
                   src={realImg}
                   alt=""
-                  className="w-full h-[320px] object-contain bg-black/30"
+                  className="w-full h-[320px] object-cover"
                   draggable={false}
                   onError={(e) => {
                     const img = e.currentTarget;
