@@ -6,6 +6,8 @@
   flex-direction: column;
   padding: 12px;
   gap: 10px;
+  /* 하단 대사창이 내용을 덮지 않도록 여백 확보 */
+  padding-bottom: 104px;
 }
 
 .header {
@@ -19,8 +21,8 @@
   flex: 1 1 auto;
   min-height: 0;
   display: grid;
-  grid-template-columns: 1fr 2px 1fr; /* 좌우 50:50 + 가운데 구분선 */
-  gap: 10px;
+  grid-template-columns: 1fr 1fr; /* 좌우 50:50 */
+  gap: 12px;
 }
 
 .leftPane {
@@ -35,12 +37,6 @@
   height: 100%;
   object-fit: cover;
   display: block;
-}
-
-.divider {
-  border-radius: 999px;
-  background: rgba(255, 80, 80, 0.65);
-  box-shadow: 0 0 18px rgba(255, 80, 80, 0.35);
 }
 
 .rightPane {
@@ -92,7 +88,7 @@
   background: rgba(0, 0, 0, 0.35);
   border: 1px solid rgba(255, 255, 255, 0.12);
   color: rgba(255, 255, 255, 0.9);
-  /* 우측 패널 상단: 설명 영역 */
+  /* 우측 패널: 설명 영역을 아래로 충분히 확장 */
   flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
@@ -141,22 +137,11 @@
   overflow: visible;
 }
 
-.scene {
-  position: relative;
-  overflow: hidden;
-  border-radius: 16px;
-  background: rgba(0, 0, 0, 0.22);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  /* 메타가 커져도 대사 영역이 사라지지 않게 최소 높이 확보 */
-  flex: 0 0 auto;
-  height: 46%;
-}
-
 .dialogueBar {
   position: absolute;
-  left: 10px;
-  right: 10px;
-  bottom: 10px;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
   display: flex;
   gap: 10px;
   padding: 12px;
@@ -211,12 +196,10 @@
   opacity: 0.7;
 }
 
-.footer {
-}
-
 .nextBtn {
-  width: 100%;
-  padding: 12px 14px;
+  flex: 0 0 auto;
+  align-self: stretch;
+  padding: 10px 12px;
   border-radius: 14px;
   border: 1px solid rgba(255, 255, 255, 0.22);
   background: rgba(255, 255, 255, 0.14);

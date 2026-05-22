@@ -213,12 +213,11 @@ export default function StoryScreen() {
         </div>
       </div>
 
-      {/* 본문: 빨간 선 기준(좌: 문화유산 이미지 / 우: 설명+대사) 50:50 세로 분할 */}
+      {/* 본문: 좌(문화유산 이미지) / 우(설명) 50:50 */}
       <div className={styles.content}>
         <div className={styles.leftPane}>
           {relicMainImage ? <img src={relicMainImage} alt="" draggable={false} /> : <div className={styles.thumbFallback} />}
         </div>
-        <div className={styles.divider} aria-hidden="true" />
         <div className={styles.rightPane}>
           <div className={styles.meta} data-interactive="true">
             <div className={styles.metaRow}>
@@ -231,26 +230,22 @@ export default function StoryScreen() {
             </div>
             <div className={styles.metaDesc}>{stage.description}</div>
           </div>
-
-          <div className={styles.scene}>
-            <div className={styles.dialogueBar} data-interactive="true">
-              <div className={styles.dialoguePortrait}>
-                <img
-                  src={line.speaker === 'han' ? '/assets/images/han_2.png' : '/assets/images/yang_2.png'}
-                  alt={line.speaker === 'han' ? '한' : '양'}
-                />
-              </div>
-              <div className={styles.dialogueContent}>
-                <div className={styles.dialogueName}>{line.speaker === 'han' ? '한' : '양'}</div>
-                <div className={styles.dialogueText}>{displayText}</div>
-                <div className={styles.dialogueHint}>{isTyping ? '탭하면 전체 표시' : '탭하여 계속'}</div>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
 
-      <div className={styles.footer}>
+      {/* 하단 고정 대사창(얼굴 + 대사) */}
+      <div className={styles.dialogueBar} data-interactive="true">
+        <div className={styles.dialoguePortrait}>
+          <img
+            src={line.speaker === 'han' ? '/assets/images/han_2.png' : '/assets/images/yang_2.png'}
+            alt={line.speaker === 'han' ? '한' : '양'}
+          />
+        </div>
+        <div className={styles.dialogueContent}>
+          <div className={styles.dialogueName}>{line.speaker === 'han' ? '한' : '양'}</div>
+          <div className={styles.dialogueText}>{displayText}</div>
+          <div className={styles.dialogueHint}>{isTyping ? '탭하면 전체 표시' : '탭하여 계속'}</div>
+        </div>
         <button
           type="button"
           className={styles.nextBtn}
@@ -259,7 +254,7 @@ export default function StoryScreen() {
             handleTapToAdvance();
           }}
         >
-          {idx < lines.length - 1 ? '다음' : '미니게임 시작'}
+          {idx < lines.length - 1 ? '다음' : '미니게임'}
         </button>
       </div>
     </div>
