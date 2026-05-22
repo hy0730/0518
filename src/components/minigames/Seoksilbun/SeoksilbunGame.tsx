@@ -99,7 +99,7 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
   // main
   const [placed, setPlaced] = useState<PlacedItem[]>([]);
   const [placedIds, setPlacedIds] = useState<Record<string, boolean>>({});
-  const [artifactModal, setArtifactModal] = useState<ArtifactDef | null>(null);
+  const [artifactModal, setArtifactModal] = useState<{ artifact: ArtifactDef; mode: 'ADD' | 'REMOVE' } | null>(null);
 
   // quiz
   const [blank1, setBlank1] = useState<WordCard | null>(null);
@@ -108,8 +108,9 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
 
   // drag (pointer 기반: 모바일에서도 안정)
   const boardRef = useRef<HTMLDivElement | null>(null);
+  const tombRef = useRef<HTMLDivElement | null>(null);
   const [drag, setDrag] = useState<{
-    kind: 'muddoll' | 'artifact' | 'word';
+    kind: 'muddoll' | 'artifact' | 'placed' | 'word';
     id: string;
     label: string;
     img?: string;
@@ -148,7 +149,22 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
   const canSubmit = !!blank1 && !!blank2;
 
   const openArtifact = (a: ArtifactDef) => {
-    setArtifactModal(a);
+    setArtifactModal({ artifact: a, mode: 'ADD' });
+  };
+
+  const openPlacedArtifact = (id: string) => {
+    const a = ARTIFACTS.find((x) => x.id === id);
+    if (!a) return;
+    setArtifactModal({ artifact: a, mode: 'REMOVE' });
+  };
+
+  const removePlaced = (id: string) => {
+    setPlaced((prev) => prev.filter((p) => p.id !== id));
+    setPlacedIds((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
   };
 
   const addPlaced = (def: { id: string; name: string; img: string }, xPct: number, yPct: number) => {
@@ -187,6 +203,7 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
 
   const startDrag = (e: React.PointerEvent, payload: typeof drag extends any ? any : never) => {
     startIfNeeded();
+    if (artifactModal || resultModal) return;
     // pointer 캡처로 드래그 안정화
     (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
     setDrag({
@@ -197,6 +214,30 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
       x: e.clientX,
       y: e.clientY,
     });
+  };
+
+  const getTombRect = () => {
+    const board = boardRef.current;
+    if (!board) return null;
+    const rect = board.getBoundingClientRect();
+    // 좌/우 인벤토리 폭(132px) + 여유(약간)만큼 제외하고 중앙을 "무덤 영역"으로 취급
+    const sidePad = 156; // px
+    return {
+      left: rect.left + sidePad,
+      right: rect.right - sidePad,
+      top: rect.top,
+      bottom: rect.bottom,
+      width: Math.max(1, rect.width - sidePad * 2),
+      height: rect.height,
+    };
+  };
+
+  const getTombPct = (clientX: number, clientY: number) => {
+    const tr = getTombRect();
+    if (!tr) return null;
+    const x = clamp01((clientX - tr.left) / tr.width);
+    const y = clamp01((clientY - tr.top) / tr.height);
+    return { xPct: x * 100, yPct: y * 100 };
   };
 
   const updateDrag = (e: React.PointerEvent) => {
@@ -226,6 +267,9 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
       if (ended.kind === 'artifact') {
         const a = ARTIFACTS.find((x) => x.id === ended.id);
         if (a) openArtifact(a);
+      } else if (ended.kind === 'placed') {
+        // 배치된 부장품: 클릭 시 설명(그리고 다시 꺼내기)
+        openPlacedArtifact(ended.id);
       } else if (ended.kind === 'word') {
         const w = ended.label as WordCard;
         if (!blank1) setBlank1(w);
@@ -241,25 +285,52 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
 
     if (!board) return;
     const rect = board.getBoundingClientRect();
-    const inside = e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom;
+    const insideBoard = e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom;
+    const tombRect = getTombRect();
+    const insideTomb =
+      !!tombRect &&
+      e.clientX >= tombRect.left &&
+      e.clientX <= tombRect.right &&
+      e.clientY >= tombRect.top &&
+      e.clientY <= tombRect.bottom;
 
     if (ended.kind === 'muddoll') {
-      if (!inside) return;
-      const { xPct, yPct } = getRelativePct(board, e.clientX, e.clientY);
+      if (!insideTomb) return;
+      const pos = getTombPct(e.clientX, e.clientY);
+      if (!pos) return;
       setMuddollPlaced(true);
-      setMuddollPos({ xPct, yPct });
+      setMuddollPos(pos);
       setDragHint('좋아요! 이제 부장품을 조사해볼까요?');
       return;
     }
 
     if (ended.kind === 'artifact') {
       if (phase !== 'MAIN') return;
-      if (!inside) return;
+      if (!insideTomb) return;
       const a = ARTIFACTS.find((x) => x.id === ended.id);
       if (!a) return;
       if (placedIds[a.id]) return;
-      const { xPct, yPct } = getRelativePct(board, e.clientX, e.clientY);
-      addPlaced(a, xPct, yPct);
+      const pos = getTombPct(e.clientX, e.clientY);
+      if (!pos) return;
+      addPlaced(a, pos.xPct, pos.yPct);
+      return;
+    }
+
+    if (ended.kind === 'placed') {
+      if (phase !== 'MAIN') return;
+      const t = e.target as HTMLElement | null;
+      const droppedOnInventory = !!t?.closest?.('[data-inventory="true"]');
+      const droppedOnReclaim = !!t?.closest?.('[data-reclaim="true"]');
+
+      // 회수 조건: 보드 밖 / 인벤토리 영역 / 회수함
+      if (!insideBoard || droppedOnInventory || droppedOnReclaim || !insideTomb) {
+        removePlaced(ended.id);
+        return;
+      }
+
+      const pos = getTombPct(e.clientX, e.clientY);
+      if (!pos) return;
+      setPlaced((prev) => prev.map((p) => (p.id === ended.id ? { ...p, xPct: pos.xPct, yPct: pos.yPct } : p)));
       return;
     }
 
@@ -307,6 +378,9 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
           }
         }}
       >
+        {/* 중앙 "무덤" 영역 (좌/우 인벤토리를 제외한 자유 배치 영역) */}
+        <div ref={tombRef} className="absolute left-[156px] right-[156px] top-0 bottom-0" />
+
         {/* 튜토리얼 드롭존(빛나는 영역) */}
         {phase === 'TUTORIAL' && (
           <div className="absolute left-1/2 top-[52%] -translate-x-1/2 -translate-y-1/2 w-[140px] h-[110px] rounded-2xl border-2 border-amber-300/70 bg-amber-300/10 shadow-[0_0_30px_rgba(251,191,36,0.35)] animate-pulse" />
@@ -318,7 +392,11 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
             src={ASSETS.muddoll}
             alt="토우"
             className="absolute w-16 h-16 object-contain drop-shadow-[0_12px_26px_rgba(0,0,0,0.55)]"
-            style={{ left: `${muddollPos.xPct}%`, top: `${muddollPos.yPct}%`, transform: 'translate(-50%, -50%)' }}
+            style={{
+              left: `calc(156px + (${muddollPos.xPct}% * (100% - 312px) / 100))`,
+              top: `${muddollPos.yPct}%`,
+              transform: 'translate(-50%, -50%)',
+            }}
             draggable={false}
           />
         )}
@@ -326,21 +404,36 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
         {/* 부장품 배치 결과 */}
         {phase !== 'INTRO' &&
           placed.map((p) => (
-            <img
+            <div
               key={p.id}
-              src={p.img}
-              alt={p.name}
-              className="absolute w-16 h-16 object-contain drop-shadow-[0_12px_26px_rgba(0,0,0,0.55)]"
-              style={{ left: `${p.xPct}%`, top: `${p.yPct}%`, transform: 'translate(-50%, -50%)' }}
-              draggable={false}
-              title={p.name}
-            />
+              data-interactive="true"
+              className="absolute cursor-move"
+              style={{
+                left: `calc(156px + (${p.xPct}% * (100% - 312px) / 100))`,
+                top: `${p.yPct}%`,
+                transform: 'translate(-50%, -50%)',
+              }}
+              onPointerDown={(e) => {
+                if (phase !== 'MAIN') return;
+                startDrag(e, { kind: 'placed', id: p.id, label: p.name, img: p.img });
+              }}
+              onPointerMove={updateDrag}
+              onPointerUp={endDrag}
+              title="드래그해서 위치 수정 / 클릭해서 설명"
+            >
+              <img
+                src={p.img}
+                alt={p.name}
+                className="w-16 h-16 object-contain drop-shadow-[0_12px_26px_rgba(0,0,0,0.55)]"
+                draggable={false}
+              />
+            </div>
           ))}
 
         {/* Phase3 좌우 인벤토리 (보드 안에 배치) */}
         {phase === 'MAIN' && (
           <>
-            <div className="absolute left-3 top-3 bottom-3 w-[132px] flex flex-col gap-2">
+            <div className="absolute left-3 top-3 bottom-3 w-[132px] flex flex-col gap-2" data-inventory="true">
               {ARTIFACTS.slice(0, 3).map((a) => (
                 <div
                   key={a.id}
@@ -363,7 +456,7 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
               ))}
             </div>
 
-            <div className="absolute right-3 top-3 bottom-3 w-[132px] flex flex-col gap-2">
+            <div className="absolute right-3 top-3 bottom-3 w-[132px] flex flex-col gap-2" data-inventory="true">
               {ARTIFACTS.slice(3, 6).map((a) => (
                 <div
                   key={a.id}
@@ -449,20 +542,30 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
           )}
 
           {phase === 'MAIN' && (
-            <button
-              type="button"
-              disabled={!canGoQuiz}
-              className={[
-                'rounded-xl px-3 py-2 text-xs font-black',
-                canGoQuiz ? 'bg-amber-400 text-black hover:bg-amber-300' : 'bg-white/10 text-white/40 cursor-not-allowed',
-              ].join(' ')}
-              onClick={() => {
-                startIfNeeded();
-                setPhase('QUIZ');
-              }}
-            >
-              배치 완료! 무덤 주인 추리하기
-            </button>
+            <>
+              <div
+                data-reclaim="true"
+                data-interactive="true"
+                className="rounded-xl px-3 py-2 text-xs font-black border border-white/10 bg-black/45"
+                title="부장품을 여기로 드롭하면 회수할 수 있어요"
+              >
+                회수함
+              </div>
+              <button
+                type="button"
+                disabled={!canGoQuiz}
+                className={[
+                  'rounded-xl px-3 py-2 text-xs font-black',
+                  canGoQuiz ? 'bg-amber-400 text-black hover:bg-amber-300' : 'bg-white/10 text-white/40 cursor-not-allowed',
+                ].join(' ')}
+                onClick={() => {
+                  startIfNeeded();
+                  setPhase('QUIZ');
+                }}
+              >
+                배치 완료! 무덤 주인 추리하기
+              </button>
+            </>
           )}
 
           {phase === 'QUIZ' && (
@@ -524,10 +627,14 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
         <div className="absolute inset-0 z-30 bg-black/70 grid place-items-center p-4" data-interactive="true">
           <div className="w-full max-w-[520px] rounded-2xl border border-white/15 bg-zinc-950/95 p-4">
             <div className="flex items-start gap-3">
-              <img src={artifactModal.img} alt="" className="w-16 h-16 object-contain rounded-xl bg-white/5 border border-white/10" />
+              <img
+                src={artifactModal.artifact.img}
+                alt=""
+                className="w-16 h-16 object-contain rounded-xl bg-white/5 border border-white/10"
+              />
               <div className="min-w-0">
-                <div className="text-sm font-black">{artifactModal.name}</div>
-                <div className="mt-2 text-xs opacity-85 leading-relaxed">{artifactModal.desc}</div>
+                <div className="text-sm font-black">{artifactModal.artifact.name}</div>
+                <div className="mt-2 text-xs opacity-85 leading-relaxed">{artifactModal.artifact.desc}</div>
               </div>
             </div>
             <div className="mt-4 flex gap-2 justify-end">
@@ -538,17 +645,31 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
               >
                 닫기
               </button>
-              <button
-                type="button"
-                className="rounded-xl px-3 py-2 text-xs font-black bg-amber-400 text-black hover:bg-amber-300"
-                onClick={() => {
-                  startIfNeeded();
-                  addPlacedCenter(artifactModal);
-                  setArtifactModal(null);
-                }}
-              >
-                무덤에 넣기
-              </button>
+              {artifactModal.mode === 'ADD' ? (
+                <button
+                  type="button"
+                  className="rounded-xl px-3 py-2 text-xs font-black bg-amber-400 text-black hover:bg-amber-300"
+                  onClick={() => {
+                    startIfNeeded();
+                    addPlacedCenter(artifactModal.artifact);
+                    setArtifactModal(null);
+                  }}
+                >
+                  무덤에 넣기
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="rounded-xl px-3 py-2 text-xs font-black bg-rose-400 text-black hover:bg-rose-300"
+                  onClick={() => {
+                    startIfNeeded();
+                    removePlaced(artifactModal.artifact.id);
+                    setArtifactModal(null);
+                  }}
+                >
+                  다시 꺼내기
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -601,4 +722,3 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
     </div>
   );
 }
-
