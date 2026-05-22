@@ -5,11 +5,13 @@ import type { MinigameProps } from '../../types/game';
 
 const BronzeAgeGame = lazy(() => import('./BronzeAge/BronzeAgeGame'));
 const DolmenGame = lazy(() => import('./Dolmen/DolmenGame'));
+const SeoksilbunGame = lazy(() => import('./Seoksilbun/SeoksilbunGame'));
 const ManangyoGame = lazy(() => import('./Manangyo/ManangyoGame'));
 
 const MINIGAME_REGISTRY: Record<number, React.ComponentType<MinigameProps>> = {
   1: BronzeAgeGame,
   2: DolmenGame,
+  3: SeoksilbunGame,
   4: ManangyoGame,
 };
 
