@@ -758,13 +758,13 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
       {/* 결과창(수동 복귀) */}
       {resultModal && (
         <div className="fixed inset-0 z-[10010] grid place-items-center bg-black/70 p-4">
-          <div className="w-full max-w-[640px] max-h-[82vh] overflow-auto rounded-2xl border border-white/15 bg-zinc-950/95 text-white shadow-2xl">
+          <div className="w-full max-w-[820px] max-h-[86vh] overflow-auto rounded-2xl border border-white/15 bg-zinc-950/95 text-white shadow-2xl">
             <div className="p-5">
               <div className="rounded-2xl border border-white/10 bg-black/25 overflow-hidden">
                 <img
                   src={realImg}
                   alt=""
-                  className="w-full h-48 object-cover"
+                  className="w-full h-[320px] object-contain bg-black/30"
                   draggable={false}
                   onError={(e) => {
                     const img = e.currentTarget;

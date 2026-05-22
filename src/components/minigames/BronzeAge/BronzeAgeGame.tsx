@@ -681,13 +681,13 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
       {/* 최종 결과 감상창 (자동 전환 없이, 유저 클릭으로만 맵 복귀) */}
       {resultModal && (
         <div className="absolute inset-0 z-[10010] grid place-items-center bg-black/75 p-4">
-          <div className="w-full max-w-[640px] max-h-[82vh] overflow-auto rounded-2xl border border-white/15 bg-zinc-950/95 text-white shadow-2xl">
+          <div className="w-full max-w-[820px] max-h-[86vh] overflow-auto rounded-2xl border border-white/15 bg-zinc-950/95 text-white shadow-2xl">
             <div className="p-5">
               <div className="rounded-2xl border border-white/10 bg-black/25 overflow-hidden">
                 <img
                   src={realImg}
                   alt=""
-                  className="w-full h-48 object-cover"
+                  className="w-full h-[320px] object-contain bg-black/30"
                   draggable={false}
                   onError={(e) => {
                     // real 이미지가 아직 없거나 로딩 실패 시 main으로 폴백
