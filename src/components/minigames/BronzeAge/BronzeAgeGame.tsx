@@ -67,7 +67,7 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
   });
   const [workbench, setWorkbench] = useState<IngredientId[]>([]);
   const [collected, setCollected] = useState<RelicId[]>([]);
-  const [relicModal, setRelicModal] = useState<RelicId | null>(null);
+  const [relicModal, setRelicModal] = useState<{ id: RelicId; mode: 'ADD' | 'VIEW' } | null>(null);
   const [resultModal, setResultModal] = useState(false);
   const [attempts, setAttempts] = useState(0);
   const [startedAt, setStartedAt] = useState<number | null>(null);
@@ -261,7 +261,7 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
     // 정답: 재료는 소비 + "유물 획득 팝업"을 띄운 뒤, 확인 버튼에서 도감에 추가
     setFlashSafe('success', '성공! 유물을 획득했어!');
     setWorkbench([]);
-    setRelicModal(relicId);
+    setRelicModal({ id: relicId, mode: 'ADD' });
     setSparkle(true);
     window.setTimeout(() => setSparkle(false), 900);
     audio.playSfx('correct', 0.85);
@@ -493,11 +493,19 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
             {RELICS.map((r) => {
               const got = collected.includes(r.id);
               return (
-                <div
+                <button
                   key={r.id}
+                  type="button"
+                  disabled={!got || tutorialMode === 'DIALOGUE' || resultModal}
+                  onClick={() => {
+                    if (!got) return;
+                    // 도감에서 클릭하면 "조합 성공"과 동일한 설명 팝업을 띄움(추가/진행 로직은 없음)
+                    setRelicModal({ id: r.id, mode: 'VIEW' });
+                  }}
                   className={[
                     'rounded-xl border p-1.5',
                     got ? 'border-emerald-400/40 bg-emerald-400/10' : 'border-white/10 bg-white/5 opacity-70',
+                    got ? 'text-left hover:bg-emerald-400/15 cursor-pointer' : 'cursor-not-allowed',
                   ].join(' ')}
                 >
                   <div className="flex items-center gap-2">
@@ -511,7 +519,7 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
                       <div className="text-[10px] opacity-80">{got ? '완성!' : '미완성'}</div>
                     </div>
                   </div>
-                </div>
+                </button>
               );
             })}
           </div>
@@ -617,18 +625,20 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
               </div>
             )}
             <div className="p-4">
-              <div className="text-lg font-black">유물 획득!</div>
-              <div className="mt-1 text-xs opacity-80">완성된 유물을 확인하고 도감에 추가해보자.</div>
+              <div className="text-lg font-black">{relicModal.mode === 'ADD' ? '유물 획득!' : '유물 설명'}</div>
+              <div className="mt-1 text-xs opacity-80">
+                {relicModal.mode === 'ADD' ? '완성된 유물을 확인하고 도감에 추가해보자.' : '완성한 유물의 설명을 다시 확인할 수 있어요.'}
+              </div>
 
               <div className="mt-4 flex items-start gap-3">
                 <img
-                  src={RELICS.find((r) => r.id === relicModal)?.img}
+                  src={RELICS.find((r) => r.id === relicModal.id)?.img}
                   alt=""
                   className="w-20 h-20 object-contain rounded-xl bg-white/5 border border-white/10"
                 />
                 <div className="min-w-0">
-                  <div className="text-sm font-black">{RELICS.find((r) => r.id === relicModal)?.name}</div>
-                  <div className="mt-2 text-xs leading-relaxed opacity-85">{RELIC_DESC[relicModal]}</div>
+                  <div className="text-sm font-black">{RELICS.find((r) => r.id === relicModal.id)?.name}</div>
+                  <div className="mt-2 text-xs leading-relaxed opacity-85">{RELIC_DESC[relicModal.id]}</div>
                 </div>
               </div>
             </div>
@@ -643,23 +653,25 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
                   const started = startedAt ?? now;
                   if (!startedAt) setStartedAt(started);
 
-                  setCollected((prev) => {
-                    const next = prev.includes(relicModal) ? prev : [...prev, relicModal];
-                    // 자동 화면 전환 금지: 목표 개수 달성 시 최종 결과창을 띄우고,
-                    // 사용자가 직접 "지도" 버튼을 눌렀을 때만 onComplete 호출
-                    if (tutorialMode === 'MAKE_MIRROR' && relicModal === 'mirror') {
-                      // 연습 완료 후 본게임 시작
-                      setTutorialMode('DONE');
-                      showToast('튜토리얼 완료! 이제 나머지 유물도 복원해보자!');
-                    }
-                    if (tutorialMode === 'DONE' && next.length >= targetRelics) setResultModal(true);
-                    return next;
-                  });
+                  if (relicModal.mode === 'ADD') {
+                    setCollected((prev) => {
+                      const next = prev.includes(relicModal.id) ? prev : [...prev, relicModal.id];
+                      // 자동 화면 전환 금지: 목표 개수 달성 시 최종 결과창을 띄우고,
+                      // 사용자가 직접 "지도" 버튼을 눌렀을 때만 onComplete 호출
+                      if (tutorialMode === 'MAKE_MIRROR' && relicModal.id === 'mirror') {
+                        // 연습 완료 후 본게임 시작
+                        setTutorialMode('DONE');
+                        showToast('튜토리얼 완료! 이제 나머지 유물도 복원해보자!');
+                      }
+                      if (tutorialMode === 'DONE' && next.length >= targetRelics) setResultModal(true);
+                      return next;
+                    });
+                  }
 
                   setRelicModal(null);
                 }}
               >
-                확인
+                {relicModal.mode === 'ADD' ? '확인' : '닫기'}
               </button>
             </div>
           </div>
@@ -687,20 +699,6 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
               <div className="text-xl font-black">축하해요! 유물 복원 완료</div>
               <div className="mt-2 text-sm opacity-85 leading-relaxed">
                 {targetRelics}개의 유물을 완성해 문화유산 기록을 되살렸어요.
-                <br />
-                아래에서 방금 만든 유물을 감상해보자!
-              </div>
-
-              <div className="mt-4 grid grid-cols-3 gap-3">
-                {collected.slice(0, targetRelics).map((id) => {
-                  const r = RELICS.find((x) => x.id === id);
-                  return (
-                    <div key={id} className="rounded-2xl border border-white/10 bg-white/5 p-3 text-center">
-                      <img src={r?.img} alt="" className="mx-auto w-16 h-16 object-contain" />
-                      <div className="mt-2 text-xs font-black">{r?.name}</div>
-                    </div>
-                  );
-                })}
               </div>
             </div>
 
