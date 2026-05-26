@@ -139,6 +139,7 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
   const [toast, setToast] = useState<string | null>(null);
   const [shakeSlot, setShakeSlot] = useState<1 | 2 | null>(null);
   const toastTimer = useRef<number | null>(null);
+  const dragThreshold = 3; // 모바일 드래그 인식 개선(너무 높으면 클릭으로 오인)
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -248,6 +249,8 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
   const startDrag = (e: React.PointerEvent, payload: typeof drag extends any ? any : never) => {
     startIfNeeded();
     if (artifactModal || resultModal) return;
+    e.preventDefault();
+    e.stopPropagation();
     // pointer 캡처로 드래그 안정화
     (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
     const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
@@ -297,7 +300,7 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
             ...prev,
             x: e.clientX,
             y: e.clientY,
-            moved: prev.moved || dx + dy > 6,
+            moved: prev.moved || dx + dy > dragThreshold,
           }
         : prev
     );
@@ -474,7 +477,7 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
       {/* 보드(드롭 영역) */}
       <div
         ref={boardRef}
-        className="absolute inset-x-0 top-[38px] bottom-[64px] z-10 mx-3 rounded-3xl border border-ink/25 overflow-hidden shadow-paper"
+        className="absolute inset-x-0 top-[38px] bottom-[64px] z-10 mx-3 rounded-3xl border border-ink/25 overflow-hidden shadow-paper touch-none"
         onPointerDown={(e) => {
           if (showIntroOverlay && !interactiveGuard(e.target)) {
             advanceIntro();
@@ -507,7 +510,7 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
               <div
                 key={p.id}
                 data-interactive="true"
-                className="absolute cursor-move"
+                className="absolute cursor-move touch-none"
                 style={{ left: `${p.xPct}%`, top: `${p.yPct}%`, transform: 'translate(-50%, -50%)' }}
                 onPointerDown={(e) => {
                   if (phase !== 'MAIN') return;
@@ -536,7 +539,7 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
                   key={a.id}
                   data-interactive="true"
                   className={[
-                    'rounded-xl border border-ink/25 bg-paper/70 p-2 flex items-center gap-2 shadow-md',
+                    'rounded-xl border border-ink/25 bg-paper/70 p-2 flex items-center gap-2 shadow-md touch-none',
                     placedIds[a.id] ? 'opacity-35' : 'hover:bg-paper/90',
                   ].join(' ')}
                   onPointerDown={(e) => {
@@ -559,7 +562,7 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
                   key={a.id}
                   data-interactive="true"
                   className={[
-                    'rounded-xl border border-ink/25 bg-paper/70 p-2 flex items-center gap-2 shadow-md',
+                    'rounded-xl border border-ink/25 bg-paper/70 p-2 flex items-center gap-2 shadow-md touch-none',
                     placedIds[a.id] ? 'opacity-35' : 'hover:bg-paper/90',
                   ].join(' ')}
                   onPointerDown={(e) => {
@@ -616,8 +619,8 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
       </div>
 
       {/* 하단 액션 바 */}
-      <div className="absolute left-0 right-0 bottom-0 z-10 px-3 py-2 flex items-center justify-between gap-2">
-        <div className="text-[11px] opacity-85 leading-relaxed">
+      <div className="absolute left-0 right-0 bottom-0 z-10 px-3 py-2 flex items-center justify-between gap-2 bg-paper2/95 border-t-2 border-ink/20">
+        <div className="text-[12px] font-bold opacity-95 leading-relaxed">
           {phase === 'INTRO' && introText}
           {phase === 'TUTORIAL' && (dragHint ?? '토우를 무덤 안으로 드래그(또는 클릭)해서 배치해 보세요!')}
           {phase === 'MAIN' && `부장품을 자유롭게 배치해보세요. (배치: ${placed.length}/3+)`}
@@ -668,7 +671,7 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
                   <div
                     key={w}
                     data-interactive="true"
-                    className="rounded-xl border border-ink/25 bg-paper/70 px-2 py-2 text-[11px] font-black hover:bg-paper/90 cursor-grab active:cursor-grabbing shadow-md"
+                    className="rounded-xl border border-ink/25 bg-paper/70 px-2 py-2 text-[11px] font-black hover:bg-paper/90 cursor-grab active:cursor-grabbing shadow-md touch-none"
                     onPointerDown={(e) => startDrag(e, { kind: 'word', id: w, label: w })}
                     onPointerMove={updateDrag}
                     onPointerUp={endDrag}
@@ -703,7 +706,7 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
         <div className="absolute left-1/2 bottom-[54px] -translate-x-1/2 z-20">
           <div
             data-interactive="true"
-            className="rounded-3xl border border-ink/25 bg-paper2/90 p-2 flex items-center gap-2 hover:bg-paper/90 cursor-grab active:cursor-grabbing shadow-paper"
+            className="rounded-3xl border border-ink/25 bg-paper2/90 p-2 flex items-center gap-2 hover:bg-paper/90 cursor-grab active:cursor-grabbing shadow-paper touch-none"
             onPointerDown={(e) => startDrag(e, { kind: 'muddoll', id: 'muddoll', label: '토우', img: ASSETS.muddoll })}
             onPointerMove={updateDrag}
             onPointerUp={endDrag}
