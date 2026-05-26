@@ -119,15 +119,15 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
   // drag (pointer 기반: 모바일에서도 안정)
   const boardRef = useRef<HTMLDivElement | null>(null);
   const tombRef = useRef<HTMLDivElement | null>(null);
-  const captureRef = useRef<HTMLElement | null>(null);
   const [drag, setDrag] = useState<{
     kind: 'muddoll' | 'artifact' | 'placed' | 'word';
     id: string;
     label: string;
     img?: string;
-    pointerId: number;
     startX: number;
     startY: number;
+    offsetX: number; // 커서(포인터)와 오브젝트 중심의 차이
+    offsetY: number;
     moved: boolean;
     x: number;
     y: number;
@@ -249,33 +249,21 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
     startIfNeeded();
     if (artifactModal || resultModal) return;
     // pointer 캡처로 드래그 안정화
-    const el = e.currentTarget as HTMLElement;
-    captureRef.current = el;
-    el.setPointerCapture?.(e.pointerId);
+    (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+    const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const centerX = r.left + r.width / 2;
+    const centerY = r.top + r.height / 2;
     setDrag({
       ...payload,
-      pointerId: e.pointerId,
       startX: e.clientX,
       startY: e.clientY,
+      offsetX: e.clientX - centerX,
+      offsetY: e.clientY - centerY,
       moved: false,
       x: e.clientX,
       y: e.clientY,
     });
   };
-
-  // 모달이 열리면 드래그/포인터 캡처가 남아 클릭이 먹통되는 상황을 방지
-  useEffect(() => {
-    if (!resultModal && !artifactModal) return;
-    if (drag) setDrag(null);
-    try {
-      if (captureRef.current && drag) captureRef.current.releasePointerCapture?.(drag.pointerId);
-    } catch {
-      // ignore
-    } finally {
-      captureRef.current = null;
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [resultModal, artifactModal]);
 
   const getTombRect = () => {
     const tomb = tombRef.current;
@@ -320,13 +308,6 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
     const board = boardRef.current;
     const ended = drag;
     setDrag(null);
-    try {
-      if (captureRef.current) captureRef.current.releasePointerCapture?.(ended.pointerId);
-    } catch {
-      // ignore
-    } finally {
-      captureRef.current = null;
-    }
 
     // moved=false면 클릭으로 처리(모바일 대체)
     if (!ended.moved) {
@@ -367,19 +348,26 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
     }
 
     if (!board) return;
+    // pointer capture 상태에서도 "실제 포인터 아래 요소"를 얻기 위해 elementFromPoint 사용
+    const elUnder = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null;
+
+    // 오브젝트의 "중심"이 놓일 좌표(드래그 시작 시 잡은 위치 보정)
+    const dropX = e.clientX - (ended.offsetX ?? 0);
+    const dropY = e.clientY - (ended.offsetY ?? 0);
+
     const rect = board.getBoundingClientRect();
-    const insideBoard = e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom;
+    const insideBoard = dropX >= rect.left && dropX <= rect.right && dropY >= rect.top && dropY <= rect.bottom;
     const tombRect = getTombRect();
     const insideTomb =
       !!tombRect &&
-      e.clientX >= tombRect.left &&
-      e.clientX <= tombRect.right &&
-      e.clientY >= tombRect.top &&
-      e.clientY <= tombRect.bottom;
+      dropX >= tombRect.left &&
+      dropX <= tombRect.right &&
+      dropY >= tombRect.top &&
+      dropY <= tombRect.bottom;
 
     if (ended.kind === 'muddoll') {
       if (!insideTomb) return;
-      const pos = getTombPct(e.clientX, e.clientY);
+      const pos = getTombPct(dropX, dropY);
       if (!pos) return;
       setMuddollPlaced(true);
       setMuddollPos(pos);
@@ -393,7 +381,7 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
       const a = ARTIFACTS.find((x) => x.id === ended.id);
       if (!a) return;
       if (placedIds[a.id]) return;
-      const pos = getTombPct(e.clientX, e.clientY);
+      const pos = getTombPct(dropX, dropY);
       if (!pos) return;
       addPlaced(a, pos.xPct, pos.yPct);
       return;
@@ -401,8 +389,7 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
 
     if (ended.kind === 'placed') {
       if (phase !== 'MAIN') return;
-      const t = e.target as HTMLElement | null;
-      const droppedOnInventory = !!t?.closest?.('[data-inventory="true"]');
+      const droppedOnInventory = !!elUnder?.closest?.('[data-inventory="true"]');
 
       // 회수 조건: 보드 밖 / 인벤토리 영역 / 회수함
       // (UX) “원래 있던 곳으로 되돌리기”가 직관적이므로 별도 회수함 UI는 제거.
@@ -412,7 +399,7 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
         return;
       }
 
-      const pos = getTombPct(e.clientX, e.clientY);
+      const pos = getTombPct(dropX, dropY);
       if (!pos) return;
       setPlaced((prev) => prev.map((p) => (p.id === ended.id ? { ...p, xPct: pos.xPct, yPct: pos.yPct } : p)));
       return;
@@ -421,8 +408,7 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
     if (ended.kind === 'word') {
       if (phase !== 'QUIZ') return;
       // 드롭: 빈칸 위에 놓았는지 판단
-      const t = e.target as HTMLElement | null;
-      const slot = t?.closest?.('[data-slot]')?.getAttribute('data-slot');
+      const slot = elUnder?.closest?.('[data-slot]')?.getAttribute('data-slot');
       const w = ended.label as WordCard;
       if (slot === '1') {
         if (wordType(w) !== 'NATION') {
@@ -468,12 +454,12 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
       {/* 배경 */}
       <div
         className="absolute inset-0 bg-cover bg-center"
-        style={{ backgroundImage: `linear-gradient(rgba(244,235,217,0.35), rgba(244,235,217,0.78)), url('${bgA}')` }}
+        style={{ backgroundImage: `linear-gradient(rgba(244,235,217,0.06), rgba(244,235,217,0.18)), url('${bgA}')` }}
       />
       {bgB && (
         <div
           className={`absolute inset-0 bg-cover bg-center transition-opacity duration-500 ${fadeIn ? 'opacity-100' : 'opacity-0'}`}
-          style={{ backgroundImage: `linear-gradient(rgba(244,235,217,0.35), rgba(244,235,217,0.78)), url('${bgB}')` }}
+          style={{ backgroundImage: `linear-gradient(rgba(244,235,217,0.06), rgba(244,235,217,0.18)), url('${bgB}')` }}
         />
       )}
 
@@ -784,7 +770,7 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
 
       {/* 결과 모달 */}
       {resultModal && (
-        <div className="absolute inset-0 z-40 bg-ink/35 grid place-items-center p-0" data-interactive="true">
+        <div className="absolute inset-0 z-[11000] bg-ink/35 p-0" data-interactive="true">
           <div className="w-full h-full bg-paper2 text-ink shadow-paper flex flex-col">
             <div className="flex-1 min-h-0 overflow-hidden">
               <img
@@ -829,8 +815,8 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
         <div
           className="fixed z-[99999] pointer-events-none"
           style={{
-            left: drag.x,
-            top: drag.y,
+            left: drag.x - (drag.offsetX ?? 0),
+            top: drag.y - (drag.offsetY ?? 0),
             transform: 'translate(-50%, -50%)',
           }}
         >
