@@ -119,11 +119,13 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
   // drag (pointer 기반: 모바일에서도 안정)
   const boardRef = useRef<HTMLDivElement | null>(null);
   const tombRef = useRef<HTMLDivElement | null>(null);
+  const captureRef = useRef<HTMLElement | null>(null);
   const [drag, setDrag] = useState<{
     kind: 'muddoll' | 'artifact' | 'placed' | 'word';
     id: string;
     label: string;
     img?: string;
+    pointerId: number;
     startX: number;
     startY: number;
     moved: boolean;
@@ -247,9 +249,12 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
     startIfNeeded();
     if (artifactModal || resultModal) return;
     // pointer 캡처로 드래그 안정화
-    (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+    const el = e.currentTarget as HTMLElement;
+    captureRef.current = el;
+    el.setPointerCapture?.(e.pointerId);
     setDrag({
       ...payload,
+      pointerId: e.pointerId,
       startX: e.clientX,
       startY: e.clientY,
       moved: false,
@@ -257,6 +262,20 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
       y: e.clientY,
     });
   };
+
+  // 모달이 열리면 드래그/포인터 캡처가 남아 클릭이 먹통되는 상황을 방지
+  useEffect(() => {
+    if (!resultModal && !artifactModal) return;
+    if (drag) setDrag(null);
+    try {
+      if (captureRef.current && drag) captureRef.current.releasePointerCapture?.(drag.pointerId);
+    } catch {
+      // ignore
+    } finally {
+      captureRef.current = null;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resultModal, artifactModal]);
 
   const getTombRect = () => {
     const tomb = tombRef.current;
@@ -301,6 +320,13 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
     const board = boardRef.current;
     const ended = drag;
     setDrag(null);
+    try {
+      if (captureRef.current) captureRef.current.releasePointerCapture?.(ended.pointerId);
+    } catch {
+      // ignore
+    } finally {
+      captureRef.current = null;
+    }
 
     // moved=false면 클릭으로 처리(모바일 대체)
     if (!ended.moved) {
