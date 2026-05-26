@@ -48,6 +48,11 @@ export default function MiniGameManager() {
     );
   }
 
+  const fit =
+    currentStageId === 4
+      ? { baseWidth: 450, baseHeight: 800 } // 세로(중초사지 당간지주)
+      : { baseWidth: 800, baseHeight: 450 }; // 기본 가로
+
   return (
     <Suspense fallback={<div style={{ padding: 20 }}>게임 불러오는 중...</div>}>
       <div className="w-full h-full relative">
@@ -64,7 +69,7 @@ export default function MiniGameManager() {
           ← 뒤로
         </button>
 
-        <FitScaleWrapper baseWidth={800} baseHeight={450}>
+        <FitScaleWrapper baseWidth={fit.baseWidth} baseHeight={fit.baseHeight}>
           <CurrentMiniGame
             stageId={currentStageId}
             regionData={regionData}
