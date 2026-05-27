@@ -6,7 +6,7 @@ import type { MinigameProps } from '../../types/game';
 const BronzeAgeGame = lazy(() => import('./BronzeAge/BronzeAgeGame'));
 const DolmenGame = lazy(() => import('./Dolmen/DolmenGame'));
 const SeoksilbunGame = lazy(() => import('./Seoksilbun/SeoksilbunGame'));
-const ManangyoGame = lazy(() => import('./Manangyo/ManangyoGame'));
+const MananGame = lazy(() => import('./Manan/MananGame'));
 const JungchosaGame = lazy(() => import('./Jungchosa/JungchosaGame'));
 const AnyangsaGame = lazy(() => import('./Anyangsa/AnyangsaGame'));
 const MaejongGame = lazy(() => import('./Maejong/MaejongGame'));
@@ -21,7 +21,7 @@ const MINIGAME_REGISTRY: Record<number, React.ComponentType<MinigameProps>> = {
   5: MaejongGame,
   6: AnyangsaGame,
   7: BisanGame,
-  8: ManangyoGame,
+  8: MananGame,
 };
 
 export default function MiniGameManager() {
