@@ -19,6 +19,7 @@ export default function App() {
   const resetError = useGameStore((s) => s.resetError);
   const isMuted = useGameStore((s) => s.isMuted);
   const appPhase = useGameStore((s) => s.appPhase);
+  const currentStageId = useGameStore((s) => s.currentStageId);
 
   const [assetsReady, setAssetsReady] = useState(false);
   const [preloading, setPreloading] = useState(false);
@@ -140,8 +141,12 @@ export default function App() {
     <GameWrapper>
       <InstallBanner />
 
-      {/* 모바일 세로모드일 때: “가로모드 권장” 안내 (INTRO 제외 전 단계) */}
-      <OrientationOverlay enabled={appPhase !== 'INTRO'} />
+      {/* 오리엔테이션 “권장” 안내(터치 1회로 닫힘) - 스테이지별 정책 */}
+      <OrientationOverlay
+        enabled={appPhase !== 'INTRO'}
+        recommended={appPhase === 'MINIGAME' && currentStageId === 4 ? 'portrait' : 'landscape'}
+        contextKey={`${appPhase}-${currentStageId ?? ''}`}
+      />
 
       {appPhase === 'INTRO' && <IntroScreen />}
       {appPhase === 'MAP' && <MapScreen />}
