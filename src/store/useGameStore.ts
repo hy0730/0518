@@ -178,7 +178,12 @@ export const useGameStore = create<GameState>()(
         set({ status: 'loading', error: null, regionData: null, currentNodeId: null, currentDialog: null, quizState: null });
 
         try {
-          const { data, error } = await supabase.from('regions').select('data').eq('id', regionKey).single();
+          // NOTE:
+          // - `.single()`은 결과가 0개 또는 2개 이상이면 에러가 발생함
+          // - 운영 중 regions에 중복 row가 생기거나(또는 RLS/뷰 영향) 결과가 배열로 판단되면
+          //   "Cannot coerce the result to a single JSON object"가 발생할 수 있음
+          // => 여기서는 "없으면 null"로 안전하게 처리하고, 혹시 중복이 있더라도 1개만 가져오도록 limit(1) 적용
+          const { data, error } = await supabase.from('regions').select('data').eq('id', regionKey).limit(1).maybeSingle();
 
           if (error) {
             set({
@@ -188,7 +193,15 @@ export const useGameStore = create<GameState>()(
             return;
           }
 
-          const ok = applyRegionDataSafely(set, data?.data);
+          if (!data?.data) {
+            set({
+              status: 'error',
+              error: `Supabase regions 조회 실패: '${regionKey}' 지역 데이터가 없습니다.`,
+            });
+            return;
+          }
+
+          const ok = applyRegionDataSafely(set, data.data);
           if (!ok) {
             set({
               status: 'error',
