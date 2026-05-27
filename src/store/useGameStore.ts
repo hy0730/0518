@@ -51,12 +51,12 @@ function applyRegionDataSafely(set: (fn: any) => void, nextRaw: unknown) {
   if (!parsed.success) return false;
 
   const validNodeIds = new Set(parsed.data.map.nodes.map((n) => n.id));
-  set((state: any) => ({
+  set((state: { visitedNodes: string[] }) => ({
     regionData: parsed.data,
     status: 'ready',
     error: null,
     // 기존 진행도 유지하되, 데이터 변경으로 사라진 노드 id는 제거
-    visitedNodes: Array.from(new Set(state.visitedNodes)).filter((id: string) => validNodeIds.has(id)),
+    visitedNodes: Array.from(new Set(state.visitedNodes)).filter((id) => validNodeIds.has(id)),
   }));
 
   return true;
@@ -232,8 +232,7 @@ export const useGameStore = create<GameState>()(
 
           const raw = data?.data ?? (regionKey === 'anyang' ? DEFAULT_ANYANG_DATA : DEFAULT_ANYANG_DATA);
           if (!data?.data) {
-            // eslint-disable-next-line no-console
-            console.warn(`DB에 '${regionKey}' 지역 데이터가 없어 기본값을 사용합니다.`);
+            // 개발 편의: DB가 비어 있어도 앱이 멈추지 않도록 기본값 사용
           }
 
           const ok = applyRegionDataSafely(set, raw);

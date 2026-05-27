@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { storyDataByStageId, type StoryDialogueLine, type StageStory } from '../../data/storyData';
+import { getRelicMainImage } from '../../utils/relicImages';
 import styles from './StoryScreen.module.css';
 
 export default function StoryScreen() {
@@ -24,8 +25,8 @@ export default function StoryScreen() {
 
     const interpolate = (text: string) =>
       text
-        .replaceAll('{PLAYER}', who)
-        .replaceAll('{ORG}', org)
+        .replace(/\{PLAYER\}/g, who)
+        .replace(/\{ORG\}/g, org)
         // 치환 후 공백이 어색하게 남는 경우 정리
         .replace(/\s{2,}/g, ' ')
         .trim();
@@ -95,20 +96,7 @@ export default function StoryScreen() {
 
   const line = lines[idx] ?? lines[lines.length - 1];
 
-  const relicMainImage = useMemo(() => {
-    const map: Record<number, string> = {
-      1: '/assets/images/relic_gwanyang_main.png',
-      2: '/assets/images/relic_pyeongchon_main.png',
-      3: '/assets/images/relic_seoksu_main.png',
-      4: '/assets/images/relic_jungcho_main.png',
-      5: '/assets/images/relic_bell_main.png',
-      6: '/assets/images/relic_turtle_main.png',
-      7: '/assets/images/relic_bisan_main.png',
-      8: '/assets/images/relic_bridge_main.png',
-      9: '/assets/images/relic_seoimyeon_main.png',
-    };
-    return map[currentStageId] ?? '';
-  }, [currentStageId]);
+  const relicMainImage = useMemo(() => getRelicMainImage(currentStageId), [currentStageId]);
 
   // 타입라이터(읽는 시간 확보) - 탭하면 즉시 전체 출력, 다음 탭에 넘어감
   useEffect(() => {

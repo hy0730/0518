@@ -680,7 +680,7 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
 
       {/* 최종 결과 감상창 (자동 전환 없이, 유저 클릭으로만 맵 복귀) */}
       {resultModal && (
-        <div className="absolute inset-0 z-[10010] bg-ink/35 p-0">
+        <div className="fixed inset-0 z-[99999] bg-ink/35 p-0">
           {/* 미니게임 테이블(캔버스)만큼 꽉 차게 */}
           <div className="w-full h-full bg-paper2 text-ink shadow-paper flex flex-col">
             <div className="flex-1 min-h-0 overflow-hidden">
@@ -697,7 +697,7 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
               />
             </div>
 
-            <div className="p-4 border-t border-white/10 bg-black/40">
+            <div className="p-4 border-t border-ink/20 bg-paper/70">
               <div className="text-lg font-black">축하해요! 유물 복원 완료</div>
               <div className="mt-1 text-sm opacity-85 leading-relaxed">
                 {targetRelics}개의 유물을 완성해 문화유산 기록을 되살렸어요.

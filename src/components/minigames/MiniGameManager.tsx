@@ -68,7 +68,7 @@ export default function MiniGameManager() {
         {/* 뒤로 버튼: 문서 흐름을 타지 않도록 완전 오버레이 */}
         <button
           type="button"
-          className="absolute top-4 left-4 z-50 px-3 py-2 rounded-xl border border-white/20 bg-black/50 text-white font-black"
+          className="absolute top-4 left-4 z-50 px-3 py-2 rounded-2xl border border-ink/30 bg-paper2/90 text-ink font-black shadow-md"
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();

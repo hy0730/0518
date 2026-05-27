@@ -50,10 +50,6 @@ function cloneMap(m: Tile[][]) {
   return m.map((row) => row.slice()) as Tile[][];
 }
 
-function clamp(n: number, a: number, b: number) {
-  return Math.max(a, Math.min(b, n));
-}
-
 function RiceBagIcon() {
   return (
     <svg width="26" height="26" viewBox="0 0 64 64" aria-hidden="true">
@@ -107,7 +103,6 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
   const rows = map.length;
   const cols = map[0]?.length ?? 0;
 
-  const tileSize = 30; // 11x16 -> 330x480(세로 초과)지만 FitScale 800x450 내에서 축소됨
   // 실제로는 11x16을 28로 하면 308x448에 딱 맞음(여백 고려)
   const cell = 28;
   const gridW = cols * cell;
@@ -505,4 +500,3 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
     </div>
   );
 }
-

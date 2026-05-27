@@ -773,7 +773,7 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
 
       {/* 결과 모달 */}
       {resultModal && (
-        <div className="absolute inset-0 z-[11000] bg-ink/35 p-0" data-interactive="true">
+        <div className="fixed inset-0 z-[99999] bg-ink/35 p-0" data-interactive="true">
           <div className="w-full h-full bg-paper2 text-ink shadow-paper flex flex-col">
             <div className="flex-1 min-h-0 overflow-hidden">
               <img
