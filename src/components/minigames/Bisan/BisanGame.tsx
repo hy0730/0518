@@ -139,6 +139,7 @@ export default function BisanGame({ stageId, onComplete, regionData }: MinigameP
   const [whiteFound, setWhiteFound] = useState(false);
   const [glow, setGlow] = useState(false);
   const [resultModal, setResultModal] = useState(false);
+  const allRevealed = digState.every((m) => m.revealed);
 
   const tapMound = (id: DigId) => {
     startIfNeeded();
@@ -164,8 +165,12 @@ export default function BisanGame({ stageId, onComplete, regionData }: MinigameP
   // 백자 발견 → 연출 → 모달
   useEffect(() => {
     if (phase !== 'DIG') return;
+    if (resultModal) return;
     const white = digState.find((m) => m.type === 'white');
-    if (!white?.revealed) return;
+    // 안전장치:
+    // - 이론상 white는 1개 고정이지만, 어떤 이유로든 탐지가 실패하더라도
+    //   "3개 흙더미를 다 치웠는데 진행이 안 되는" 상황을 막기 위해 allRevealed도 허용
+    if (!white?.revealed && !allRevealed) return;
     if (whiteFound) return;
 
     setWhiteFound(true);
@@ -174,7 +179,7 @@ export default function BisanGame({ stageId, onComplete, regionData }: MinigameP
     showToast("우와! 아주 희귀한 '고려 백자'를 찾았어요!", 1800);
     const t = window.setTimeout(() => setResultModal(true), 900);
     return () => window.clearTimeout(t);
-  }, [phase, digState, whiteFound]);
+  }, [phase, digState, whiteFound, allRevealed, resultModal]);
 
   return (
     <div className="w-full h-full p-2 text-ink flex flex-col relative">
@@ -402,4 +407,3 @@ export default function BisanGame({ stageId, onComplete, regionData }: MinigameP
     </div>
   );
 }
-
