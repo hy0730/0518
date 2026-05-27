@@ -10,6 +10,7 @@ const ManangyoGame = lazy(() => import('./Manangyo/ManangyoGame'));
 const JungchosaGame = lazy(() => import('./Jungchosa/JungchosaGame'));
 const AnyangsaGame = lazy(() => import('./Anyangsa/AnyangsaGame'));
 const MaejongGame = lazy(() => import('./Maejong/MaejongGame'));
+const BisanGame = lazy(() => import('./Bisan/BisanGame'));
 
 const MINIGAME_REGISTRY: Record<number, React.ComponentType<MinigameProps>> = {
   1: BronzeAgeGame,
@@ -19,6 +20,7 @@ const MINIGAME_REGISTRY: Record<number, React.ComponentType<MinigameProps>> = {
   // 기획 변경: 5↔6 스왑
   5: MaejongGame,
   6: AnyangsaGame,
+  7: BisanGame,
   8: ManangyoGame,
 };
 
