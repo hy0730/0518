@@ -10,6 +10,8 @@ type TutorialMode = 'DIALOGUE' | 'WEDGE' | 'LOG' | 'PULL' | 'DONE';
 const TARGET_PROGRESS = 85;
 const QUARRY_SWELL_MS = 1500;
 const QUARRY_SHAKE_MS = 650;
+// 덮개돌(밧줄 돌) 위치 미세 조정: 값이 작을수록(음수) mountain 쪽으로 이동
+const CAPSTONE_X_OFFSET_PX = -28;
 
 const WEDGE_POS = [
   { left: '58%', top: '38%' },
@@ -451,6 +453,7 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
                   src="/assets/images/capstone_raw.png"
                   alt="떼돌"
                   className="absolute left-0 top-[18%] w-[clamp(170px,32vw,280px)] select-none object-contain drop-shadow-[0_18px_40px_rgba(0,0,0,0.45)] fallFx"
+                  style={{ left: `${CAPSTONE_X_OFFSET_PX}px` }}
                   draggable={false}
                 />
               )}
@@ -467,6 +470,7 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
                       src="/assets/images/capstone_rope.png"
                       alt="떼돌"
                       className="w-[clamp(170px,32vw,280px)] select-none object-contain drop-shadow-[0_18px_40px_rgba(0,0,0,0.45)]"
+                      style={{ marginLeft: `${CAPSTONE_X_OFFSET_PX}px` }}
                       draggable={false}
                     />
                   )}
