@@ -37,7 +37,7 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
     () => storyDataByStageId[stageId]?.title ?? regionData?.map?.nodes?.[stageId - 1]?.title ?? `스테이지 ${stageId}`,
     [regionData, stageId]
   );
-  const title = `${stageTitle} · 안양사 귀부`;
+  const title = stageTitle;
 
   const [phase, setPhase] = useState<Phase>('FRAGMENTS');
   const [attempts, setAttempts] = useState(0);
@@ -356,4 +356,3 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
     </div>
   );
 }
-

@@ -16,8 +16,9 @@ const MINIGAME_REGISTRY: Record<number, React.ComponentType<MinigameProps>> = {
   2: DolmenGame,
   3: SeoksilbunGame,
   4: JungchosaGame,
-  5: AnyangsaGame,
-  6: MaejongGame,
+  // 기획 변경: 5↔6 스왑
+  5: MaejongGame,
+  6: AnyangsaGame,
   8: ManangyoGame,
 };
 

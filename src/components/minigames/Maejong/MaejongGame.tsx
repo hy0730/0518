@@ -50,7 +50,7 @@ export default function MaejongGame({ stageId, onComplete, regionData }: Minigam
     () => storyDataByStageId[stageId]?.title ?? regionData?.map?.nodes?.[stageId - 1]?.title ?? `스테이지 ${stageId}`,
     [regionData, stageId]
   );
-  const title = `${stageTitle} · 석수동 마애종`;
+  const title = stageTitle;
 
   const mainBg = useMemo(() => getRelicMainImage(stageId), [stageId]);
   const realImg = useMemo(() => getRelicRealImage(stageId), [stageId]);
@@ -439,4 +439,3 @@ export default function MaejongGame({ stageId, onComplete, regionData }: Minigam
     </div>
   );
 }
-
