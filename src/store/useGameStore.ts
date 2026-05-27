@@ -9,6 +9,43 @@ import type { RealtimeChannel } from '@supabase/supabase-js';
 let realtimeChannel: RealtimeChannel | null = null;
 let realtimeRegionId: string | null = null;
 
+/**
+ * 개발 편의를 위한 기본 지역 데이터(폴백).
+ * - Supabase regions 테이블이 비어 있어도 앱이 멈추지 않고 MAP/스토리/미니게임 흐름을 볼 수 있게 함
+ * - RegionDataSchema를 만족하는 "최소 구조" + 9개 스테이지 노드(visitedNodes 처리 안전)
+ */
+const DEFAULT_ANYANG_DATA: RegionData = {
+  region: { id: 'anyang', name: '안양' },
+  assets: {
+    mainBackground: '/assets/images/map_real.png',
+    mapBackground: '/assets/images/map_real.png',
+  },
+  map: {
+    nodes: [
+      { id: 'stage-1', title: '관양동 선사유적지', position: { x: 20, y: 28 }, dialogId: 'd-stage-1' },
+      { id: 'stage-2', title: '평촌동 지석묘', position: { x: 35, y: 42 }, dialogId: 'd-stage-2' },
+      { id: 'stage-3', title: '석수동 석실분', position: { x: 52, y: 30 }, dialogId: 'd-stage-3' },
+      { id: 'stage-4', title: '중초사지 당간지주', position: { x: 64, y: 44 }, dialogId: 'd-stage-4' },
+      { id: 'stage-5', title: '석수동 마애종', position: { x: 76, y: 30 }, dialogId: 'd-stage-5' },
+      { id: 'stage-6', title: '안양사 귀부', position: { x: 18, y: 58 }, dialogId: 'd-stage-6' },
+      { id: 'stage-7', title: '비산동 도요지', position: { x: 40, y: 66 }, dialogId: 'd-stage-7' },
+      { id: 'stage-8', title: '만안교', position: { x: 62, y: 68 }, dialogId: 'd-stage-8' },
+      { id: 'stage-9', title: '구서이면사무소', position: { x: 82, y: 58 }, dialogId: 'd-stage-9' },
+    ],
+  },
+  dialogs: {
+    'd-stage-1': { id: 'd-stage-1', title: '관양동 선사유적지', steps: [{ type: 'end' }] },
+    'd-stage-2': { id: 'd-stage-2', title: '평촌동 지석묘', steps: [{ type: 'end' }] },
+    'd-stage-3': { id: 'd-stage-3', title: '석수동 석실분', steps: [{ type: 'end' }] },
+    'd-stage-4': { id: 'd-stage-4', title: '중초사지 당간지주', steps: [{ type: 'end' }] },
+    'd-stage-5': { id: 'd-stage-5', title: '석수동 마애종', steps: [{ type: 'end' }] },
+    'd-stage-6': { id: 'd-stage-6', title: '안양사 귀부', steps: [{ type: 'end' }] },
+    'd-stage-7': { id: 'd-stage-7', title: '비산동 도요지', steps: [{ type: 'end' }] },
+    'd-stage-8': { id: 'd-stage-8', title: '만안교', steps: [{ type: 'end' }] },
+    'd-stage-9': { id: 'd-stage-9', title: '구서이면사무소', steps: [{ type: 'end' }] },
+  },
+};
+
 function applyRegionDataSafely(set: (fn: any) => void, nextRaw: unknown) {
   const parsed = RegionDataSchema.safeParse(nextRaw);
   if (!parsed.success) return false;
@@ -193,15 +230,13 @@ export const useGameStore = create<GameState>()(
             return;
           }
 
+          const raw = data?.data ?? (regionKey === 'anyang' ? DEFAULT_ANYANG_DATA : DEFAULT_ANYANG_DATA);
           if (!data?.data) {
-            set({
-              status: 'error',
-              error: `Supabase regions 조회 실패: '${regionKey}' 지역 데이터가 없습니다.`,
-            });
-            return;
+            // eslint-disable-next-line no-console
+            console.warn(`DB에 '${regionKey}' 지역 데이터가 없어 기본값을 사용합니다.`);
           }
 
-          const ok = applyRegionDataSafely(set, data.data);
+          const ok = applyRegionDataSafely(set, raw);
           if (!ok) {
             set({
               status: 'error',
