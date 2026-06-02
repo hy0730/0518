@@ -137,13 +137,15 @@ export default function BisanGame({ stageId, onComplete, regionData }: MinigameP
   });
   const [digState, setDigState] = useState(digItems);
   const [whiteFound, setWhiteFound] = useState(false);
+  const whiteFoundRef = useRef(false);
   const [glow, setGlow] = useState(false);
   const [resultModal, setResultModal] = useState(false);
   const allRevealed = digState.every((m) => m.revealed);
 
   const tapMound = (id: DigId) => {
     startIfNeeded();
-    if (phase !== 'DIG' || resultModal) return;
+    // UX: 백자 발견 직후에는 연출을 방해하지 않도록 입력 차단
+    if (phase !== 'DIG' || resultModal || whiteFoundRef.current || whiteFound) return;
     setDigState((prev) =>
       prev.map((m) => {
         if (m.id !== id) return m;
@@ -173,13 +175,21 @@ export default function BisanGame({ stageId, onComplete, regionData }: MinigameP
     if (!white?.revealed && !allRevealed) return;
     if (whiteFound) return;
 
+    // 즉시 입력 차단(연타로 인해 effect 타이머가 취소되는 문제 방지)
+    whiteFoundRef.current = true;
     setWhiteFound(true);
     setGlow(true);
     audio.playUrl('/assets/sounds/sfx_fanfare.mp3', 0.85);
     showToast("우와! 아주 희귀한 '고려 백자'를 찾았어요!", 1800);
+  }, [phase, digState, whiteFound, allRevealed, resultModal]);
+
+  // (핵심) 결과 모달 타이머는 digState 변화와 분리: whiteFound만 보고 1회 실행
+  useEffect(() => {
+    if (!whiteFound) return;
+    if (resultModal) return;
     const t = window.setTimeout(() => setResultModal(true), 900);
     return () => window.clearTimeout(t);
-  }, [phase, digState, whiteFound, allRevealed, resultModal]);
+  }, [whiteFound, resultModal]);
 
   return (
     <div className="w-full h-full p-2 text-ink flex flex-col relative">
@@ -323,10 +333,11 @@ export default function BisanGame({ stageId, onComplete, regionData }: MinigameP
                 <button
                   key={m.id}
                   type="button"
+                  disabled={whiteFound}
                   className={[
                     'absolute -translate-x-1/2 -translate-y-1/2 rounded-3xl border border-ink/25 shadow-md px-4 py-4 text-left touch-none select-none',
                     m.revealed ? 'bg-paper2/90' : 'bg-[#C7A98B]/90',
-                    m.revealed ? '' : 'hover:opacity-95 active:translate-y-[1px]',
+                    whiteFound ? 'cursor-not-allowed' : m.revealed ? '' : 'hover:opacity-95 active:translate-y-[1px]',
                     whiteFound && m.type === 'white' && m.revealed ? 'glowFx' : '',
                   ].join(' ')}
                   style={{ left: `${m.x}%`, top: `${m.y}%`, width: '160px' }}
