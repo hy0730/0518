@@ -19,6 +19,10 @@ export default function IntroScreen() {
   const [org, setOrg] = useState('');
   const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [issued, setIssued] = useState(false);
+  const [stampAnim, setStampAnim] = useState<'idle' | 'drop'>('idle');
+  const [cardShake, setCardShake] = useState(false);
+  const [enterAnim, setEnterAnim] = useState(true);
   const stepTimer = useRef<number | null>(null);
   const typingTimer = useRef<number | null>(null);
   const lastClickAt = useRef(0);
@@ -32,6 +36,22 @@ export default function IntroScreen() {
     if (step === 2) return '우리는 문화유산연구원이야.\n문화유산을 발굴하고 보존하는 일을 하지!';
     if (step === 3) return '앗! 안양 문화유산의 기록이 사라지고 있어!';
     return '';
+  }, [step]);
+
+  // 진입 연출 + 페이지 넘김 사운드
+  useEffect(() => {
+    if (step !== 1) return;
+    setEnterAnim(true);
+    const t = window.setTimeout(() => setEnterAnim(false), 860);
+    void (async () => {
+      try {
+        const { audio } = await import('../../utils/audio');
+        audio.playUrl('/assets/sounds/sfx_paper_slide.mp3', 0.7);
+      } catch {
+        // ignore
+      }
+    })();
+    return () => window.clearTimeout(t);
   }, [step]);
 
   useEffect(() => {
@@ -63,14 +83,15 @@ export default function IntroScreen() {
 
   return (
     <div className={`${styles.root} ${glitch ? styles.glitch : ''}`} style={{ backgroundImage: `url(${bgImage})` }}>
-      <div className={styles.card}>
+      {/* 연필 스케치 지도 라인 오버레이(스크랩북 느낌) */}
+      <img className={styles.mapOverlay} src="/assets/images/map_main.png" alt="" aria-hidden="true" />
+
+      <div className={`${styles.card} ${enterAnim && step === 1 ? styles.noteOpen : ''} ${cardShake ? styles.shake : ''}`}>
         {step === 1 && (
           <>
             <div className={styles.title}>{title}</div>
             <div className={styles.desc}>
-              대원증을 발급하고, 안양 문화유산의 기록을 지켜주세요.
-              <br />
-              정보를 입력하면 연구원 소개로 넘어갑니다.
+              안양의 문화유산 기록이 사라지고 있어요. 수호대원 정보를 등록하고 복원 노트를 열어주세요.
             </div>
 
             <div className={styles.form}>
@@ -82,6 +103,7 @@ export default function IntroScreen() {
                   onChange={(e) => setOrg(e.target.value)}
                   placeholder="예) 안양초등학교"
                   autoComplete="organization"
+                  disabled={issued}
                 />
               </label>
 
@@ -93,15 +115,34 @@ export default function IntroScreen() {
                   onChange={(e) => setName(e.target.value)}
                   placeholder="예) 홍길동"
                   autoComplete="name"
+                  disabled={issued}
                 />
               </label>
 
               {error && <div className={styles.error}>{error}</div>}
 
+              {/* 도장 '쿵' 연출 */}
+              <div className={styles.stampStage} aria-hidden="true">
+                <img
+                  src="/assets/images/seal.png"
+                  alt=""
+                  className={`${styles.stamp} ${stampAnim === 'drop' ? styles.stampDrop : ''}`}
+                />
+                {issued && <div className={styles.stampGlow} />}
+              </div>
+
               <button
                 type="button"
-                className={styles.primaryBtn}
+                className={`${styles.primaryBtn} ${issued ? styles.primaryBtnPulse : ''}`}
                 onClick={async () => {
+                  // 2단 버튼:
+                  // 1) 발급(도장 연출) → 2) 복원 노트 펼치기(다음 화면)
+                  if (issued) {
+                    // Step2: 연구원 소개(노트 다음 페이지 느낌)
+                    setStep(2);
+                    return;
+                  }
+
                   // A+B+C 조합:
                   // C) 가능한 브라우저에서는 "진짜" 풀스크린 시도 (반드시 사용자 제스처 내에서!)
                   void tryEnterFullscreen();
@@ -119,11 +160,13 @@ export default function IntroScreen() {
                   setPlayerOrg(trimmedOrg);
                   setPlayerName(trimmedName);
 
-                  // 사용자 제스처 내에서 오디오 제한 해제 + BGM 재생 시도
+                  // 사용자 제스처 내에서 오디오 제한 해제 + BGM 재생 시도 + 발급 사운드
                   try {
                     const { audio } = await import('../../utils/audio');
                     await audio.unlock();
                     audio.setMuted(isMuted);
+                    // 발급(도장) 소리
+                    audio.playUrl('/assets/sounds/sfx_pop.mp3', 0.8);
                     if (!isMuted) {
                       await audio.playBgm();
                     }
@@ -131,10 +174,15 @@ export default function IntroScreen() {
                     // ignore
                   }
 
-                  setStep(2);
+                  // 도장 '쿵' + 카드 흔들림
+                  setStampAnim('drop');
+                  setCardShake(true);
+                  window.setTimeout(() => setCardShake(false), 220);
+                  window.setTimeout(() => setStampAnim('idle'), 520);
+                  setIssued(true);
                 }}
               >
-                대원증 발급 완료
+                {issued ? '복원 노트 펼치기' : '수호대증 발급'}
               </button>
             </div>
           </>
