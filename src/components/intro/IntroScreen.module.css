@@ -8,16 +8,20 @@
   overflow: hidden;
 
   background-color: var(--paper);
-  background-size: cover;
+  /* 배경이 잘리지 않도록 전체 표시(레터박스 허용) */
+  background-size: contain;
   background-position: center;
+  background-repeat: no-repeat;
 }
 
 .root::before {
   content: '';
   position: absolute;
   inset: 0;
-  background: rgba(244, 235, 217, 0.65);
+  /* 어두운 상태에서 서서히 밝아지기 */
+  background: rgba(0, 0, 0, 0.78);
   z-index: 0;
+  animation: bgFadeIn 1.8s ease-in-out both;
 }
 
 .mapOverlay {
@@ -44,6 +48,7 @@
   backdrop-filter: blur(2px);
   position: relative;
   z-index: 2;
+  transform-style: preserve-3d;
 }
 
 .noteOpen {
@@ -54,6 +59,48 @@
 .pageExit {
   animation: pageExit 520ms ease-in-out both;
   pointer-events: none;
+}
+
+.pageTurn {
+  transform-origin: left center;
+  animation: pageTurn 620ms cubic-bezier(.2,.9,.2,1) both;
+  pointer-events: none;
+}
+
+.pageEnter {
+  transform-origin: left center;
+  animation: pageEnter 460ms cubic-bezier(.2,.9,.2,1) both;
+}
+
+.startStage {
+  margin-top: 16px;
+  display: grid;
+  place-items: center;
+  padding: 18px 6px 10px;
+}
+
+.startBtn {
+  width: min(320px, 100%);
+  border-radius: 999px;
+  padding: 18px 18px;
+  border: 2px solid rgba(74, 55, 40, 0.35);
+  background: var(--stamp);
+  color: #fff;
+  cursor: pointer;
+  font-weight: 900;
+  font-size: 18px;
+  letter-spacing: -0.2px;
+  box-shadow: 0 14px 34px rgba(217, 83, 79, 0.22), 0 18px 44px rgba(74, 55, 40, 0.22);
+  animation: pulse 1.2s ease-in-out infinite;
+  transition: transform 120ms ease, box-shadow 160ms ease;
+}
+
+.startBtn:hover {
+  box-shadow: 0 16px 40px rgba(217, 83, 79, 0.26), 0 22px 54px rgba(74, 55, 40, 0.24);
+}
+
+.startBtn:active {
+  transform: translateY(1px);
 }
 
 .title {
@@ -232,5 +279,36 @@
   100% {
     transform: translateX(-42px);
     opacity: 0;
+  }
+}
+
+@keyframes bgFadeIn {
+  0% {
+    background: rgba(0, 0, 0, 0.82);
+  }
+  100% {
+    background: rgba(244, 235, 217, 0.65);
+  }
+}
+
+@keyframes pageTurn {
+  0% {
+    transform: perspective(900px) rotateY(0deg) translateX(0);
+    opacity: 1;
+  }
+  100% {
+    transform: perspective(900px) rotateY(-90deg) translateX(-20px);
+    opacity: 0;
+  }
+}
+
+@keyframes pageEnter {
+  0% {
+    transform: perspective(900px) rotateY(90deg) translateX(18px);
+    opacity: 0;
+  }
+  100% {
+    transform: perspective(900px) rotateY(0deg) translateX(0);
+    opacity: 1;
   }
 }

@@ -22,6 +22,9 @@ export default function IntroScreen() {
   const [issued, setIssued] = useState(false);
   const [enterAnim, setEnterAnim] = useState(true);
   const [exiting, setExiting] = useState(false);
+  const [showForm, setShowForm] = useState(false);
+  const [pageTurning, setPageTurning] = useState(false);
+  const [pageEnter, setPageEnter] = useState(false);
   const stepTimer = useRef<number | null>(null);
   const typingTimer = useRef<number | null>(null);
   const lastClickAt = useRef(0);
@@ -42,14 +45,7 @@ export default function IntroScreen() {
     if (step !== 1) return;
     setEnterAnim(true);
     const t = window.setTimeout(() => setEnterAnim(false), 860);
-    void (async () => {
-      try {
-        const { audio } = await import('../../utils/audio');
-        audio.playUrl('/assets/sounds/sfx_paper_slide.mp3', 0.7);
-      } catch {
-        // ignore
-      }
-    })();
+    // 배경 페이드인과 함께 조용히 등장(사운드는 '시작하기'에서 재생)
     return () => window.clearTimeout(t);
   }, [step]);
 
@@ -86,99 +82,140 @@ export default function IntroScreen() {
       <img className={styles.mapOverlay} src="/assets/images/map_main.png" alt="" aria-hidden="true" />
 
       <div
-        className={`${styles.card} ${enterAnim && step === 1 ? styles.noteOpen : ''} ${exiting ? styles.pageExit : ''}`}
+        className={[
+          styles.card,
+          enterAnim && step === 1 ? styles.noteOpen : '',
+          pageTurning ? styles.pageTurn : '',
+          pageEnter ? styles.pageEnter : '',
+          exiting ? styles.pageExit : '',
+        ].join(' ')}
       >
         {step === 1 && (
           <>
             <div className={styles.title}>{title}</div>
-            <div className={styles.desc}>
-              안양의 문화유산 기록이 사라지고 있어요. 수호대원 정보를 등록하고 복원 노트를 열어주세요.
-            </div>
+            {!showForm ? (
+              <div className={styles.startStage}>
+                <button
+                  type="button"
+                  className={styles.startBtn}
+                  onClick={async () => {
+                    if (pageTurning || exiting) return;
 
-            <div className={styles.form}>
-              <label className={styles.label}>
-                기관(학교)
-                <input
-                  className={styles.input}
-                  value={org}
-                  onChange={(e) => setOrg(e.target.value)}
-                  placeholder="예) 안양초등학교"
-                  autoComplete="organization"
-                  disabled={issued}
-                />
-              </label>
-
-              <label className={styles.label}>
-                이름
-                <input
-                  className={styles.input}
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="예) 홍길동"
-                  autoComplete="name"
-                  disabled={issued}
-                />
-              </label>
-
-              {error && <div className={styles.error}>{error}</div>}
-
-              <button
-                type="button"
-                className={`${styles.primaryBtn} ${issued ? styles.primaryBtnPulse : ''}`}
-                onClick={async () => {
-                  // 2단 버튼:
-                  // 1) 발급(도장 연출) → 2) 복원 노트 펼치기(다음 화면)
-                  if (issued) {
-                    if (exiting) return;
-                    setExiting(true);
+                    // 책장 넘김 + 사운드 (첫 제스처에서 오디오 unlock)
                     try {
                       const { audio } = await import('../../utils/audio');
+                      await audio.unlock();
+                      // muted 상태일 때만 반영(비뮤트 상태에서 setMuted(false)로 BGM이 켜지는 것을 방지)
+                      if (isMuted) audio.setMuted(true);
                       audio.playUrl('/assets/sounds/sfx_paper_slide.mp3', 0.75);
                     } catch {
                       // ignore
                     }
+
+                    setPageTurning(true);
                     window.setTimeout(() => {
-                      setExiting(false);
-                      setStep(2);
-                    }, 520);
-                    return;
-                  }
+                      setPageTurning(false);
+                      setShowForm(true);
+                      setPageEnter(true);
+                      window.setTimeout(() => setPageEnter(false), 460);
+                    }, 620);
+                  }}
+                >
+                  시작하기
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className={styles.desc}>
+                  안양의 문화유산 기록이 사라지고 있어요. 수호대원 정보를 등록하고 복원 노트를 열어주세요.
+                </div>
 
-                  // A+B+C 조합:
-                  // C) 가능한 브라우저에서는 "진짜" 풀스크린 시도 (반드시 사용자 제스처 내에서!)
-                  void tryEnterFullscreen();
-                  // B) 탭 브라우저에서는 주소창/하단바가 접히도록 스크롤 유도
-                  nudgeHideBrowserUI();
+                <div className={styles.form}>
+                  <label className={styles.label}>
+                    기관(학교)
+                    <input
+                      className={styles.input}
+                      value={org}
+                      onChange={(e) => setOrg(e.target.value)}
+                      placeholder="예) 안양초등학교"
+                      autoComplete="organization"
+                      disabled={issued || exiting}
+                    />
+                  </label>
 
-                  const trimmedOrg = org.trim();
-                  const trimmedName = name.trim();
-                  if (!trimmedOrg || !trimmedName) {
-                    setError('기관(학교)과 이름을 모두 입력해 주세요.');
-                    return;
-                  }
+                  <label className={styles.label}>
+                    이름
+                    <input
+                      className={styles.input}
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="예) 홍길동"
+                      autoComplete="name"
+                      disabled={issued || exiting}
+                    />
+                  </label>
 
-                  setError(null);
-                  setPlayerOrg(trimmedOrg);
-                  setPlayerName(trimmedName);
+                  {error && <div className={styles.error}>{error}</div>}
 
-                  // 사용자 제스처 내에서 오디오 제한 해제 + BGM 재생 시도 + 발급 사운드
-                  try {
-                    const { audio } = await import('../../utils/audio');
-                    await audio.unlock();
-                    audio.setMuted(isMuted);
-                    if (!isMuted) {
-                      await audio.playBgm();
-                    }
-                  } catch {
-                    // ignore
-                  }
-                  setIssued(true);
-                }}
-                disabled={exiting}
-              >
-                {issued ? '복원 노트 펼치기' : '수호대증 발급'}
-              </button>
-            </div>
+                  <button
+                    type="button"
+                    className={`${styles.primaryBtn} ${issued ? styles.primaryBtnPulse : ''}`}
+                    onClick={async () => {
+                      // 2단 버튼:
+                      // 1) 발급 → 2) 복원 노트 펼치기(다음 화면)
+                      if (issued) {
+                        if (exiting) return;
+                        setExiting(true);
+                        try {
+                          const { audio } = await import('../../utils/audio');
+                          audio.playUrl('/assets/sounds/sfx_paper_slide.mp3', 0.75);
+                        } catch {
+                          // ignore
+                        }
+                        window.setTimeout(() => {
+                          setExiting(false);
+                          setStep(2);
+                        }, 520);
+                        return;
+                      }
+
+                      // A+B+C 조합:
+                      // C) 가능한 브라우저에서는 "진짜" 풀스크린 시도 (반드시 사용자 제스처 내에서!)
+                      void tryEnterFullscreen();
+                      // B) 탭 브라우저에서는 주소창/하단바가 접히도록 스크롤 유도
+                      nudgeHideBrowserUI();
+
+                      const trimmedOrg = org.trim();
+                      const trimmedName = name.trim();
+                      if (!trimmedOrg || !trimmedName) {
+                        setError('기관(학교)과 이름을 모두 입력해 주세요.');
+                        return;
+                      }
+
+                      setError(null);
+                      setPlayerOrg(trimmedOrg);
+                      setPlayerName(trimmedName);
+
+                      // 사용자 제스처 내에서 오디오 제한 해제 + BGM 재생 시도
+                      try {
+                        const { audio } = await import('../../utils/audio');
+                        await audio.unlock();
+                        audio.setMuted(isMuted);
+                        if (!isMuted) {
+                          await audio.playBgm();
+                        }
+                      } catch {
+                        // ignore
+                      }
+                      setIssued(true);
+                    }}
+                    disabled={exiting}
+                  >
+                    {issued ? '복원 노트 펼치기' : '수호대증 발급'}
+                  </button>
+                </div>
+              </>
+            )}
           </>
         )}
 
