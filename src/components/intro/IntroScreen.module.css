@@ -15,6 +15,24 @@
 }
 
 .root::before {
+  0% {
+    transform: translateX(-120%) rotate(18deg);
+    opacity: 0;
+  }
+  30% {
+    opacity: 1;
+  }
+  60% {
+    transform: translateX(420%) rotate(18deg);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(420%) rotate(18deg);
+    opacity: 0;
+  }
+}
+
+.root::before {
   content: '';
   position: absolute;
   inset: 0;
@@ -49,6 +67,153 @@
   position: relative;
   z-index: 2;
   transform-style: preserve-3d;
+  overflow: hidden;
+}
+
+.card::before {
+  /* 낡은 서류철 질감 (은은한 잉크 텍스처 + 얼룩) */
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(rgba(74, 55, 40, 0.08) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.15), rgba(0, 0, 0, 0)),
+    url('/assets/images/items/ink_background.png');
+  background-size: 26px 26px, 100% 100%, cover;
+  background-position: 0 0, 0 0, center;
+  opacity: 0.12;
+  mix-blend-mode: multiply;
+}
+
+.decor {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.tapeTL,
+.tapeTR {
+  position: absolute;
+  width: 86px;
+  height: 34px;
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(74, 55, 40, 0.18);
+  box-shadow: 0 10px 22px rgba(74, 55, 40, 0.12);
+  opacity: 0.9;
+}
+
+.tapeTL {
+  left: -12px;
+  top: 8px;
+  transform: rotate(-10deg);
+}
+
+.tapeTR {
+  right: -14px;
+  top: 18px;
+  transform: rotate(12deg);
+}
+
+.clip {
+  position: absolute;
+  right: 10px;
+  top: 62px;
+  width: 32px;
+  height: 38px;
+  border-radius: 10px 10px 16px 16px;
+  border: 3px solid rgba(74, 55, 40, 0.55);
+  background: rgba(74, 55, 40, 0.08);
+  transform: rotate(8deg);
+}
+
+.clip::after {
+  content: '';
+  position: absolute;
+  inset: 8px 7px auto 7px;
+  height: 14px;
+  border-radius: 10px;
+  border: 3px solid rgba(74, 55, 40, 0.45);
+  background: transparent;
+}
+
+.polaroid {
+  position: absolute;
+  left: 10px;
+  bottom: 8px;
+  width: 108px;
+  padding: 8px 8px 18px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 2px solid rgba(74, 55, 40, 0.22);
+  box-shadow: 0 14px 30px rgba(74, 55, 40, 0.18);
+  transform: rotate(-6deg);
+}
+
+.polaroid img {
+  width: 100%;
+  height: 72px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid rgba(74, 55, 40, 0.18);
+  display: block;
+}
+
+.polaroidCap {
+  margin-top: 6px;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: -0.1px;
+  opacity: 0.8;
+  text-align: center;
+}
+
+.topSecret {
+  position: absolute;
+  left: 12px;
+  top: 10px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(217, 83, 79, 0.92);
+  color: white;
+  font-weight: 900;
+  font-size: 11px;
+  letter-spacing: 0.6px;
+  box-shadow: 0 10px 24px rgba(217, 83, 79, 0.22), 0 10px 26px rgba(74, 55, 40, 0.18);
+  transform: rotate(-8deg);
+}
+
+.header {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.emblem {
+  width: 44px;
+  height: 44px;
+  border-radius: 16px;
+  border: 2px solid rgba(74, 55, 40, 0.25);
+  background: rgba(244, 235, 217, 0.55);
+  display: grid;
+  place-items: center;
+  box-shadow: 0 10px 22px rgba(74, 55, 40, 0.12);
+}
+
+.secretTitle {
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: -0.4px;
+}
+
+.secretSub {
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 900;
+  opacity: 0.78;
 }
 
 .noteOpen {
@@ -93,6 +258,26 @@
   box-shadow: 0 14px 34px rgba(217, 83, 79, 0.22), 0 18px 44px rgba(74, 55, 40, 0.22);
   animation: pulse 1.2s ease-in-out infinite;
   transition: transform 120ms ease, box-shadow 160ms ease;
+  position: relative;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.startBtn::after {
+  /* Shine 효과 */
+  content: '';
+  position: absolute;
+  top: -20%;
+  left: -35%;
+  width: 40%;
+  height: 140%;
+  background: linear-gradient(to right, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.38), rgba(255, 255, 255, 0));
+  transform: rotate(18deg);
+  animation: shine 1.9s ease-in-out infinite;
+  pointer-events: none;
 }
 
 .startBtn:hover {
@@ -101,6 +286,25 @@
 
 .startBtn:active {
   transform: translateY(1px);
+}
+
+.startIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.startHint {
+  margin-top: 10px;
+  font-size: 12px;
+  font-weight: 900;
+  opacity: 0.8;
+  text-shadow: 0 8px 18px rgba(74, 55, 40, 0.12);
 }
 
 .title {

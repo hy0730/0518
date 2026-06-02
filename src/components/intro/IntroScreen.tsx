@@ -92,7 +92,38 @@ export default function IntroScreen() {
       >
         {step === 1 && (
           <>
-            <div className={styles.title}>{title}</div>
+            {/* 장식 레이어(극비 서류철 / 다꾸 느낌) */}
+            <div className={styles.decor} aria-hidden="true">
+              <div className={styles.tapeTL} />
+              <div className={styles.tapeTR} />
+              <div className={styles.clip} />
+              <div className={styles.polaroid}>
+                <img src="/assets/images/relic_bridge_3d.png" alt="" draggable={false} />
+                <div className={styles.polaroidCap}>현장 사진</div>
+              </div>
+              <div className={styles.topSecret}>TOP SECRET</div>
+            </div>
+
+            <div className={styles.header}>
+              <div className={styles.emblem} aria-hidden="true">
+                {/* 나침반/방패 느낌 간단 SVG */}
+                <svg width="44" height="44" viewBox="0 0 64 64">
+                  <path
+                    d="M32 4l20 8v18c0 14-9 26-20 30C21 56 12 44 12 30V12l20-8Z"
+                    fill="rgba(244,235,217,0.9)"
+                    stroke="rgba(74,55,40,0.65)"
+                    strokeWidth="3"
+                    strokeLinejoin="round"
+                  />
+                  <circle cx="32" cy="28" r="12" fill="rgba(74,55,40,0.10)" stroke="rgba(74,55,40,0.55)" strokeWidth="3" />
+                  <path d="M32 18l6 12-6 8-6-8 6-12Z" fill="rgba(217,83,79,0.85)" stroke="rgba(74,55,40,0.55)" strokeWidth="2" />
+                </svg>
+              </div>
+              <div>
+                <div className={styles.secretTitle}>극비 역사 일기장</div>
+                <div className={styles.secretSub}>{title}</div>
+              </div>
+            </div>
             {!showForm ? (
               <div className={styles.startStage}>
                 <button
@@ -121,8 +152,18 @@ export default function IntroScreen() {
                     }, 620);
                   }}
                 >
+                  <span className={styles.startIcon} aria-hidden="true">
+                    {/* 돋보기 아이콘 */}
+                    <svg width="22" height="22" viewBox="0 0 24 24">
+                      <path
+                        d="M10.5 3a7.5 7.5 0 105.02 13.06l3.2 3.2a1 1 0 001.41-1.42l-3.2-3.2A7.5 7.5 0 0010.5 3zm0 2a5.5 5.5 0 110 11 5.5 5.5 0 010-11z"
+                        fill="currentColor"
+                      />
+                    </svg>
+                  </span>
                   시작하기
                 </button>
+                <div className={styles.startHint}>펼치는 순간 모험이 시작돼요!</div>
               </div>
             ) : (
               <>
