@@ -95,7 +95,8 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
 
   // 배치 상태: slotIdx -> stoneId
   const [slotStones, setSlotStones] = useState<(number | null)[]>(() => Array.from({ length: SLOT_COUNT }, () => null));
-  const placedCount = slotStones.filter(Boolean).length;
+  // NOTE: stoneId는 0~8까지 가능하므로 Boolean 필터를 쓰면 0이 누락됨(= 9개 꽂아도 8개로 계산되는 버그)
+  const placedCount = slotStones.filter((v) => v !== null).length;
   const allPlaced = placedCount >= SLOT_COUNT;
 
   // 인벤토리(돌 블록 9개)
