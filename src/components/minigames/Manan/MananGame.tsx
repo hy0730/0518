@@ -36,9 +36,11 @@ function makeSlots() {
   // 800x450 기준에서 아치 중심/반지름을 잡고, 반원(좌하단→우하단)으로 슬롯 배치
   const W = 800;
   const H = 450;
+  // NOTE: 브라우저 좌표계(y+ 아래) 때문에 sin을 반전해서 "위로 볼록한" 홍예가 되도록 함
+  // 배경(다리 구멍)과 최대한 맞추기 위해 cx/cy/r 미세 조정
   const cx = 400;
-  const cy = 300;
-  const r = 160;
+  const cy = 325;
+  const r = 155;
   const start = 200; // deg
   const end = -20; // deg
   const slots = Array.from({ length: SLOT_COUNT }).map((_, i) => {
@@ -46,7 +48,7 @@ function makeSlots() {
     const deg = start + (end - start) * t;
     const rad = (deg * Math.PI) / 180;
     const x = cx + Math.cos(rad) * r;
-    const y = cy + Math.sin(rad) * r;
+    const y = cy - Math.sin(rad) * r;
     return {
       idx: i,
       xPct: (x / W) * 100,
@@ -343,19 +345,20 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
             </div>
 
             {/* 인벤토리 */}
-            <div className="rounded-3xl border border-ink/20 bg-paper/70 px-3 py-2">
+            <div className="rounded-3xl border border-ink/20 bg-paper/70 px-3 py-2 relative z-10 overflow-visible">
               <div className="flex items-center justify-between">
                 <div className="text-[12px] font-bold opacity-90">돌 블록을 아치 슬롯에 끼워보자! ({placedCount}/{SLOT_COUNT})</div>
                 {phase === 'BUILD' ? <div className="text-[11px] opacity-80">드래그 또는 클릭</div> : null}
               </div>
-              <div className="mt-2 grid grid-cols-9 gap-1">
+              {/* 화면 폭이 좁으면 자동으로 2줄(5+4 등)로 래핑되어 9번째가 절대 잘리지 않게 */}
+              <div className="mt-2 flex flex-wrap justify-center gap-2">
                 {inventory.map((stoneId, i) => {
                   const used = slotStones.includes(stoneId);
                   return (
                     <div
                       key={stoneId}
                       className={[
-                        'rounded-2xl border border-ink/20 bg-paper2/90 shadow-md h-[56px] grid place-items-center touch-none select-none',
+                        'w-[60px] h-[56px] rounded-2xl border border-ink/20 bg-paper2/90 shadow-md grid place-items-center touch-none select-none',
                         used || phase !== 'BUILD' ? 'opacity-45' : 'cursor-grab active:cursor-grabbing hover:bg-paper2',
                       ].join(' ')}
                       onPointerDown={(e) => startDrag(e, stoneId)}
@@ -419,4 +422,3 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
     </div>
   );
 }
-
