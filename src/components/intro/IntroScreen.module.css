@@ -15,24 +15,6 @@
 }
 
 .root::before {
-  0% {
-    transform: translateX(-120%) rotate(18deg);
-    opacity: 0;
-  }
-  30% {
-    opacity: 1;
-  }
-  60% {
-    transform: translateX(420%) rotate(18deg);
-    opacity: 0;
-  }
-  100% {
-    transform: translateX(420%) rotate(18deg);
-    opacity: 0;
-  }
-}
-
-.root::before {
   content: '';
   position: absolute;
   inset: 0;
@@ -514,5 +496,23 @@
   100% {
     transform: perspective(900px) rotateY(0deg) translateX(0);
     opacity: 1;
+  }
+}
+
+@keyframes shine {
+  0% {
+    transform: translateX(-120%) rotate(18deg);
+    opacity: 0;
+  }
+  30% {
+    opacity: 1;
+  }
+  60% {
+    transform: translateX(420%) rotate(18deg);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(420%) rotate(18deg);
+    opacity: 0;
   }
 }
