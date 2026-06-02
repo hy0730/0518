@@ -20,9 +20,8 @@ export default function IntroScreen() {
   const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [issued, setIssued] = useState(false);
-  const [stampAnim, setStampAnim] = useState<'idle' | 'drop'>('idle');
-  const [cardShake, setCardShake] = useState(false);
   const [enterAnim, setEnterAnim] = useState(true);
+  const [exiting, setExiting] = useState(false);
   const stepTimer = useRef<number | null>(null);
   const typingTimer = useRef<number | null>(null);
   const lastClickAt = useRef(0);
@@ -86,7 +85,9 @@ export default function IntroScreen() {
       {/* 연필 스케치 지도 라인 오버레이(스크랩북 느낌) */}
       <img className={styles.mapOverlay} src="/assets/images/map_main.png" alt="" aria-hidden="true" />
 
-      <div className={`${styles.card} ${enterAnim && step === 1 ? styles.noteOpen : ''} ${cardShake ? styles.shake : ''}`}>
+      <div
+        className={`${styles.card} ${enterAnim && step === 1 ? styles.noteOpen : ''} ${exiting ? styles.pageExit : ''}`}
+      >
         {step === 1 && (
           <>
             <div className={styles.title}>{title}</div>
@@ -121,16 +122,6 @@ export default function IntroScreen() {
 
               {error && <div className={styles.error}>{error}</div>}
 
-              {/* 도장 '쿵' 연출 */}
-              <div className={styles.stampStage} aria-hidden="true">
-                <img
-                  src="/assets/images/seal.png"
-                  alt=""
-                  className={`${styles.stamp} ${stampAnim === 'drop' ? styles.stampDrop : ''}`}
-                />
-                {issued && <div className={styles.stampGlow} />}
-              </div>
-
               <button
                 type="button"
                 className={`${styles.primaryBtn} ${issued ? styles.primaryBtnPulse : ''}`}
@@ -138,8 +129,18 @@ export default function IntroScreen() {
                   // 2단 버튼:
                   // 1) 발급(도장 연출) → 2) 복원 노트 펼치기(다음 화면)
                   if (issued) {
-                    // Step2: 연구원 소개(노트 다음 페이지 느낌)
-                    setStep(2);
+                    if (exiting) return;
+                    setExiting(true);
+                    try {
+                      const { audio } = await import('../../utils/audio');
+                      audio.playUrl('/assets/sounds/sfx_paper_slide.mp3', 0.75);
+                    } catch {
+                      // ignore
+                    }
+                    window.setTimeout(() => {
+                      setExiting(false);
+                      setStep(2);
+                    }, 520);
                     return;
                   }
 
@@ -165,22 +166,15 @@ export default function IntroScreen() {
                     const { audio } = await import('../../utils/audio');
                     await audio.unlock();
                     audio.setMuted(isMuted);
-                    // 발급(도장) 소리
-                    audio.playUrl('/assets/sounds/sfx_pop.mp3', 0.8);
                     if (!isMuted) {
                       await audio.playBgm();
                     }
                   } catch {
                     // ignore
                   }
-
-                  // 도장 '쿵' + 카드 흔들림
-                  setStampAnim('drop');
-                  setCardShake(true);
-                  window.setTimeout(() => setCardShake(false), 220);
-                  window.setTimeout(() => setStampAnim('idle'), 520);
                   setIssued(true);
                 }}
+                disabled={exiting}
               >
                 {issued ? '복원 노트 펼치기' : '수호대증 발급'}
               </button>

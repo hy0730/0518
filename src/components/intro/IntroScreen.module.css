@@ -51,8 +51,9 @@
   animation: noteOpen 860ms cubic-bezier(.2,.9,.2,1) both;
 }
 
-.shake {
-  animation: stampShake 220ms ease-in-out both;
+.pageExit {
+  animation: pageExit 520ms ease-in-out both;
+  pointer-events: none;
 }
 
 .title {
@@ -128,38 +129,6 @@
 
 .primaryBtnPulse {
   animation: pulse 1.2s ease-in-out infinite;
-}
-
-.stampStage {
-  height: 86px;
-  border-radius: 18px;
-  border: 2px dashed rgba(74, 55, 40, 0.22);
-  background: rgba(244, 235, 217, 0.55);
-  display: grid;
-  place-items: center;
-  position: relative;
-  overflow: hidden;
-}
-
-.stamp {
-  width: 92px;
-  height: 92px;
-  object-fit: contain;
-  opacity: 0;
-  transform: translateY(-40px) scale(1.5);
-  filter: drop-shadow(0 10px 20px rgba(217, 83, 79, 0.22));
-}
-
-.stampDrop {
-  animation: stampDrop 520ms cubic-bezier(.15,1,.22,1) both;
-}
-
-.stampGlow {
-  position: absolute;
-  inset: -20px;
-  pointer-events: none;
-  background: radial-gradient(circle at 50% 50%, rgba(217, 83, 79, 0.18), rgba(217, 83, 79, 0) 60%);
-  filter: blur(1px);
 }
 
 .characters3d {
@@ -255,38 +224,13 @@
   }
 }
 
-@keyframes stampDrop {
+@keyframes pageExit {
   0% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(-42px);
     opacity: 0;
-    transform: translateY(-46px) scale(1.5);
-  }
-  60% {
-    opacity: 1;
-    transform: translateY(0px) scale(1.05);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0px) scale(1);
-  }
-}
-
-@keyframes stampShake {
-  0% {
-    transform: translateX(0);
-  }
-  20% {
-    transform: translateX(-4px);
-  }
-  40% {
-    transform: translateX(4px);
-  }
-  60% {
-    transform: translateX(-3px);
-  }
-  80% {
-    transform: translateX(3px);
-  }
-  100% {
-    transform: translateX(0);
   }
 }
