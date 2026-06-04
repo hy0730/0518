@@ -7,7 +7,9 @@ import { getRelicMainImage, getRelicRealImage } from '../../../utils/relicImages
 type Phase = 'BUILD' | 'FORCE' | 'RESULT';
 
 type DragState = {
-  stoneId: number;
+  pieceIndex: number;
+  origin: 'inventory' | 'slot';
+  originSlotIdx: number | null;
   startX: number;
   startY: number;
   x: number;
@@ -17,18 +19,11 @@ type DragState = {
   moved: boolean;
 };
 
-const PIECE_COUNT = 10;
-const BRIDGE_IMG = '/assets/images/relic_bridge.jpeg';
+const SLOT_COUNT = 13;
 
-// 퍼즐 캔버스(아치 이미지 표시 영역) - 800x450 안에서 보기 좋게
-const ARCH_W = 560;
-const ARCH_H = 260;
-const PIECE_W = 76;
-const PIECE_H = 64;
-
-function clamp(n: number, a: number, b: number) {
-  return Math.max(a, Math.min(b, n));
-}
+const BG_BLUEPRINT = '/assets/images/relic_bridge_blueprint.png';
+const BG_FRONT = '/assets/images/relic_bridge_front.png';
+const BG_COMPLETE = '/assets/images/relic_bridge.png';
 
 function shuffle<T>(arr: T[]) {
   const a = arr.slice();
@@ -39,78 +34,44 @@ function shuffle<T>(arr: T[]) {
   return a;
 }
 
-function buildClipPolygons() {
-  // 가운데는 더 뾰족/윗부분이 높고, 양끝으로 갈수록 윗부분이 내려오는 형태로 살짝 곡선감 부여
-  const mid = (PIECE_COUNT - 1) / 2;
-  return Array.from({ length: PIECE_COUNT }).map((_, i) => {
-    const d = Math.abs(i - mid) / mid; // 0(중앙) ~ 1(끝)
-    const topY = Math.round(6 + d * 16); // 6~22
-    const topInset = Math.round(16 + d * 10); // 16~26
-    const bottomInset = Math.round(6 + d * 4); // 6~10
-    const tipY = Math.max(0, topY - 8);
-    return `polygon(${bottomInset}% 100%, ${100 - bottomInset}% 100%, ${100 - topInset}% ${topY}%, 50% ${tipY}%, ${topInset}% ${topY}%)`;
+function makeSlots() {
+  // 스펙 기반: 800x450 기준 반원 궤도 자동 계산
+  // Center: (400, 350), Radius: 200
+  const cx = 400;
+  const cy = 350;
+  const r = 200;
+
+  return Array.from({ length: SLOT_COUNT }).map((_, index) => {
+    const theta = 180 - index * 15; // deg
+    const radian = theta * (Math.PI / 180);
+    const x = cx + r * Math.cos(radian);
+    const y = cy - r * Math.sin(radian); // DOM 좌표계 y축 반전
+    return { index, theta, x, y };
   });
 }
 
-const CLIPS = buildClipPolygons();
+const SLOTS = makeSlots();
 
-function buildSlots() {
-  // ARCH_W x ARCH_H 안에서, 위로 볼록한 반원 형태로 10개 위치
-  const cx = ARCH_W / 2;
-  const cy = ARCH_H * 0.96; // 아치의 중심은 아래쪽에 위치
-  const r = 175;
-  const start = 200; // deg (좌하단)
-  const end = -20; // deg (우하단)
-  return Array.from({ length: PIECE_COUNT }).map((_, i) => {
-    const t = i / (PIECE_COUNT - 1);
-    const deg = start + (end - start) * t;
-    const rad = (deg * Math.PI) / 180;
-    const x = cx + Math.cos(rad) * r;
-    // IMPORTANT: y 반전(브라우저 좌표계)
-    const y = cy - Math.sin(rad) * r;
-    const rectX = x - PIECE_W / 2;
-    const rectY = y - PIECE_H / 2;
-    return {
-      idx: i,
-      deg,
-      x,
-      y,
-      rectX,
-      rectY,
-    };
-  });
-}
+type PuzzlePiece = { index: number; id: string; src: string };
 
-const SLOTS = buildSlots();
-
-function BridgePiece({
-  idx,
-  variant = 'normal',
-}: {
-  idx: number;
-  variant?: 'normal' | 'ghost';
-}) {
-  const slot = SLOTS[idx];
-  return (
-    <div
-      className={[
-        'rounded-2xl border shadow-md',
-        variant === 'ghost' ? 'border-ink/35 bg-paper2/95 opacity-95' : 'border-ink/25 bg-paper2/90',
-      ].join(' ')}
-      style={{
-        width: `${PIECE_W}px`,
-        height: `${PIECE_H}px`,
-        clipPath: CLIPS[idx],
-        backgroundImage: `url('${BRIDGE_IMG}')`,
-        backgroundRepeat: 'no-repeat',
-        // 모든 조각이 동일한 원본을 쓰되, 같은 기준(ARCH_W/ARCH_H)에 맞춰 정렬
-        backgroundSize: `${ARCH_W}px ${ARCH_H}px`,
-        backgroundPosition: `${-slot.rectX}px ${-slot.rectY}px`,
-        filter: variant === 'ghost' ? 'drop-shadow(0 14px 22px rgba(74,55,40,0.25))' : 'none',
-      }}
-    />
-  );
-}
+// NOTE:
+// - 슬롯 index(0~12)와 조각 index가 일치할 때만 정답으로 스냅됨
+// - naming 가정: left_1이 keystone에 가장 가까운 쪽, left_6이 가장 왼쪽 끝
+const PUZZLE_PIECES: PuzzlePiece[] = [
+  { index: 0, id: 'left_6', src: '/assets/images/left_6.png' },
+  { index: 1, id: 'left_5', src: '/assets/images/left_5.png' },
+  { index: 2, id: 'left_4', src: '/assets/images/left_4.png' },
+  { index: 3, id: 'left_3', src: '/assets/images/left_3.png' },
+  { index: 4, id: 'left_2', src: '/assets/images/left_2.png' },
+  { index: 5, id: 'left_1', src: '/assets/images/left_1.png' },
+  { index: 6, id: 'keystone', src: '/assets/images/keystone.png' },
+  { index: 7, id: 'right_1', src: '/assets/images/right_1.png' },
+  { index: 8, id: 'right_2', src: '/assets/images/right_2.png' },
+  { index: 9, id: 'right_3', src: '/assets/images/right_3.png' },
+  { index: 10, id: 'right_4', src: '/assets/images/right_4.png' },
+  { index: 11, id: 'right_5', src: '/assets/images/right_5.png' },
+  { index: 12, id: 'right_6', src: '/assets/images/right_6.png' },
+];
 
 export default function MananGame({ stageId, onComplete, regionData }: MinigameProps) {
   const stageTitle = useMemo(
@@ -129,14 +90,13 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
     if (!startedAt) setStartedAt(Date.now());
   };
 
-  // 배치 상태: slotIdx -> stoneId
-  const [slotStones, setSlotStones] = useState<(number | null)[]>(() => Array.from({ length: PIECE_COUNT }, () => null));
-  // NOTE: stoneId는 0~8까지 가능하므로 Boolean 필터를 쓰면 0이 누락됨(= 9개 꽂아도 8개로 계산되는 버그)
-  const placedCount = slotStones.filter((v) => v !== null).length;
-  const allPlaced = placedCount >= PIECE_COUNT;
+  // 배치 상태: slotIdx -> pieceIndex
+  const [slotPieces, setSlotPieces] = useState<(number | null)[]>(() => Array.from({ length: SLOT_COUNT }, () => null));
+  const placedCount = slotPieces.filter((v) => v !== null).length;
+  const allPlaced = placedCount >= SLOT_COUNT;
 
-  // 인벤토리(퍼즐 조각 10개)
-  const [inventory] = useState(() => shuffle(Array.from({ length: PIECE_COUNT }, (_, i) => i)));
+  // 인벤토리(13개): 2줄(7+6)로 보여주되, 조각 자체는 모두 노출(재배치 허용)
+  const [inventoryOrder] = useState(() => shuffle(PUZZLE_PIECES.map((p) => p.index)));
 
   // drag
   const [drag, setDrag] = useState<DragState | null>(null);
@@ -144,10 +104,9 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
 
   const boardRef = useRef<HTMLDivElement | null>(null);
 
-  const startDrag = (e: React.PointerEvent, stoneId: number) => {
+  const beginDrag = (e: React.PointerEvent, pieceIndex: number, origin: DragState['origin'], originSlotIdx: number | null) => {
     startIfNeeded();
     if (phase !== 'BUILD') return;
-    if (slotStones.includes(stoneId)) return;
     e.preventDefault();
     e.stopPropagation();
     (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
@@ -155,7 +114,9 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
     const centerX = r.left + r.width / 2;
     const centerY = r.top + r.height / 2;
     setDrag({
-      stoneId,
+      pieceIndex,
+      origin,
+      originSlotIdx,
       startX: e.clientX,
       startY: e.clientY,
       x: e.clientX,
@@ -164,6 +125,33 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
       offsetY: e.clientY - centerY,
       moved: false,
     });
+  };
+
+  const startDragFromInventory = (e: React.PointerEvent, pieceIndex: number) => {
+    // 이미 배치된 조각도 인벤토리에서 다시 집어서 재배치 허용
+    const curSlot = slotPieces.findIndex((v) => v === pieceIndex);
+    if (curSlot >= 0) {
+      setSlotPieces((prev) => {
+        const next = prev.slice();
+        next[curSlot] = null;
+        return next;
+      });
+      beginDrag(e, pieceIndex, 'slot', curSlot);
+      return;
+    }
+    beginDrag(e, pieceIndex, 'inventory', null);
+  };
+
+  const startDragFromSlot = (e: React.PointerEvent, slotIdx: number) => {
+    const pieceIndex = slotPieces[slotIdx];
+    if (pieceIndex == null) return;
+    // 드래그 시작 즉시 슬롯에서 꺼내기(실패 시 원복)
+    setSlotPieces((prev) => {
+      const next = prev.slice();
+      next[slotIdx] = null;
+      return next;
+    });
+    beginDrag(e, pieceIndex, 'slot', slotIdx);
   };
 
   const updateDrag = (e: React.PointerEvent) => {
@@ -182,14 +170,18 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
     );
   };
 
-  const placeToSlot = (slotIdx: number, stoneId: number) => {
-    setSlotStones((prev) => {
-      if (prev[slotIdx] != null) return prev;
+  const placeToSlot = (slotIdx: number, pieceIndex: number) => {
+    setSlotPieces((prev) => {
       const next = prev.slice();
-      next[slotIdx] = stoneId;
+      // 동일 조각이 다른 슬롯에 있으면 제거(재배치 허용)
+      for (let i = 0; i < next.length; i += 1) {
+        if (next[i] === pieceIndex) next[i] = null;
+      }
+      // 타깃 슬롯에는 정답 조각 고정(있던 조각이 있다면 인벤토리로 = 덮어쓰기)
+      next[slotIdx] = pieceIndex;
       return next;
     });
-    audio.playSfx('correct', 0.7);
+    audio.playSfx('correct', 0.75);
   };
 
   const endDrag = (e: React.PointerEvent) => {
@@ -198,61 +190,72 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
     setDrag(null);
     if (phase !== 'BUILD') return;
 
-    // 클릭으로도 넣기: 첫 번째 빈 슬롯에 자동 배치(아이들용)
-    if (!ended.moved) {
-      // 이미지 퍼즐 조각은 "정답 슬롯"에만 들어가도록 유지
-      const targetIdx = ended.stoneId;
-      if (slotStones[targetIdx] == null) {
-        placeToSlot(targetIdx, ended.stoneId);
-      } else {
-        setAttempts((a) => a + 1);
-        audio.playSfx('wrong', 0.8);
-      }
-      return;
-    }
-
     const elUnder = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null;
     const slotAttr = elUnder?.closest?.('[data-slot]')?.getAttribute('data-slot');
-    if (!slotAttr) {
-      setAttempts((a) => a + 1);
-      audio.playSfx('wrong', 0.75);
-      return;
-    }
-    const idx = Number(slotAttr);
-    if (Number.isNaN(idx) || idx < 0 || idx >= PIECE_COUNT) return;
+    const revert = () => {
+      if (ended.origin === 'slot' && ended.originSlotIdx != null) {
+        setSlotPieces((prev) => {
+          const next = prev.slice();
+          next[ended.originSlotIdx as number] = ended.pieceIndex;
+          return next;
+        });
+      }
+    };
 
-    if (slotStones[idx] != null) {
+    if (!slotAttr) {
+      if (ended.origin === 'slot') {
+        setAttempts((a) => a + 1);
+        audio.playSfx('wrong', 0.75);
+      }
+      revert();
+      return;
+    }
+
+    const idx = Number(slotAttr);
+    if (Number.isNaN(idx) || idx < 0 || idx >= SLOT_COUNT) {
+      revert();
+      return;
+    }
+
+    // 정답 판정: 조각 index와 슬롯 index가 일치해야만 스냅
+    if (idx !== ended.pieceIndex) {
       setAttempts((a) => a + 1);
       audio.playSfx('wrong', 0.75);
+      revert();
       return;
     }
-    // 퍼즐 조각은 인덱스 매칭(맞는 위치에만 들어감)
-    if (idx !== ended.stoneId) {
-      setAttempts((a) => a + 1);
-      audio.playSfx('wrong', 0.8);
-      return;
-    }
-    placeToSlot(idx, ended.stoneId);
+
+    placeToSlot(idx, ended.pieceIndex);
   };
 
   // Phase 1 완료 → Phase 2(힘의 분산)
   const [showInfo, setShowInfo] = useState(false);
   const [forceStep, setForceStep] = useState<'DOWN' | 'SPREAD' | 'DONE'>('DOWN');
+  const forceTimersRef = useRef<number[]>([]);
 
   useEffect(() => {
     if (phase !== 'BUILD') return;
     if (!allPlaced) return;
     audio.playUrl('/assets/sounds/sfx_completed.mp3', 0.9);
+    // 이전 타이머가 남아있을 가능성 방지
+    forceTimersRef.current.forEach((id) => window.clearTimeout(id));
+    forceTimersRef.current = [];
+
     const t = window.setTimeout(() => {
       setPhase('FORCE');
       setShowInfo(true);
       setForceStep('DOWN');
       audio.playUrl('/assets/sounds/sfx_rock_impact.mp3', 0.85);
-      window.setTimeout(() => setForceStep('SPREAD'), 650);
-      window.setTimeout(() => setForceStep('DONE'), 1700);
-      window.setTimeout(() => setPhase('RESULT'), 2400);
+      const t1 = window.setTimeout(() => setForceStep('SPREAD'), 650);
+      const t2 = window.setTimeout(() => setForceStep('DONE'), 1700);
+      const t3 = window.setTimeout(() => setPhase('RESULT'), 2400);
+      forceTimersRef.current = [t1, t2, t3];
     }, 600);
-    return () => window.clearTimeout(t);
+    return () => {
+      window.clearTimeout(t);
+      forceTimersRef.current.forEach((id) => window.clearTimeout(id));
+      forceTimersRef.current = [];
+    };
   }, [phase, allPlaced]);
 
   const [resultModal, setResultModal] = useState(false);
@@ -263,7 +266,7 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
   }, [phase]);
 
   return (
-    <div className="w-full h-full p-2 text-ink flex flex-col relative">
+    <div className="w-full h-full text-ink relative">
       <style>{`
         @keyframes arrowDown {
           0% { transform: translate(-50%, -18px); opacity: 0; }
@@ -285,68 +288,61 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
         .glowFx { animation: glowPulse 1.2s ease-in-out infinite; }
       `}</style>
 
-      <div className="flex items-center justify-between gap-2">
+      <div className="absolute left-0 right-0 top-0 z-50 px-2 pt-2 flex items-center justify-between gap-2 pointer-events-none">
         <div className="text-sm font-black tracking-tight">스테이지 {stageId} · {title}</div>
         <div className="text-xs font-bold opacity-80">{phase === 'BUILD' ? 'Phase 1' : 'Phase 2'}</div>
       </div>
 
-      <div ref={boardRef} className="mt-2 flex-1 min-h-0 rounded-3xl border border-ink/30 bg-paper2/90 shadow-paper overflow-hidden relative">
-        {/* 배경 */}
-        <div
-          className="absolute inset-0 bg-cover bg-center"
-          style={{
-            backgroundImage: `linear-gradient(rgba(244,235,217,0.18), rgba(244,235,217,0.38)), url('${mainBg || '/assets/images/map_main.png'}')`,
-          }}
-        />
+      <div ref={boardRef} className="absolute inset-0 rounded-3xl border border-ink/30 bg-paper2/90 shadow-paper overflow-hidden">
+        {/* 배경 레이어: front + blueprint(Phase1) / complete(완성) */}
+        <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url('${BG_FRONT}')` }} />
+        {phase === 'BUILD' ? (
+          <div className="absolute inset-0 bg-cover bg-center opacity-90" style={{ backgroundImage: `url('${BG_BLUEPRINT}')` }} />
+        ) : (
+          <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url('${BG_COMPLETE}')` }} />
+        )}
 
         {/* 다리 본체(중앙) */}
-        <div className="absolute inset-0 p-3">
-          <div className="h-full grid grid-rows-[1fr_auto] gap-3">
-            {/* 아치 영역 */}
-            <div className="relative rounded-3xl border border-ink/20 bg-paper/55 overflow-hidden">
-              {/* 아치 원본 이미지(가이드) */}
-              <div className="absolute inset-0 grid place-items-center">
-                <div className="relative" style={{ width: `${ARCH_W}px`, height: `${ARCH_H}px` }}>
-                  <img
-                    src={BRIDGE_IMG}
-                    alt=""
-                    className="absolute inset-0 w-full h-full object-cover opacity-35"
-                    draggable={false}
-                  />
-
-                  {/* 슬롯(반원) - clip-path 실루엣 */}
-                  {SLOTS.map((s) => {
-                    const has = slotStones[s.idx] != null;
-                    const placedId = slotStones[s.idx];
-                    return (
-                      <div
-                        key={s.idx}
-                        data-slot={s.idx}
-                        className={[
-                          'absolute',
-                          phase !== 'BUILD' ? 'pointer-events-none' : '',
-                        ].join(' ')}
-                        style={{
-                          left: `${s.rectX}px`,
-                          top: `${s.rectY}px`,
-                          width: `${PIECE_W}px`,
-                          height: `${PIECE_H}px`,
-                        }}
-                        title="여기에 돌을 끼워보자!"
-                      >
-                        {!has ? (
-                          <div
-                            className="w-full h-full border-2 border-dashed border-ink/25 bg-paper/25 animate-pulse"
-                            style={{ clipPath: CLIPS[s.idx] }}
-                          />
-                        ) : (
-                          <BridgePiece idx={placedId as number} />
-                        )}
-                      </div>
-                    );
-                  })}
+        <div className="absolute inset-0">
+          {/* 슬롯(반원 궤도) + 배치된 퍼즐 */}
+          {SLOTS.map((s) => {
+            const pieceIndex = slotPieces[s.index];
+            const piece = pieceIndex != null ? PUZZLE_PIECES.find((p) => p.index === pieceIndex) : null;
+            const isBuild = phase === 'BUILD';
+            return (
+              <div
+                key={s.index}
+                data-slot={s.index}
+                className={[
+                  'absolute -translate-x-1/2 -translate-y-1/2',
+                  isBuild ? 'cursor-pointer' : 'pointer-events-none',
+                ].join(' ')}
+                style={{ left: `${s.x}px`, top: `${s.y}px` }}
+                title={isBuild ? '여기에 조각을 끼워보자!' : ''}
+              >
+                {/* 빈 슬롯 표시 */}
+                <div
+                  className={[
+                    'w-[66px] h-[54px] rounded-2xl border-2 border-dashed grid place-items-center',
+                    piece ? 'border-olive/60 bg-olive/10' : 'border-ink/25 bg-paper/35 animate-pulse',
+                  ].join(' ')}
+                >
+                  {piece ? (
+                    <img
+                      src={piece.src}
+                      alt=""
+                      className="w-full h-full object-contain select-none"
+                      draggable={false}
+                      onPointerDown={(e) => startDragFromSlot(e, s.index)}
+                      onPointerMove={updateDrag}
+                      onPointerUp={endDrag}
+                      onPointerCancel={endDrag}
+                    />
+                  ) : null}
                 </div>
               </div>
+            );
+          })}
 
               {/* 힘의 분산 애니메이션 오버레이 */}
               {phase !== 'BUILD' && (
@@ -400,37 +396,37 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
                   </div>
                 </div>
               )}
-            </div>
+        </div>
 
-            {/* 인벤토리 */}
-            <div className="rounded-3xl border border-ink/20 bg-paper/70 px-3 py-2 relative z-10 overflow-visible">
-              <div className="flex items-center justify-between">
-                <div className="text-[12px] font-bold opacity-90">퍼즐 조각을 아치 슬롯에 끼워보자! ({placedCount}/{PIECE_COUNT})</div>
-                {phase === 'BUILD' ? <div className="text-[11px] opacity-80">드래그 또는 클릭</div> : null}
-              </div>
-              {/* 화면 폭이 좁으면 자동으로 2줄(5+4 등)로 래핑되어 9번째가 절대 잘리지 않게 */}
-              <div className="mt-2 flex flex-wrap justify-center gap-2">
-                {inventory.map((stoneId, i) => {
-                  const used = slotStones.includes(stoneId);
-                  return (
-                    <div
-                      key={stoneId}
-                      className={[
-                        'w-[76px] h-[64px] rounded-2xl border border-ink/20 bg-paper2/90 shadow-md grid place-items-center touch-none select-none overflow-hidden',
-                        used || phase !== 'BUILD' ? 'opacity-45' : 'cursor-grab active:cursor-grabbing hover:bg-paper2',
-                      ].join(' ')}
-                      onPointerDown={(e) => startDrag(e, stoneId)}
-                      onPointerMove={updateDrag}
-                      onPointerUp={endDrag}
-                      onPointerCancel={endDrag}
-                      title="드래그해서 슬롯에 끼워보자!"
-                    >
-                      <BridgePiece idx={stoneId} />
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+        {/* 인벤토리(하단 2줄: 7+6) */}
+        <div className="absolute left-3 right-3 bottom-3 rounded-3xl border border-ink/20 bg-paper/70 px-3 py-2 z-40 overflow-visible">
+          <div className="flex items-center justify-between">
+            <div className="text-[12px] font-bold opacity-90">퍼즐 조각을 끼워보자! ({placedCount}/{SLOT_COUNT})</div>
+            {phase === 'BUILD' ? <div className="text-[11px] opacity-80">드래그로 끼우기 · 다시 빼서 재배치 가능</div> : null}
+          </div>
+          <div className="mt-2 grid grid-cols-7 gap-2 justify-items-center">
+            {inventoryOrder.map((pieceIndex) => {
+              const piece = PUZZLE_PIECES.find((p) => p.index === pieceIndex)!;
+              const placed = slotPieces.includes(pieceIndex);
+              return (
+                <div
+                  key={piece.id}
+                  className={[
+                    'w-[64px] h-[48px] rounded-2xl border border-ink/20 bg-paper2/90 shadow-md grid place-items-center touch-none select-none relative',
+                    phase !== 'BUILD' ? 'opacity-45' : 'cursor-grab active:cursor-grabbing hover:bg-paper2',
+                    placed ? 'opacity-55' : '',
+                  ].join(' ')}
+                  onPointerDown={(e) => startDragFromInventory(e, pieceIndex)}
+                  onPointerMove={updateDrag}
+                  onPointerUp={endDrag}
+                  onPointerCancel={endDrag}
+                  title="드래그해서 슬롯에 끼워보자!"
+                >
+                  <img src={piece.src} alt="" className="w-full h-full object-contain" draggable={false} />
+                  {placed ? <div className="absolute right-1 top-1 w-2 h-2 rounded-full bg-olive/80" /> : null}
+                </div>
+              );
+            })}
           </div>
         </div>
 
@@ -444,7 +440,14 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
               transform: 'translate(-50%, -50%)',
             }}
           >
-            <BridgePiece idx={drag.stoneId} variant="ghost" />
+            <div className="w-[64px] h-[48px] rounded-2xl border border-ink/25 bg-paper2/95 shadow-paper grid place-items-center">
+              <img
+                src={PUZZLE_PIECES.find((p) => p.index === drag.pieceIndex)?.src ?? ''}
+                alt=""
+                className="w-full h-full object-contain"
+                draggable={false}
+              />
+            </div>
           </div>
         )}
       </div>
