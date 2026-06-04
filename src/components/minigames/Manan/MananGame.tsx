@@ -200,15 +200,13 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
 
     // 클릭으로도 넣기: 첫 번째 빈 슬롯에 자동 배치(아이들용)
     if (!ended.moved) {
-      const idx = slotStones.findIndex((s) => s == null);
-      if (idx >= 0) {
-        // 이미지 퍼즐 조각은 위치가 맞아야 자연스럽게 복원됨 → 자동 배치도 "정답 슬롯"로 유도
-        const targetIdx = ended.stoneId;
-        if (slotStones[targetIdx] == null) {
-          placeToSlot(targetIdx, ended.stoneId);
-        } else {
-          placeToSlot(idx, ended.stoneId);
-        }
+      // 이미지 퍼즐 조각은 "정답 슬롯"에만 들어가도록 유지
+      const targetIdx = ended.stoneId;
+      if (slotStones[targetIdx] == null) {
+        placeToSlot(targetIdx, ended.stoneId);
+      } else {
+        setAttempts((a) => a + 1);
+        audio.playSfx('wrong', 0.8);
       }
       return;
     }
