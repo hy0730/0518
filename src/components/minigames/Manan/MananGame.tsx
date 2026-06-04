@@ -23,7 +23,8 @@ const SLOT_COUNT = 13;
 const BASE_W = 800;
 const BASE_H = 450;
 const BOARD_SCALE = 0.92;
-const BOARD_SHIFT_Y = -24;
+// 인벤토리(하단 2줄)와 겹치지 않도록 보드(blueprint+슬롯) 전체를 위로 이동
+const BOARD_SHIFT_Y = -110;
 
 const BG_BLUEPRINT = '/assets/images/relic_bridge_blueprint.png';
 const BG_FRONT = '/assets/images/relic_bridge_front.png';
@@ -483,7 +484,8 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
                   <div
                     key={piece.id}
                     className={[
-                      'w-[74px] h-[56px] rounded-2xl border border-ink/20 bg-paper2/90 shadow-md grid place-items-center touch-none select-none relative transition-all',
+                      // 인벤토리 높이를 줄여 슬롯과 겹침을 추가로 완화
+                      'w-[64px] h-[48px] rounded-2xl border border-ink/20 bg-paper2/90 shadow-md grid place-items-center touch-none select-none relative transition-all',
                       phase !== 'BUILD' ? 'opacity-45' : 'cursor-grab active:cursor-grabbing hover:bg-paper2',
                       placed ? 'opacity-45 cursor-not-allowed' : '',
                       isTutorPiece ? 'ring-2 ring-amber-300/80 animate-pulse' : '',
