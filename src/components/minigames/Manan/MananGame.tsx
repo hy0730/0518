@@ -4,7 +4,7 @@ import { storyDataByStageId } from '../../../data/storyData';
 import { audio } from '../../../utils/audio';
 import { getRelicMainImage, getRelicRealImage } from '../../../utils/relicImages';
 
-type Phase = 'BUILD' | 'FORCE' | 'RESULT';
+type Phase = 'INTRO' | 'BUILD' | 'COMPLETE' | 'FORCE' | 'RESULT';
 
 type DragState = {
   pieceIndex: number;
@@ -80,24 +80,6 @@ const PUZZLE_PIECES: PuzzlePiece[] = [
   { index: 12, id: 'right_1', src: '/assets/images/right_1.png' },
 ];
 
-// 튜토리얼: "각각의 1번(좌/우)"부터 안내
-// - 아래(1번)부터 위로(6번) 채우고, 마지막에 종석(keystone)을 끼우는 흐름
-const TUTORIAL_ORDER: number[] = [
-  0, // left_1 (가장 아래)
-  12, // right_1 (가장 아래)
-  1, // left_2
-  11, // right_2
-  2, // left_3
-  10, // right_3
-  3, // left_4
-  9, // right_4
-  4, // left_5
-  8, // right_5
-  5, // left_6
-  7, // right_6
-  6, // keystone (마지막)
-];
-
 export default function MananGame({ stageId, onComplete, regionData }: MinigameProps) {
   const stageTitle = useMemo(
     () => storyDataByStageId[stageId]?.title ?? regionData?.map?.nodes?.[stageId - 1]?.title ?? `스테이지 ${stageId}`,
@@ -108,7 +90,8 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
   const mainBg = useMemo(() => getRelicMainImage(stageId), [stageId]);
   const realImg = useMemo(() => getRelicRealImage(stageId), [stageId]);
 
-  const [phase, setPhase] = useState<Phase>('BUILD');
+  // 1) relic_bridge_front로 원리 설명 → 2) 조립 시작(blueprint) → 3) 완성 팝업 → 4) 힘의 분산 확인
+  const [phase, setPhase] = useState<Phase>('INTRO');
   const [attempts, setAttempts] = useState(0);
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const startIfNeeded = () => {
@@ -129,25 +112,10 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
 
   const boardRef = useRef<HTMLDivElement | null>(null);
 
-  // 튜토리얼 UI/상태
-  const requiredIndex = useMemo(() => {
-    if (phase !== 'BUILD') return null;
-    for (const idx of TUTORIAL_ORDER) {
-      if (slotPieces[idx] == null) return idx;
-    }
-    return null;
-  }, [phase, slotPieces]);
-  const tutorialActive = phase === 'BUILD' && requiredIndex != null;
-
-  const tutorialText = useMemo(() => {
-    if (!tutorialActive || requiredIndex == null) return '';
-    const piece = PUZZLE_PIECES.find((p) => p.index === requiredIndex);
-    if (!piece) return '아래부터 순서대로 끼워보자!';
-    if (piece.id === 'keystone') return '마지막! 중앙 종석(keystone)을 끼워 완성해보자!';
-    if (piece.id.startsWith('left_')) return `왼쪽 ${piece.id.replace('left_', '')}번 주춧돌을 끼워보자!`;
-    if (piece.id.startsWith('right_')) return `오른쪽 ${piece.id.replace('right_', '')}번 주춧돌을 끼워보자!`;
-    return '아래부터 순서대로 끼워보자!';
-  }, [tutorialActive, requiredIndex]);
+  // 튜토리얼: "처음 1번 돌(left_1)"을 끼울 때만 노출
+  const tutorialActive = phase === 'BUILD' && slotPieces[0] == null;
+  const requiredIndex = tutorialActive ? 0 : null;
+  const tutorialText = '왼쪽 1번 주춧돌을 끼워보자!';
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef<number | null>(null);
   const showToast = (msg: string, ms = 1300) => {
@@ -275,38 +243,39 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
     }
 
     placeToSlot(idx, ended.pieceIndex);
-    // 다음 튜토리얼 안내는 slotPieces 기반으로 자동 갱신됨
   };
 
-  // Phase 1 완료 → Phase 2(힘의 분산)
+  // 퍼즐 완성 시: 완성 이미지(BG_COMPLETE) + "완성" 팝업 → 클릭 시 FORCE로 진행
+  useEffect(() => {
+    if (phase !== 'BUILD') return;
+    if (!allPlaced) return;
+    audio.playUrl('/assets/sounds/sfx_completed.mp3', 0.9);
+    const t = window.setTimeout(() => setPhase('COMPLETE'), 350);
+    return () => window.clearTimeout(t);
+  }, [phase, allPlaced]);
+
+  // Phase 2(힘의 분산) 시퀀스: COMPLETE 팝업에서 클릭으로 시작
   const [showInfo, setShowInfo] = useState(false);
   const [forceStep, setForceStep] = useState<'DOWN' | 'SPREAD' | 'DONE'>('DOWN');
   const forceTimersRef = useRef<number[]>([]);
 
   useEffect(() => {
-    if (phase !== 'BUILD') return;
-    if (!allPlaced) return;
-    audio.playUrl('/assets/sounds/sfx_completed.mp3', 0.9);
-    // 이전 타이머가 남아있을 가능성 방지
-    forceTimersRef.current.forEach((id) => window.clearTimeout(id));
-    forceTimersRef.current = [];
+    if (phase !== 'FORCE') return;
+    setShowInfo(true);
+    setForceStep('DOWN');
+    audio.playUrl('/assets/sounds/sfx_rock_impact.mp3', 0.85);
 
-    const t = window.setTimeout(() => {
-      setPhase('FORCE');
-      setShowInfo(true);
-      setForceStep('DOWN');
-      audio.playUrl('/assets/sounds/sfx_rock_impact.mp3', 0.85);
-      const t1 = window.setTimeout(() => setForceStep('SPREAD'), 650);
-      const t2 = window.setTimeout(() => setForceStep('DONE'), 1700);
-      const t3 = window.setTimeout(() => setPhase('RESULT'), 2400);
-      forceTimersRef.current = [t1, t2, t3];
-    }, 600);
+    // 타이머 등록/클린업
+    const t1 = window.setTimeout(() => setForceStep('SPREAD'), 650);
+    const t2 = window.setTimeout(() => setForceStep('DONE'), 1700);
+    const t3 = window.setTimeout(() => setPhase('RESULT'), 2400);
+    forceTimersRef.current = [t1, t2, t3];
+
     return () => {
-      window.clearTimeout(t);
       forceTimersRef.current.forEach((id) => window.clearTimeout(id));
       forceTimersRef.current = [];
     };
-  }, [phase, allPlaced]);
+  }, [phase]);
 
   const [resultModal, setResultModal] = useState(false);
   useEffect(() => {
@@ -340,7 +309,9 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
 
       <div className="absolute left-0 right-0 top-0 z-50 px-2 pt-2 flex items-center justify-between gap-2 pointer-events-none">
         <div className="text-sm font-black tracking-tight">스테이지 {stageId} · {title}</div>
-        <div className="text-xs font-bold opacity-80">{phase === 'BUILD' ? 'Phase 1' : 'Phase 2'}</div>
+        <div className="text-xs font-bold opacity-80">
+          {phase === 'INTRO' ? '설명' : phase === 'BUILD' ? '조립' : phase === 'COMPLETE' ? '완성' : '원리'}
+        </div>
       </div>
 
       <div ref={boardRef} className="absolute inset-0 rounded-3xl border border-ink/30 bg-paper2/90 shadow-paper overflow-hidden">
@@ -367,7 +338,7 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
                 className="absolute inset-0 bg-center bg-no-repeat bg-contain opacity-90 pointer-events-none"
                 style={{ backgroundImage: `url('${BG_BLUEPRINT}')` }}
               />
-            ) : (
+            ) : phase === 'INTRO' ? null : (
               <div
                 className="absolute inset-0 bg-center bg-no-repeat bg-contain pointer-events-none"
                 style={{ backgroundImage: `url('${BG_COMPLETE}')` }}
@@ -377,7 +348,7 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
             {/* 다리 본체(중앙) */}
             <div className="absolute inset-0">
               {/* 슬롯(반원 궤도) + 배치된 퍼즐 */}
-              {SLOTS.map((s) => {
+              {(phase === 'BUILD' || phase === 'COMPLETE' || phase === 'FORCE' || phase === 'RESULT') && SLOTS.map((s) => {
                 const pieceIndex = slotPieces[s.index];
                 const piece = pieceIndex != null ? PUZZLE_PIECES.find((p) => p.index === pieceIndex) : null;
                 const isBuild = phase === 'BUILD';
@@ -415,7 +386,7 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
               })}
 
               {/* 힘의 분산 애니메이션 오버레이 */}
-              {phase !== 'BUILD' && (
+              {(phase === 'FORCE' || phase === 'RESULT') && (
                 <div className="absolute inset-0 pointer-events-none">
                   {/* 아래로 누르는 힘 */}
                   {forceStep === 'DOWN' || forceStep === 'SPREAD' || forceStep === 'DONE' ? (
@@ -456,7 +427,7 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
               )}
 
               {/* 안내 팝업 */}
-              {showInfo && (
+              {(phase === 'FORCE' || phase === 'RESULT') && showInfo && (
                 <div className="absolute inset-0 grid place-items-center bg-ink/25">
                   <div className="note-panel px-5 py-4 max-w-[520px] glowFx">
                     <div className="text-sm font-black">힘의 분산 원리</div>
@@ -470,6 +441,7 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
           </div>
 
           {/* 인벤토리(하단 2줄: 7+6) */}
+          {phase === 'BUILD' && (
           <div className="absolute left-3 right-3 bottom-3 rounded-3xl border border-ink/20 bg-paper/70 px-3 py-2 z-40 overflow-visible">
             <div className="flex items-center justify-between">
               <div className="text-[12px] font-bold opacity-90">퍼즐 조각을 끼워보자! ({placedCount}/{SLOT_COUNT})</div>
@@ -503,6 +475,7 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
               })}
             </div>
           </div>
+          )}
 
           {/* 튜토리얼 안내 */}
           {tutorialActive && (
@@ -546,6 +519,52 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
         )}
         {/* end stage container */}
       </div>
+
+      {/* INTRO: 아치 구조 설명 후 조립 시작 */}
+      {phase === 'INTRO' && (
+        <div className="absolute inset-0 z-[12000] grid place-items-center p-4">
+          <div className="note-panel px-5 py-4 max-w-[560px]">
+            <div className="text-sm font-black">홍예(아치) 구조는 왜 튼튼할까요?</div>
+            <div className="mt-2 text-sm opacity-90 leading-relaxed">
+              둥근 아치는 위에서 누르는 힘을 양옆으로 분산시켜서 쉽게 무너지지 않아요.
+              <br />
+              이제 만안교의 홍예를 직접 조립해볼까요?
+            </div>
+            <button
+              type="button"
+              className="mt-3 w-full rounded-2xl bg-stamp text-white border border-ink/25 font-black py-3 shadow-md hover:opacity-95"
+              onClick={() => {
+                startIfNeeded();
+                audio.playUrl('/assets/sounds/sfx_paper_slide.mp3', 0.75);
+                setPhase('BUILD');
+              }}
+            >
+              조립 시작하기
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* COMPLETE: 완성 이미지 + 클릭하여 다음 */}
+      {phase === 'COMPLETE' && (
+        <div className="absolute inset-0 z-[12000] grid place-items-center bg-ink/20 p-4">
+          <div className="note-panel px-5 py-4 max-w-[560px]">
+            <div className="text-lg font-black">완성!</div>
+            <div className="mt-1 text-sm opacity-90 leading-relaxed">
+              홍예가 완성되었어요. 이제 힘이 어떻게 분산되는지 확인해볼까요?
+            </div>
+            <button
+              type="button"
+              className="mt-3 w-full rounded-2xl bg-olive text-white border border-ink/25 font-black py-3 shadow-md hover:opacity-95"
+              onClick={() => {
+                setPhase('FORCE');
+              }}
+            >
+              클릭하여 다음
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* 결과 모달 */}
       {resultModal && (
