@@ -23,6 +23,7 @@ const SLOT_COUNT = 13;
 const BASE_W = 800;
 const BASE_H = 450;
 const BOARD_SCALE = 0.92;
+const BOARD_SHIFT_Y = -24;
 
 const BG_BLUEPRINT = '/assets/images/relic_bridge_blueprint.png';
 const BG_FRONT = '/assets/images/relic_bridge_front.png';
@@ -41,9 +42,8 @@ function makeSlots() {
   // 스펙 기반: 800x450 기준 반원 궤도 자동 계산
   // Center: (400, 350), Radius: 200
   const cx = 400;
-  // 인벤토리 패널과 겹치지 않도록 아치를 위로 끌어올림(시각/드롭 모두 안정)
-  const cy = 265;
-  const r = 175;
+  const cy = 350;
+  const r = 200;
 
   return Array.from({ length: SLOT_COUNT }).map((_, index) => {
     const theta = 180 - index * 15; // deg
@@ -129,9 +129,24 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
   const boardRef = useRef<HTMLDivElement | null>(null);
 
   // 튜토리얼 UI/상태
-  const [tutorialStep, setTutorialStep] = useState(0);
-  const tutorialActive = phase === 'BUILD' && tutorialStep < TUTORIAL_ORDER.length;
-  const requiredIndex = tutorialActive ? TUTORIAL_ORDER[tutorialStep] : null;
+  const requiredIndex = useMemo(() => {
+    if (phase !== 'BUILD') return null;
+    for (const idx of TUTORIAL_ORDER) {
+      if (slotPieces[idx] == null) return idx;
+    }
+    return null;
+  }, [phase, slotPieces]);
+  const tutorialActive = phase === 'BUILD' && requiredIndex != null;
+
+  const tutorialText = useMemo(() => {
+    if (!tutorialActive || requiredIndex == null) return '';
+    const piece = PUZZLE_PIECES.find((p) => p.index === requiredIndex);
+    if (!piece) return '아래부터 순서대로 끼워보자!';
+    if (piece.id === 'keystone') return '마지막! 중앙 종석(keystone)을 끼워 완성해보자!';
+    if (piece.id.startsWith('left_')) return `왼쪽 ${piece.id.replace('left_', '')}번 주춧돌을 끼워보자!`;
+    if (piece.id.startsWith('right_')) return `오른쪽 ${piece.id.replace('right_', '')}번 주춧돌을 끼워보자!`;
+    return '아래부터 순서대로 끼워보자!';
+  }, [tutorialActive, requiredIndex]);
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef<number | null>(null);
   const showToast = (msg: string, ms = 1300) => {
@@ -174,7 +189,7 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
 
   const startDragFromInventory = (e: React.PointerEvent, pieceIndex: number) => {
     if (tutorialActive && requiredIndex !== pieceIndex) {
-      showToast('먼저 강조된 1번 조각을 끼워보자!');
+      showToast('아래부터 순서대로 끼워보자!');
       return;
     }
     // 재배치 금지: 이미 맞춘 조각은 다시 집을 수 없음
@@ -259,17 +274,7 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
     }
 
     placeToSlot(idx, ended.pieceIndex);
-
-    // 튜토리얼 진행(정답 스냅 후 다음 단계)
-    if (tutorialActive && requiredIndex === ended.pieceIndex) {
-      const nextStep = tutorialStep + 1;
-      setTutorialStep(nextStep);
-      if (nextStep >= TUTORIAL_ORDER.length) {
-        showToast('좋아! 이제 나머지도 채워보자!', 1200);
-      } else {
-        showToast('좋아! 다음 1번 조각도 끼워보자!', 1200);
-      }
-    }
+    // 다음 튜토리얼 안내는 slotPieces 기반으로 자동 갱신됨
   };
 
   // Phase 1 완료 → Phase 2(힘의 분산)
@@ -344,7 +349,13 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
           style={{ width: `${BASE_W}px`, height: `${BASE_H}px` }}
         >
           {/* 배경 + 슬롯은 같이 축소(블루프린트가 "커 보이는" 문제 해결 + 좌표 정합 유지) */}
-          <div className="absolute inset-0" style={{ transform: `scale(${BOARD_SCALE})`, transformOrigin: 'center' }}>
+          <div
+            className="absolute inset-0"
+            style={{
+              transform: `translateY(${BOARD_SHIFT_Y}px) scale(${BOARD_SCALE})`,
+              transformOrigin: 'center',
+            }}
+          >
             {/* 배경 레이어: front + blueprint(Phase1) / complete(완성) */}
             <div
               className="absolute inset-0 bg-center bg-no-repeat bg-contain pointer-events-none"
@@ -461,7 +472,7 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
           <div className="absolute left-3 right-3 bottom-3 rounded-3xl border border-ink/20 bg-paper/70 px-3 py-2 z-40 overflow-visible">
             <div className="flex items-center justify-between">
               <div className="text-[12px] font-bold opacity-90">퍼즐 조각을 끼워보자! ({placedCount}/{SLOT_COUNT})</div>
-              {phase === 'BUILD' ? <div className="text-[11px] opacity-80">드래그 · 재배치 가능</div> : null}
+              {phase === 'BUILD' ? <div className="text-[11px] opacity-80">드래그</div> : null}
             </div>
             <div className="mt-2 grid grid-cols-7 gap-2 justify-items-center">
               {inventoryOrder.map((pieceIndex) => {
@@ -497,9 +508,7 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
               <div className="note-panel px-4 py-3 max-w-[520px]">
                 <div className="text-sm font-black">튜토리얼</div>
                 <div className="mt-1 text-sm opacity-90">
-                  {tutorialStep === 0
-                    ? '왼쪽 1번 주춧돌을 드래그해서 끼워보자!'
-                    : '오른쪽 1번 주춧돌도 드래그해서 끼워보자!'}
+                  {tutorialText}
                 </div>
               </div>
             </div>
