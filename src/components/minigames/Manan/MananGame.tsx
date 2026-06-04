@@ -26,6 +26,8 @@ const BASE_H = 450;
 const BG_BLUEPRINT = '/assets/images/relic_bridge_blueprint.png';
 const BG_FRONT = '/assets/images/relic_bridge_front.png';
 const BG_COMPLETE = '/assets/images/relic_bridge.png';
+// 배경 이미지가 너무 커 보이지 않도록 약간 축소해서 표시
+const BG_SIZE = '92% auto';
 
 function shuffle<T>(arr: T[]) {
   const a = arr.slice();
@@ -60,25 +62,39 @@ type PuzzlePiece = { index: number; id: string; src: string };
 // - 슬롯 index(0~12)와 조각 index가 일치할 때만 정답으로 스냅됨
 // - naming 가정: left_1이 keystone에 가장 가까운 쪽, left_6이 가장 왼쪽 끝
 const PUZZLE_PIECES: PuzzlePiece[] = [
-  { index: 0, id: 'left_6', src: '/assets/images/left_6.png' },
-  { index: 1, id: 'left_5', src: '/assets/images/left_5.png' },
-  { index: 2, id: 'left_4', src: '/assets/images/left_4.png' },
-  { index: 3, id: 'left_3', src: '/assets/images/left_3.png' },
-  { index: 4, id: 'left_2', src: '/assets/images/left_2.png' },
-  { index: 5, id: 'left_1', src: '/assets/images/left_1.png' },
+  // 좌측은 "1번이 가장 아래" 기준으로 1 → 6 순서로 위로 올라가도록 매핑
+  { index: 0, id: 'left_1', src: '/assets/images/left_1.png' },
+  { index: 1, id: 'left_2', src: '/assets/images/left_2.png' },
+  { index: 2, id: 'left_3', src: '/assets/images/left_3.png' },
+  { index: 3, id: 'left_4', src: '/assets/images/left_4.png' },
+  { index: 4, id: 'left_5', src: '/assets/images/left_5.png' },
+  { index: 5, id: 'left_6', src: '/assets/images/left_6.png' },
   { index: 6, id: 'keystone', src: '/assets/images/keystone.png' },
-  { index: 7, id: 'right_1', src: '/assets/images/right_1.png' },
-  { index: 8, id: 'right_2', src: '/assets/images/right_2.png' },
-  { index: 9, id: 'right_3', src: '/assets/images/right_3.png' },
-  { index: 10, id: 'right_4', src: '/assets/images/right_4.png' },
-  { index: 11, id: 'right_5', src: '/assets/images/right_5.png' },
-  { index: 12, id: 'right_6', src: '/assets/images/right_6.png' },
+  // 우측은 keystone에 가까운 쪽이 6, 바깥(아래)이 1이 되도록 역순 매핑
+  { index: 7, id: 'right_6', src: '/assets/images/right_6.png' },
+  { index: 8, id: 'right_5', src: '/assets/images/right_5.png' },
+  { index: 9, id: 'right_4', src: '/assets/images/right_4.png' },
+  { index: 10, id: 'right_3', src: '/assets/images/right_3.png' },
+  { index: 11, id: 'right_2', src: '/assets/images/right_2.png' },
+  { index: 12, id: 'right_1', src: '/assets/images/right_1.png' },
 ];
 
 // 튜토리얼: "각각의 1번(좌/우)"부터 안내
+// - 아래(1번)부터 위로(6번) 채우고, 마지막에 종석(keystone)을 끼우는 흐름
 const TUTORIAL_ORDER: number[] = [
-  5, // left_1 -> slot index 5
-  7, // right_1 -> slot index 7
+  0, // left_1 (가장 아래)
+  12, // right_1 (가장 아래)
+  1, // left_2
+  11, // right_2
+  2, // left_3
+  10, // right_3
+  3, // left_4
+  9, // right_4
+  4, // left_5
+  8, // right_5
+  5, // left_6
+  7, // right_6
+  6, // keystone (마지막)
 ];
 
 export default function MananGame({ stageId, onComplete, regionData }: MinigameProps) {
@@ -157,38 +173,21 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
   };
 
   const startDragFromInventory = (e: React.PointerEvent, pieceIndex: number) => {
-    // 이미 배치된 조각도 인벤토리에서 다시 집어서 재배치 허용
     if (tutorialActive && requiredIndex !== pieceIndex) {
       showToast('먼저 강조된 1번 조각을 끼워보자!');
       return;
     }
-    const curSlot = slotPieces.findIndex((v) => v === pieceIndex);
-    if (curSlot >= 0) {
-      setSlotPieces((prev) => {
-        const next = prev.slice();
-        next[curSlot] = null;
-        return next;
-      });
-      beginDrag(e, pieceIndex, 'slot', curSlot);
+    // 재배치 금지: 이미 맞춘 조각은 다시 집을 수 없음
+    if (slotPieces.includes(pieceIndex)) {
+      showToast('이미 끼운 조각이에요!');
       return;
     }
     beginDrag(e, pieceIndex, 'inventory', null);
   };
 
   const startDragFromSlot = (e: React.PointerEvent, slotIdx: number) => {
-    const pieceIndex = slotPieces[slotIdx];
-    if (pieceIndex == null) return;
-    if (tutorialActive && requiredIndex !== pieceIndex) {
-      showToast('튜토리얼 조각부터 진행해보자!');
-      return;
-    }
-    // 드래그 시작 즉시 슬롯에서 꺼내기(실패 시 원복)
-    setSlotPieces((prev) => {
-      const next = prev.slice();
-      next[slotIdx] = null;
-      return next;
-    });
-    beginDrag(e, pieceIndex, 'slot', slotIdx);
+    // 재배치 금지: 슬롯에서 다시 빼는 기능은 사용하지 않음
+    e.preventDefault();
   };
 
   const updateDrag = (e: React.PointerEvent) => {
@@ -210,11 +209,8 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
   const placeToSlot = (slotIdx: number, pieceIndex: number) => {
     setSlotPieces((prev) => {
       const next = prev.slice();
-      // 동일 조각이 다른 슬롯에 있으면 제거(재배치 허용)
-      for (let i = 0; i < next.length; i += 1) {
-        if (next[i] === pieceIndex) next[i] = null;
-      }
-      // 타깃 슬롯에는 정답 조각 고정(있던 조각이 있다면 인벤토리로 = 덮어쓰기)
+      // 재배치/덮어쓰기 금지: 슬롯이 비어있을 때만 채움
+      if (next[slotIdx] != null) return prev;
       next[slotIdx] = pieceIndex;
       return next;
     });
@@ -348,11 +344,20 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
           style={{ width: `${BASE_W}px`, height: `${BASE_H}px` }}
         >
           {/* 배경 레이어: front + blueprint(Phase1) / complete(완성) */}
-          <div className="absolute inset-0 bg-center bg-no-repeat bg-contain" style={{ backgroundImage: `url('${BG_FRONT}')` }} />
+          <div
+            className="absolute inset-0 bg-center bg-no-repeat"
+            style={{ backgroundImage: `url('${BG_FRONT}')`, backgroundSize: BG_SIZE }}
+          />
           {phase === 'BUILD' ? (
-            <div className="absolute inset-0 bg-center bg-no-repeat bg-contain opacity-90" style={{ backgroundImage: `url('${BG_BLUEPRINT}')` }} />
+            <div
+              className="absolute inset-0 bg-center bg-no-repeat opacity-90"
+              style={{ backgroundImage: `url('${BG_BLUEPRINT}')`, backgroundSize: BG_SIZE }}
+            />
           ) : (
-            <div className="absolute inset-0 bg-center bg-no-repeat bg-contain" style={{ backgroundImage: `url('${BG_COMPLETE}')` }} />
+            <div
+              className="absolute inset-0 bg-center bg-no-repeat"
+              style={{ backgroundImage: `url('${BG_COMPLETE}')`, backgroundSize: BG_SIZE }}
+            />
           )}
 
           {/* 다리 본체(중앙) */}
@@ -378,9 +383,10 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
                   {/* 빈 슬롯 표시 */}
                   <div
                     className={[
-                      'w-[80px] h-[62px] rounded-2xl border-2 border-dashed grid place-items-center transition-all',
-                      piece ? 'border-olive/60 bg-olive/10' : 'border-ink/25 bg-paper/35',
-                      !piece ? 'animate-pulse' : '',
+                      // 요청: "끼워넣는 칸에 점선이 안보이게"
+                      // => 기본적으로 슬롯 테두리는 숨기고, 튜토리얼 때만 강조 링으로 안내
+                      'w-[80px] h-[62px] rounded-2xl grid place-items-center transition-all',
+                      piece ? '' : '',
                       isTutorSlot ? 'ring-2 ring-amber-300/80 shadow-[0_0_18px_rgba(245,158,11,0.25)]' : '',
                     ].join(' ')}
                   >
@@ -390,10 +396,6 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
                         alt=""
                         className="w-full h-full object-contain select-none"
                         draggable={false}
-                        onPointerDown={(e) => startDragFromSlot(e, s.index)}
-                        onPointerMove={updateDrag}
-                        onPointerUp={endDrag}
-                        onPointerCancel={endDrag}
                       />
                     ) : null}
                   </div>
@@ -472,7 +474,7 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
                     className={[
                       'w-[74px] h-[56px] rounded-2xl border border-ink/20 bg-paper2/90 shadow-md grid place-items-center touch-none select-none relative transition-all',
                       phase !== 'BUILD' ? 'opacity-45' : 'cursor-grab active:cursor-grabbing hover:bg-paper2',
-                      placed ? 'opacity-55' : '',
+                      placed ? 'opacity-45 cursor-not-allowed' : '',
                       isTutorPiece ? 'ring-2 ring-amber-300/80 animate-pulse' : '',
                     ].join(' ')}
                     onPointerDown={(e) => startDragFromInventory(e, pieceIndex)}
