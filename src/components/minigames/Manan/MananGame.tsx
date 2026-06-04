@@ -22,12 +22,11 @@ type DragState = {
 const SLOT_COUNT = 13;
 const BASE_W = 800;
 const BASE_H = 450;
+const BOARD_SCALE = 0.92;
 
 const BG_BLUEPRINT = '/assets/images/relic_bridge_blueprint.png';
 const BG_FRONT = '/assets/images/relic_bridge_front.png';
 const BG_COMPLETE = '/assets/images/relic_bridge.png';
-// 배경 이미지가 너무 커 보이지 않도록 약간 축소해서 표시
-const BG_SIZE = '92% auto';
 
 function shuffle<T>(arr: T[]) {
   const a = arr.slice();
@@ -42,8 +41,9 @@ function makeSlots() {
   // 스펙 기반: 800x450 기준 반원 궤도 자동 계산
   // Center: (400, 350), Radius: 200
   const cx = 400;
-  const cy = 350;
-  const r = 200;
+  // 인벤토리 패널과 겹치지 않도록 아치를 위로 끌어올림(시각/드롭 모두 안정)
+  const cy = 265;
+  const r = 175;
 
   return Array.from({ length: SLOT_COUNT }).map((_, index) => {
     const theta = 180 - index * 15; // deg
@@ -343,65 +343,64 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
           className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
           style={{ width: `${BASE_W}px`, height: `${BASE_H}px` }}
         >
-          {/* 배경 레이어: front + blueprint(Phase1) / complete(완성) */}
-          <div
-            className="absolute inset-0 bg-center bg-no-repeat"
-            style={{ backgroundImage: `url('${BG_FRONT}')`, backgroundSize: BG_SIZE }}
-          />
-          {phase === 'BUILD' ? (
+          {/* 배경 + 슬롯은 같이 축소(블루프린트가 "커 보이는" 문제 해결 + 좌표 정합 유지) */}
+          <div className="absolute inset-0" style={{ transform: `scale(${BOARD_SCALE})`, transformOrigin: 'center' }}>
+            {/* 배경 레이어: front + blueprint(Phase1) / complete(완성) */}
             <div
-              className="absolute inset-0 bg-center bg-no-repeat opacity-90"
-              style={{ backgroundImage: `url('${BG_BLUEPRINT}')`, backgroundSize: BG_SIZE }}
+              className="absolute inset-0 bg-center bg-no-repeat bg-contain pointer-events-none"
+              style={{ backgroundImage: `url('${BG_FRONT}')` }}
             />
-          ) : (
-            <div
-              className="absolute inset-0 bg-center bg-no-repeat"
-              style={{ backgroundImage: `url('${BG_COMPLETE}')`, backgroundSize: BG_SIZE }}
-            />
-          )}
+            {phase === 'BUILD' ? (
+              <div
+                className="absolute inset-0 bg-center bg-no-repeat bg-contain opacity-90 pointer-events-none"
+                style={{ backgroundImage: `url('${BG_BLUEPRINT}')` }}
+              />
+            ) : (
+              <div
+                className="absolute inset-0 bg-center bg-no-repeat bg-contain pointer-events-none"
+                style={{ backgroundImage: `url('${BG_COMPLETE}')` }}
+              />
+            )}
 
-          {/* 다리 본체(중앙) */}
-          <div className="absolute inset-0">
-            {/* 슬롯(반원 궤도) + 배치된 퍼즐 */}
-            {SLOTS.map((s) => {
-              const pieceIndex = slotPieces[s.index];
-              const piece = pieceIndex != null ? PUZZLE_PIECES.find((p) => p.index === pieceIndex) : null;
-              const isBuild = phase === 'BUILD';
-              const isTutorSlot = tutorialActive && requiredIndex === s.index && !piece;
+            {/* 다리 본체(중앙) */}
+            <div className="absolute inset-0">
+              {/* 슬롯(반원 궤도) + 배치된 퍼즐 */}
+              {SLOTS.map((s) => {
+                const pieceIndex = slotPieces[s.index];
+                const piece = pieceIndex != null ? PUZZLE_PIECES.find((p) => p.index === pieceIndex) : null;
+                const isBuild = phase === 'BUILD';
+                const isTutorSlot = tutorialActive && requiredIndex === s.index && !piece;
 
-              return (
-                <div
-                  key={s.index}
-                  data-slot={s.index}
-                  className={[
-                    'absolute -translate-x-1/2 -translate-y-1/2',
-                    isBuild ? 'cursor-pointer' : 'pointer-events-none',
-                  ].join(' ')}
-                  style={{ left: `${s.x}px`, top: `${s.y}px` }}
-                  title={isBuild ? '여기에 조각을 끼워보자!' : ''}
-                >
-                  {/* 빈 슬롯 표시 */}
+                return (
                   <div
+                    key={s.index}
+                    data-slot={s.index}
                     className={[
-                      // 요청: "끼워넣는 칸에 점선이 안보이게"
-                      // => 기본적으로 슬롯 테두리는 숨기고, 튜토리얼 때만 강조 링으로 안내
-                      'w-[80px] h-[62px] rounded-2xl grid place-items-center transition-all',
-                      piece ? '' : '',
-                      isTutorSlot ? 'ring-2 ring-amber-300/80 shadow-[0_0_18px_rgba(245,158,11,0.25)]' : '',
+                      'absolute -translate-x-1/2 -translate-y-1/2',
+                      isBuild ? 'cursor-pointer' : 'pointer-events-none',
                     ].join(' ')}
+                    style={{ left: `${s.x}px`, top: `${s.y}px` }}
+                    title={isBuild ? '여기에 조각을 끼워보자!' : ''}
                   >
-                    {piece ? (
-                      <img
-                        src={piece.src}
-                        alt=""
-                        className="w-full h-full object-contain select-none"
-                        draggable={false}
-                      />
-                    ) : null}
+                    {/* 빈 슬롯 표시(점선/테두리 숨김). 튜토리얼 슬롯만 링으로 안내 */}
+                    <div
+                      className={[
+                        'w-[80px] h-[62px] rounded-2xl grid place-items-center transition-all',
+                        isTutorSlot ? 'ring-2 ring-amber-300/80 shadow-[0_0_18px_rgba(245,158,11,0.25)]' : '',
+                      ].join(' ')}
+                    >
+                      {piece ? (
+                        <img
+                          src={piece.src}
+                          alt=""
+                          className="w-full h-full object-contain select-none"
+                          draggable={false}
+                        />
+                      ) : null}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
 
               {/* 힘의 분산 애니메이션 오버레이 */}
               {phase !== 'BUILD' && (
@@ -456,6 +455,7 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
                 </div>
               )}
         </div>
+          </div>
 
           {/* 인벤토리(하단 2줄: 7+6) */}
           <div className="absolute left-3 right-3 bottom-3 rounded-3xl border border-ink/20 bg-paper/70 px-3 py-2 z-40 overflow-visible">
