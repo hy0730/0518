@@ -20,6 +20,8 @@ type DragState = {
 };
 
 const SLOT_COUNT = 13;
+const BASE_W = 800;
+const BASE_H = 450;
 
 const BG_BLUEPRINT = '/assets/images/relic_bridge_blueprint.png';
 const BG_FRONT = '/assets/images/relic_bridge_front.png';
@@ -73,6 +75,12 @@ const PUZZLE_PIECES: PuzzlePiece[] = [
   { index: 12, id: 'right_6', src: '/assets/images/right_6.png' },
 ];
 
+// 튜토리얼: "각각의 1번(좌/우)"부터 안내
+const TUTORIAL_ORDER: number[] = [
+  5, // left_1 -> slot index 5
+  7, // right_1 -> slot index 7
+];
+
 export default function MananGame({ stageId, onComplete, regionData }: MinigameProps) {
   const stageTitle = useMemo(
     () => storyDataByStageId[stageId]?.title ?? regionData?.map?.nodes?.[stageId - 1]?.title ?? `스테이지 ${stageId}`,
@@ -104,9 +112,30 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
 
   const boardRef = useRef<HTMLDivElement | null>(null);
 
+  // 튜토리얼 UI/상태
+  const [tutorialStep, setTutorialStep] = useState(0);
+  const tutorialActive = phase === 'BUILD' && tutorialStep < TUTORIAL_ORDER.length;
+  const requiredIndex = tutorialActive ? TUTORIAL_ORDER[tutorialStep] : null;
+  const [toast, setToast] = useState<string | null>(null);
+  const toastTimer = useRef<number | null>(null);
+  const showToast = (msg: string, ms = 1300) => {
+    setToast(msg);
+    if (toastTimer.current) window.clearTimeout(toastTimer.current);
+    toastTimer.current = window.setTimeout(() => setToast(null), ms);
+  };
+  useEffect(() => {
+    return () => {
+      if (toastTimer.current) window.clearTimeout(toastTimer.current);
+    };
+  }, []);
+
   const beginDrag = (e: React.PointerEvent, pieceIndex: number, origin: DragState['origin'], originSlotIdx: number | null) => {
     startIfNeeded();
     if (phase !== 'BUILD') return;
+    if (tutorialActive && requiredIndex !== pieceIndex) {
+      showToast('튜토리얼 조각부터 끼워보자!');
+      return;
+    }
     e.preventDefault();
     e.stopPropagation();
     (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
@@ -129,6 +158,10 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
 
   const startDragFromInventory = (e: React.PointerEvent, pieceIndex: number) => {
     // 이미 배치된 조각도 인벤토리에서 다시 집어서 재배치 허용
+    if (tutorialActive && requiredIndex !== pieceIndex) {
+      showToast('먼저 강조된 1번 조각을 끼워보자!');
+      return;
+    }
     const curSlot = slotPieces.findIndex((v) => v === pieceIndex);
     if (curSlot >= 0) {
       setSlotPieces((prev) => {
@@ -145,6 +178,10 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
   const startDragFromSlot = (e: React.PointerEvent, slotIdx: number) => {
     const pieceIndex = slotPieces[slotIdx];
     if (pieceIndex == null) return;
+    if (tutorialActive && requiredIndex !== pieceIndex) {
+      showToast('튜토리얼 조각부터 진행해보자!');
+      return;
+    }
     // 드래그 시작 즉시 슬롯에서 꺼내기(실패 시 원복)
     setSlotPieces((prev) => {
       const next = prev.slice();
@@ -226,6 +263,17 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
     }
 
     placeToSlot(idx, ended.pieceIndex);
+
+    // 튜토리얼 진행(정답 스냅 후 다음 단계)
+    if (tutorialActive && requiredIndex === ended.pieceIndex) {
+      const nextStep = tutorialStep + 1;
+      setTutorialStep(nextStep);
+      if (nextStep >= TUTORIAL_ORDER.length) {
+        showToast('좋아! 이제 나머지도 채워보자!', 1200);
+      } else {
+        showToast('좋아! 다음 1번 조각도 끼워보자!', 1200);
+      }
+    }
   };
 
   // Phase 1 완료 → Phase 2(힘의 분산)
@@ -294,55 +342,64 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
       </div>
 
       <div ref={boardRef} className="absolute inset-0 rounded-3xl border border-ink/30 bg-paper2/90 shadow-paper overflow-hidden">
-        {/* 배경 레이어: front + blueprint(Phase1) / complete(완성) */}
-        <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url('${BG_FRONT}')` }} />
-        {phase === 'BUILD' ? (
-          <div className="absolute inset-0 bg-cover bg-center opacity-90" style={{ backgroundImage: `url('${BG_BLUEPRINT}')` }} />
-        ) : (
-          <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url('${BG_COMPLETE}')` }} />
-        )}
+        {/* 800x450 좌표계를 보장하는 스테이지 컨테이너 */}
+        <div
+          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+          style={{ width: `${BASE_W}px`, height: `${BASE_H}px` }}
+        >
+          {/* 배경 레이어: front + blueprint(Phase1) / complete(완성) */}
+          <div className="absolute inset-0 bg-center bg-no-repeat bg-contain" style={{ backgroundImage: `url('${BG_FRONT}')` }} />
+          {phase === 'BUILD' ? (
+            <div className="absolute inset-0 bg-center bg-no-repeat bg-contain opacity-90" style={{ backgroundImage: `url('${BG_BLUEPRINT}')` }} />
+          ) : (
+            <div className="absolute inset-0 bg-center bg-no-repeat bg-contain" style={{ backgroundImage: `url('${BG_COMPLETE}')` }} />
+          )}
 
-        {/* 다리 본체(중앙) */}
-        <div className="absolute inset-0">
-          {/* 슬롯(반원 궤도) + 배치된 퍼즐 */}
-          {SLOTS.map((s) => {
-            const pieceIndex = slotPieces[s.index];
-            const piece = pieceIndex != null ? PUZZLE_PIECES.find((p) => p.index === pieceIndex) : null;
-            const isBuild = phase === 'BUILD';
-            return (
-              <div
-                key={s.index}
-                data-slot={s.index}
-                className={[
-                  'absolute -translate-x-1/2 -translate-y-1/2',
-                  isBuild ? 'cursor-pointer' : 'pointer-events-none',
-                ].join(' ')}
-                style={{ left: `${s.x}px`, top: `${s.y}px` }}
-                title={isBuild ? '여기에 조각을 끼워보자!' : ''}
-              >
-                {/* 빈 슬롯 표시 */}
+          {/* 다리 본체(중앙) */}
+          <div className="absolute inset-0">
+            {/* 슬롯(반원 궤도) + 배치된 퍼즐 */}
+            {SLOTS.map((s) => {
+              const pieceIndex = slotPieces[s.index];
+              const piece = pieceIndex != null ? PUZZLE_PIECES.find((p) => p.index === pieceIndex) : null;
+              const isBuild = phase === 'BUILD';
+              const isTutorSlot = tutorialActive && requiredIndex === s.index && !piece;
+
+              return (
                 <div
+                  key={s.index}
+                  data-slot={s.index}
                   className={[
-                    'w-[66px] h-[54px] rounded-2xl border-2 border-dashed grid place-items-center',
-                    piece ? 'border-olive/60 bg-olive/10' : 'border-ink/25 bg-paper/35 animate-pulse',
+                    'absolute -translate-x-1/2 -translate-y-1/2',
+                    isBuild ? 'cursor-pointer' : 'pointer-events-none',
                   ].join(' ')}
+                  style={{ left: `${s.x}px`, top: `${s.y}px` }}
+                  title={isBuild ? '여기에 조각을 끼워보자!' : ''}
                 >
-                  {piece ? (
-                    <img
-                      src={piece.src}
-                      alt=""
-                      className="w-full h-full object-contain select-none"
-                      draggable={false}
-                      onPointerDown={(e) => startDragFromSlot(e, s.index)}
-                      onPointerMove={updateDrag}
-                      onPointerUp={endDrag}
-                      onPointerCancel={endDrag}
-                    />
-                  ) : null}
+                  {/* 빈 슬롯 표시 */}
+                  <div
+                    className={[
+                      'w-[80px] h-[62px] rounded-2xl border-2 border-dashed grid place-items-center transition-all',
+                      piece ? 'border-olive/60 bg-olive/10' : 'border-ink/25 bg-paper/35',
+                      !piece ? 'animate-pulse' : '',
+                      isTutorSlot ? 'ring-2 ring-amber-300/80 shadow-[0_0_18px_rgba(245,158,11,0.25)]' : '',
+                    ].join(' ')}
+                  >
+                    {piece ? (
+                      <img
+                        src={piece.src}
+                        alt=""
+                        className="w-full h-full object-contain select-none"
+                        draggable={false}
+                        onPointerDown={(e) => startDragFromSlot(e, s.index)}
+                        onPointerMove={updateDrag}
+                        onPointerUp={endDrag}
+                        onPointerCancel={endDrag}
+                      />
+                    ) : null}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
 
               {/* 힘의 분산 애니메이션 오버레이 */}
               {phase !== 'BUILD' && (
@@ -398,36 +455,60 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
               )}
         </div>
 
-        {/* 인벤토리(하단 2줄: 7+6) */}
-        <div className="absolute left-3 right-3 bottom-3 rounded-3xl border border-ink/20 bg-paper/70 px-3 py-2 z-40 overflow-visible">
-          <div className="flex items-center justify-between">
-            <div className="text-[12px] font-bold opacity-90">퍼즐 조각을 끼워보자! ({placedCount}/{SLOT_COUNT})</div>
-            {phase === 'BUILD' ? <div className="text-[11px] opacity-80">드래그로 끼우기 · 다시 빼서 재배치 가능</div> : null}
+          {/* 인벤토리(하단 2줄: 7+6) */}
+          <div className="absolute left-3 right-3 bottom-3 rounded-3xl border border-ink/20 bg-paper/70 px-3 py-2 z-40 overflow-visible">
+            <div className="flex items-center justify-between">
+              <div className="text-[12px] font-bold opacity-90">퍼즐 조각을 끼워보자! ({placedCount}/{SLOT_COUNT})</div>
+              {phase === 'BUILD' ? <div className="text-[11px] opacity-80">드래그 · 재배치 가능</div> : null}
+            </div>
+            <div className="mt-2 grid grid-cols-7 gap-2 justify-items-center">
+              {inventoryOrder.map((pieceIndex) => {
+                const piece = PUZZLE_PIECES.find((p) => p.index === pieceIndex)!;
+                const placed = slotPieces.includes(pieceIndex);
+                const isTutorPiece = tutorialActive && requiredIndex === pieceIndex;
+                return (
+                  <div
+                    key={piece.id}
+                    className={[
+                      'w-[74px] h-[56px] rounded-2xl border border-ink/20 bg-paper2/90 shadow-md grid place-items-center touch-none select-none relative transition-all',
+                      phase !== 'BUILD' ? 'opacity-45' : 'cursor-grab active:cursor-grabbing hover:bg-paper2',
+                      placed ? 'opacity-55' : '',
+                      isTutorPiece ? 'ring-2 ring-amber-300/80 animate-pulse' : '',
+                    ].join(' ')}
+                    onPointerDown={(e) => startDragFromInventory(e, pieceIndex)}
+                    onPointerMove={updateDrag}
+                    onPointerUp={endDrag}
+                    onPointerCancel={endDrag}
+                    title="드래그해서 슬롯에 끼워보자!"
+                  >
+                    <img src={piece.src} alt="" className="w-full h-full object-contain" draggable={false} />
+                    {placed ? <div className="absolute right-1 top-1 w-2 h-2 rounded-full bg-olive/80" /> : null}
+                  </div>
+                );
+              })}
+            </div>
           </div>
-          <div className="mt-2 grid grid-cols-7 gap-2 justify-items-center">
-            {inventoryOrder.map((pieceIndex) => {
-              const piece = PUZZLE_PIECES.find((p) => p.index === pieceIndex)!;
-              const placed = slotPieces.includes(pieceIndex);
-              return (
-                <div
-                  key={piece.id}
-                  className={[
-                    'w-[64px] h-[48px] rounded-2xl border border-ink/20 bg-paper2/90 shadow-md grid place-items-center touch-none select-none relative',
-                    phase !== 'BUILD' ? 'opacity-45' : 'cursor-grab active:cursor-grabbing hover:bg-paper2',
-                    placed ? 'opacity-55' : '',
-                  ].join(' ')}
-                  onPointerDown={(e) => startDragFromInventory(e, pieceIndex)}
-                  onPointerMove={updateDrag}
-                  onPointerUp={endDrag}
-                  onPointerCancel={endDrag}
-                  title="드래그해서 슬롯에 끼워보자!"
-                >
-                  <img src={piece.src} alt="" className="w-full h-full object-contain" draggable={false} />
-                  {placed ? <div className="absolute right-1 top-1 w-2 h-2 rounded-full bg-olive/80" /> : null}
+
+          {/* 튜토리얼 안내 */}
+          {tutorialActive && (
+            <div className="absolute left-1/2 top-14 -translate-x-1/2 z-50 pointer-events-none">
+              <div className="note-panel px-4 py-3 max-w-[520px]">
+                <div className="text-sm font-black">튜토리얼</div>
+                <div className="mt-1 text-sm opacity-90">
+                  {tutorialStep === 0
+                    ? '왼쪽 1번 주춧돌을 드래그해서 끼워보자!'
+                    : '오른쪽 1번 주춧돌도 드래그해서 끼워보자!'}
                 </div>
-              );
-            })}
-          </div>
+              </div>
+            </div>
+          )}
+
+          {/* 토스트 */}
+          {toast && (
+            <div className="absolute left-1/2 top-2 -translate-x-1/2 z-[9000] pointer-events-none">
+              <div className="rounded-xl border border-ink/25 bg-paper2 px-3 py-2 text-xs font-black shadow-paper">{toast}</div>
+            </div>
+          )}
         </div>
 
         {/* 드래그 고스트 */}
@@ -450,6 +531,7 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
             </div>
           </div>
         )}
+        {/* end stage container */}
       </div>
 
       {/* 결과 모달 */}
