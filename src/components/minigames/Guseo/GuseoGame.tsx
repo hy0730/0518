@@ -297,6 +297,13 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
   const [usedQuizIds, setUsedQuizIds] = useState<Set<number>>(() => new Set());
 
   const movingLocked = lockInput || encounter.active || phase !== 'MAZE';
+  const turnRef = useRef(0);
+
+  // 미로 시작 시 턴 카운터 초기화
+  useEffect(() => {
+    if (phase !== 'MAZE') return;
+    turnRef.current = 0;
+  }, [phase]);
 
   // 가드/맵 변경 시 시야 재계산
   useEffect(() => {
@@ -342,8 +349,15 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
   };
 
   const processGuardTurnAndDetect = (playerPos: Pos, rollbackPos: Pos) => {
-    const nextGuards = computeNextGuards(playerPos);
-    setGuards(nextGuards);
+    // (요청) 순사가 너무 빠르므로 2턴마다 1번은 "제자리 대기"
+    // turn 1: 이동, turn 2: 대기, turn 3: 이동, turn 4: 대기 ...
+    const nextTurn = turnRef.current + 1;
+    turnRef.current = nextTurn;
+    const guardShouldMove = nextTurn % 2 === 1;
+
+    const nextGuards = guardShouldMove ? computeNextGuards(playerPos) : guards;
+    if (guardShouldMove) setGuards(nextGuards);
+
     const nextDanger = computeVisibleDangerSet(map, nextGuards);
     setVisibleDangerSet(nextDanger);
 
