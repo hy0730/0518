@@ -25,6 +25,7 @@ const REAL = '/assets/images/relic_turtle_real.png'; // 실제 문화유산 사�
 
 const GUIBU_EMPTY = '/assets/images/relic_gwibu_base_front.png';
 const GUIBU_FULL = '/assets/images/relic_gwibu_complete.png';
+const STELE_BODY = '/assets/images/relic_gwibu_body.png';
 
 const FRAGMENTS: { id: FragmentId; label: string; img: string; x: number; y: number }[] = [
   { id: 'f1', label: '비석 조각', img: '/assets/images/relic_gwibu_head.png', x: 14, y: 18 },
@@ -145,17 +146,18 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
     if (phase !== 'FRAGMENTS') return;
     if (!allCollected) return;
     audio.playUrl('/assets/sounds/sfx_unlock.mp3', 0.85);
-    const t = window.setTimeout(() => setPhase('ENGRAVE'), 600);
+    // Phase1에서 "완성 모습"을 잠깐 보여준 뒤 Phase2로 전환
+    const t = window.setTimeout(() => setPhase('ENGRAVE'), 1200);
     return () => window.clearTimeout(t);
   }, [phase, allCollected]);
 
-  // Phase2
+  // Phase2 (세로 모드 UI + 실시간 타이핑, 엔터 줄 허용)
   const [input, setInput] = useState('');
   const [engraved, setEngraved] = useState<string | null>(null);
   const [engraving, setEngraving] = useState(false);
   const [resultModal, setResultModal] = useState(false);
 
-  const engrave = () => {
+  const finishEngrave = () => {
     startIfNeeded();
     if (phase !== 'ENGRAVE') return;
     const text = input.trim();
@@ -251,22 +253,38 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
           <div className="absolute inset-0 p-3">
             {/* 귀부(비석 없음) */}
             <div className="absolute left-1/2 bottom-2 -translate-x-1/2 w-[min(520px,88%)]">
-              <img src={GUIBU_EMPTY} alt="귀부" className="w-full object-contain drop-shadow-[0_18px_40px_rgba(74,55,40,0.18)]" draggable={false} />
+              <img
+                src={allCollected ? GUIBU_FULL : GUIBU_EMPTY}
+                alt="귀부"
+                className="w-full object-contain drop-shadow-[0_18px_40px_rgba(74,55,40,0.18)]"
+                draggable={false}
+              />
               {/* Drop Zone: 거북이 등 */}
-              <div
-                ref={dropRef}
-                className={[
-                  'absolute left-1/2 top-[10%] -translate-x-1/2 w-[58%] h-[34%] rounded-3xl border-2 border-dashed',
-                  'border-ink/30 bg-paper/40',
-                  allCollected ? 'ring-2 ring-amber-300/60' : '',
-                ].join(' ')}
-                title="여기로 비석 조각을 모아보자!"
-              >
-                <div className="absolute inset-0 grid place-items-center text-xs font-black opacity-80">
-                  {allCollected ? '조각을 모두 모았어!' : `조각 모으기 ${Object.values(collected).filter(Boolean).length}/3`}
+              {!allCollected && (
+                <div
+                  ref={dropRef}
+                  className={[
+                    'absolute left-1/2 top-[10%] -translate-x-1/2 w-[58%] h-[34%] rounded-3xl border-2 border-dashed',
+                    'border-ink/30 bg-paper/40',
+                  ].join(' ')}
+                  title="여기로 비석 조각을 모아보자!"
+                >
+                  <div className="absolute inset-0 grid place-items-center text-xs font-black opacity-80">
+                    {`조각 모으기 ${Object.values(collected).filter(Boolean).length}/3`}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* 완성 축하 안내 (Phase1에서만) */}
+            {allCollected && (
+              <div className="absolute inset-0 grid place-items-center pointer-events-none">
+                <div className="note-panel px-5 py-4 max-w-[420px]">
+                  <div className="text-sm font-black">완성!</div>
+                  <div className="mt-1 text-sm opacity-90">비희의 등에 비석을 다시 올려줬어.</div>
                 </div>
               </div>
-            </div>
+            )}
 
             {/* 흩어진 조각들 */}
             {FRAGMENTS.map((f) => {
@@ -292,60 +310,62 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
             })}
           </div>
         ) : (
-          <div className="absolute inset-0 p-3 flex flex-col gap-3">
-            <div className="note-panel px-4 py-3">
-              <div className="text-sm font-black">천년의 비석 완성하기</div>
-              <div className="mt-1 text-sm opacity-90 leading-relaxed">
-                조상님들은 후대에 남기고 싶은 중요한 내용을 돌에 새겼어요. 여러분이 비석에 남기고 싶은 말을 적어보세요!
+          <div className="absolute inset-0 p-3 grid place-items-center">
+            {/* 세로 모드 스테이지 */}
+            <div className="w-[min(460px,92%)] h-full max-h-[820px] flex flex-col gap-3">
+              <div className="note-panel px-4 py-3">
+                <div className="text-sm font-black">비석 글씨 새기기</div>
+                <div className="mt-1 text-sm opacity-90 leading-relaxed">비석 몸통에 남기고 싶은 말을 적어보자! (엔터로 줄바꿈 가능)</div>
               </div>
-            </div>
 
-            <div className="flex-1 min-h-0 rounded-3xl border border-ink/20 bg-paper/55 overflow-hidden relative">
-              <img
-                src={GUIBU_FULL}
-                alt="완성된 귀부"
-                className="absolute inset-0 w-full h-full object-contain drop-shadow-[0_20px_45px_rgba(74,55,40,0.20)]"
-                draggable={false}
-              />
+              <div className="flex-1 min-h-0 rounded-3xl border border-ink/20 bg-paper/55 overflow-hidden relative">
+                {/* 몸통만 표시 */}
+                <img
+                  src={STELE_BODY}
+                  alt="비석 몸통"
+                  className="absolute inset-0 w-full h-full object-contain drop-shadow-[0_18px_40px_rgba(74,55,40,0.18)]"
+                  draggable={false}
+                />
 
-              {/* 새긴 글씨(음각 느낌) */}
-              {engraved && (
-                <div className="absolute left-1/2 top-[34%] -translate-x-1/2 w-[70%] text-center engraveFx">
+                {/* 실시간 타이핑(음각 느낌) */}
+                <div className="absolute left-1/2 top-[22%] -translate-x-1/2 w-[72%] text-center">
                   <div
-                    className="text-[22px] md:text-[26px] font-black tracking-tight"
+                    className="text-[18px] md:text-[22px] font-black tracking-tight"
                     style={{
                       color: 'rgba(74,55,40,0.55)',
                       textShadow:
                         '1px 1px 0 rgba(255,255,255,0.35), -1px -1px 0 rgba(0,0,0,0.08), 0 2px 6px rgba(74,55,40,0.15)',
                       filter: 'contrast(1.05)',
+                      whiteSpace: 'pre-wrap',
+                      wordBreak: 'keep-all',
+                      lineHeight: 1.25,
                     }}
                   >
-                    {engraved}
+                    {engraved ?? input}
                   </div>
                 </div>
-              )}
-            </div>
+              </div>
 
-            <div className="rounded-3xl border border-ink/20 bg-paper/70 p-3">
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
+              <div className="rounded-3xl border border-ink/20 bg-paper/70 p-3 flex flex-col gap-2">
+                <textarea
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  placeholder="예: 문화유산 수호대 파이팅!"
-                  className="flex-1 rounded-2xl border-2 border-ink/25 bg-paper2 px-3 py-3 text-sm font-bold outline-none"
+                  placeholder="예:\n문화유산 수호대 파이팅!\n우리 동네 유산을 지켜요!"
+                  className="w-full min-h-[96px] rounded-2xl border-2 border-ink/25 bg-paper2 px-3 py-3 text-sm font-bold outline-none resize-none"
                   disabled={engraving || !!engraved}
                 />
                 <button
                   type="button"
-                  onClick={engrave}
+                  onClick={finishEngrave}
                   disabled={engraving || !!engraved}
                   className={[
                     'rounded-2xl px-4 py-3 font-black border shadow-md',
-                    engraving || !!engraved ? 'bg-paper/50 text-ink/40 cursor-not-allowed border-ink/20' : 'bg-stamp text-white border-ink/25 hover:opacity-95',
+                    engraving || !!engraved
+                      ? 'bg-paper/50 text-ink/40 cursor-not-allowed border-ink/20'
+                      : 'bg-stamp text-white border-ink/25 hover:opacity-95',
                   ].join(' ')}
                 >
-                  {engraving ? '새기는 중…' : '비석에 새기기'}
+                  {engraving ? '새기는 중…' : '완료'}
                 </button>
               </div>
             </div>
