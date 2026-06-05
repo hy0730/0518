@@ -434,10 +434,8 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
                       const isPlayer = pos.r === r && pos.c === c;
                       const isGuard = guards.some((g) => g.r === r && g.c === c);
                       const isDanger = visibleDangerSet.has(keyOf(r, c));
-                      const base =
-                        t === 0
-                          ? 'bg-ink/25 border-ink/35'
-                          : 'bg-transparent border-ink/10';
+                      // 배경 일러스트 위에서 길/벽 구분이 잘 되도록 길 타일에도 아주 옅은 바탕을 깔아줌
+                      const base = t === 0 ? 'bg-ink/25 border-ink/35' : 'bg-paper/20 border-ink/10';
                       const isGoal = t === 3;
                       const isStart = t === 2;
                       const isRice = t === 4;
@@ -447,13 +445,19 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
                           className={[
                             'relative border',
                             base,
-                            isGoal ? 'bg-emerald-100/70 border-ink/20' : '',
+                            // 목표 타일은 더 눈에 띄게
+                            isGoal ? 'bg-emerald-200/80 border-ink/25' : '',
                             isStart ? 'bg-sky-100/65 border-ink/20' : '',
-                            isRice ? 'bg-amber-100/70 border-ink/20' : '',
+                            // 쌀 타일은 더 눈에 띄게(획득 전)
+                            isRice ? 'bg-amber-200/80 border-ink/25 animate-pulse' : '',
+                            // 쌀을 찾은 뒤에는 탈출구를 유도
+                            isGoal && hasRice ? 'ring-2 ring-emerald-500/80 animate-pulse' : '',
                           ].join(' ')}
                         >
                           {/* 붉은 시야 오버레이 */}
-                          {isDanger && <div className="absolute inset-0 bg-red-500/30" />}
+                          {isDanger && (
+                            <div className="absolute inset-0 bg-red-600/45 ring-2 ring-red-500/70 animate-pulse" />
+                          )}
 
                           {isRice ? (
                             <div className="absolute inset-0 grid place-items-center opacity-80">
