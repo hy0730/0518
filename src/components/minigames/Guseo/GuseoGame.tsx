@@ -28,6 +28,8 @@ type Guard = {
   visionLen: number;
 };
 
+const MAZE_BG = '/assets/images/relic_seoimyeon_maze.png';
+
 const QUIZZES: Quiz[] = [
   {
     question: '구서이면사무소는 일제강점기 때 어떤 곳이었을까요?',
@@ -483,11 +485,16 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
           <div className="h-full grid grid-cols-[1fr_220px] gap-3">
             <div className={['relative rounded-3xl border border-ink/20 bg-paper/55 overflow-hidden', shake ? 'shakeFx' : ''].join(' ')}>
               <div
-                className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+                className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 relative"
                 style={{ width: `${gridW}px`, height: `${gridH}px` }}
               >
+                {/* 타일 뒷배경(미로 전용 이미지) */}
                 <div
-                  className="grid"
+                  className="absolute inset-0 bg-cover bg-center opacity-90 pointer-events-none"
+                  style={{ backgroundImage: `url('${MAZE_BG}')` }}
+                />
+                <div
+                  className="relative z-10 grid"
                   style={{
                     gridTemplateColumns: `repeat(${cols}, ${cell}px)`,
                     gridTemplateRows: `repeat(${rows}, ${cell}px)`,
@@ -501,8 +508,8 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
                       const isDanger = visibleDangerSet.has(keyOf(r, c));
                       const base =
                         t === 0
-                          ? 'bg-ink/18 border-ink/25'
-                          : 'bg-paper/70 border-ink/10';
+                          ? 'bg-ink/25 border-ink/35'
+                          : 'bg-transparent border-ink/10';
                       const isGoal = t === 3;
                       const isStart = t === 2;
                       const isRice = t === 4;
