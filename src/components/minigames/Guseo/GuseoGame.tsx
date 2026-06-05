@@ -3,7 +3,7 @@ import type { MinigameProps } from '../../../types/game';
 import { storyDataByStageId } from '../../../data/storyData';
 import { audio } from '../../../utils/audio';
 import { getRelicMainImage, getRelicRealImage } from '../../../utils/relicImages';
-import { ANYANG_GRID_MAP, DEFAULT_TRAPS, GUSEO_ASSETS, QUIZ_POOL, START_POS, keyOf } from '../../../data/guseoMazeConfig';
+import { ANYANG_GRID_MAP, DEFAULT_TRAPS, DELIVERY_TILES, GUSEO_ASSETS, QUIZ_POOL, RICE_SOURCE_TILES, START_POS, keyOf } from '../../../data/guseoMazeConfig';
 import type { GuseoTile as Tile, Pos, Quiz } from '../../../data/guseoMazeConfig';
 
 type Phase = 'MAZE' | 'FINALE';
@@ -29,6 +29,64 @@ function dirFromDelta(dr: number, dc: number): Dir {
   if (dr === 1 && dc === 0) return 'D';
   if (dr === 0 && dc === -1) return 'L';
   return 'R';
+}
+
+function manhattan(a: Pos, b: Pos) {
+  return Math.abs(a.r - b.r) + Math.abs(a.c - b.c);
+}
+
+function isWalkable(t: Tile) {
+  // 0만 벽/건물
+  return t !== 0;
+}
+
+function bfsNextStep(map: Tile[][], start: Pos, goal: Pos, blocked: Set<string>) {
+  const rows = map.length;
+  const cols = map[0]?.length ?? 0;
+  const q: Pos[] = [];
+  const prev = new Map<string, string | null>();
+
+  const startKey = keyOf(start.r, start.c);
+  q.push(start);
+  prev.set(startKey, null);
+
+  const dirs: Array<{ dr: number; dc: number }> = [
+    { dr: -1, dc: 0 },
+    { dr: 1, dc: 0 },
+    { dr: 0, dc: -1 },
+    { dr: 0, dc: 1 },
+  ];
+
+  while (q.length) {
+    const cur = q.shift()!;
+    if (cur.r === goal.r && cur.c === goal.c) break;
+    for (const d of dirs) {
+      const nr = cur.r + d.dr;
+      const nc = cur.c + d.dc;
+      if (nr < 0 || nr >= rows || nc < 0 || nc >= cols) continue;
+      if (!isWalkable(map[nr][nc])) continue;
+      const k = keyOf(nr, nc);
+      if (blocked.has(k) && !(nr === goal.r && nc === goal.c)) continue;
+      if (prev.has(k)) continue;
+      prev.set(k, keyOf(cur.r, cur.c));
+      q.push({ r: nr, c: nc });
+    }
+  }
+
+  const goalKey = keyOf(goal.r, goal.c);
+  if (!prev.has(goalKey)) return null;
+
+  // start -> ... -> goal 경로에서 "다음 한 칸"을 역추적
+  let curKey: string | null = goalKey;
+  let parent: string | null = prev.get(curKey) ?? null;
+  while (parent && parent !== startKey) {
+    curKey = parent;
+    parent = prev.get(curKey) ?? null;
+  }
+
+  if (!curKey) return null;
+  const [rStr, cStr] = curKey.split(',');
+  return { r: Number(rStr), c: Number(cStr) };
 }
 
 function computeVisibleDangerSet(map: Tile[][], guards: Guard[]) {
@@ -61,6 +119,23 @@ function RiceBagIcon() {
   return (
     <div className="w-8 h-8 rounded-full bg-white/85 border-2 border-ink/50 shadow-md grid place-items-center">
       <img src={GUSEO_ASSETS.ricesack} alt="" className="w-7 h-7 object-contain" draggable={false} />
+    </div>
+  );
+}
+
+function DeliveryIcon({ done }: { done: boolean }) {
+  return (
+    <div
+      className={[
+        'w-8 h-8 rounded-full border-2 shadow-md grid place-items-center',
+        done ? 'bg-emerald-200/85 border-emerald-700/50' : 'bg-white/85 border-ink/50',
+      ].join(' ')}
+    >
+      {done ? (
+        <div className="text-[12px] font-black text-emerald-900">✔</div>
+      ) : (
+        <div className="text-[10px] font-black text-ink/80">배달</div>
+      )}
     </div>
   );
 }
@@ -122,19 +197,40 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
   const [map, setMap] = useState<Tile[][]>(() => cloneMap(ANYANG_GRID_MAP));
   const [pos, setPos] = useState(START_POS);
   const [lastSafePos, setLastSafePos] = useState(START_POS);
-  const [hasRice, setHasRice] = useState(false);
+  const [carryingRice, setCarryingRice] = useState(0);
+  const [deliveredSet, setDeliveredSet] = useState<Set<string>>(() => new Set());
   const [trapSet, setTrapSet] = useState<Set<string>>(() => new Set(DEFAULT_TRAPS.map((p) => keyOf(p.r, p.c))));
 
   const [guards, setGuards] = useState<Guard[]>(() => [
     {
       id: 1,
-      r: 3,
-      c: 9,
+      // 서이면사무소 주변 순찰(중앙부)
+      r: 8,
+      c: 8,
       patrol: [
-        { r: 3, c: 9 },
-        { r: 3, c: 10 },
-        { r: 3, c: 11 },
-        { r: 3, c: 10 }, // 왕복
+        { r: 8, c: 8 },
+        { r: 8, c: 9 },
+        { r: 8, c: 10 },
+        { r: 8, c: 11 },
+        { r: 8, c: 12 },
+        { r: 8, c: 11 },
+        { r: 8, c: 10 },
+        { r: 8, c: 9 },
+      ],
+      patrolIdx: 0,
+      dirFacing: 'R',
+      visionLen: 1,
+    },
+    {
+      id: 2,
+      // 플레이어 추격(거리 6칸 이내면 BFS로 1칸 추격, 멀면 순찰)
+      r: 17,
+      c: 10,
+      patrol: [
+        { r: 17, c: 10 },
+        { r: 17, c: 12 },
+        { r: 17, c: 14 },
+        { r: 17, c: 12 },
       ],
       patrolIdx: 0,
       dirFacing: 'R',
@@ -142,20 +238,8 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
     },
   ]);
   const [visibleDangerSet, setVisibleDangerSet] = useState<Set<string>>(() => computeVisibleDangerSet(ANYANG_GRID_MAP, [
-    {
-      id: 1,
-      r: 3,
-      c: 9,
-      patrol: [
-        { r: 3, c: 9 },
-        { r: 3, c: 10 },
-        { r: 3, c: 11 },
-        { r: 3, c: 10 },
-      ],
-      patrolIdx: 0,
-      dirFacing: 'R',
-      visionLen: 1,
-    },
+    { id: 1, r: 8, c: 8, patrol: [], patrolIdx: 0, dirFacing: 'R', visionLen: 1 },
+    { id: 2, r: 17, c: 10, patrol: [], patrolIdx: 0, dirFacing: 'R', visionLen: 1 },
   ]));
   const [lockInput, setLockInput] = useState(false);
   const [redFlash, setRedFlash] = useState(false);
@@ -163,8 +247,8 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
   const rows = map.length;
   const cols = map[0]?.length ?? 0;
 
-  // 10x15를 보기 좋게
-  const cell = 30;
+  // 20x20 표시를 위해 셀 크기 축소
+  const cell = 22;
   const gridW = cols * cell;
   const gridH = rows * cell;
 
@@ -218,55 +302,98 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
     const prev = pos;
     setLastSafePos(prev);
 
-    // GOAL(3): 쌀 획득 전에는 탈출 불가
-    if (nextTile === 3 && !hasRice) {
-      showToast('서이면사무소에서 쌀을 먼저 찾아야 해!', 1200);
-      audio.playSfx('wrong', 0.75);
-      setLockInput(false);
-      return;
-    }
+    const deliveredCount = deliveredSet.size;
+    const targetDeliveryCount = DELIVERY_TILES.length;
 
     // 이동 확정
     const nextPos = { r: nr, c: nc };
     setPos(nextPos);
 
-    // 턴제: 플레이어 이동 성공 직후 가드 1칸 이동 → 시야 업데이트 → 발각 검사
-    const nextGuards = guards.map((g) => {
+    // 턴제: 플레이어 이동 성공 직후 가드 1칸 이동(순찰/추격) → 시야 업데이트 → 발각 검사
+    const nextGuards: Guard[] = [];
+    // 1) 순찰 가드(서이면사무소 주변)
+    {
+      const g = guards[0];
       const nextIdx = (g.patrolIdx + 1) % g.patrol.length;
       const nextP = g.patrol[nextIdx];
       const dr = nextP.r - g.r;
       const dc = nextP.c - g.c;
       const facing = dr === 0 && dc === 0 ? g.dirFacing : dirFromDelta(dr, dc);
-      return { ...g, r: nextP.r, c: nextP.c, patrolIdx: nextIdx, dirFacing: facing };
-    });
+      nextGuards.push({ ...g, r: nextP.r, c: nextP.c, patrolIdx: nextIdx, dirFacing: facing });
+    }
+    // 2) 추격 가드(거리 6 이내면 BFS로 한 칸 추격)
+    {
+      const g = guards[1];
+      const dist = manhattan({ r: g.r, c: g.c }, nextPos);
+      const blocked = new Set<string>([keyOf(nextGuards[0].r, nextGuards[0].c)]);
+      let nextP: Pos | null = null;
+      if (dist <= 6) {
+        nextP = bfsNextStep(map, { r: g.r, c: g.c }, nextPos, blocked);
+      }
+      if (!nextP) {
+        const nextIdx = (g.patrolIdx + 1) % g.patrol.length;
+        nextP = g.patrol[nextIdx];
+        const dr = nextP.r - g.r;
+        const dc = nextP.c - g.c;
+        const facing = dr === 0 && dc === 0 ? g.dirFacing : dirFromDelta(dr, dc);
+        nextGuards.push({ ...g, r: nextP.r, c: nextP.c, patrolIdx: nextIdx, dirFacing: facing });
+      } else {
+        const dr = nextP.r - g.r;
+        const dc = nextP.c - g.c;
+        const facing = dr === 0 && dc === 0 ? g.dirFacing : dirFromDelta(dr, dc);
+        nextGuards.push({ ...g, r: nextP.r, c: nextP.c, dirFacing: facing });
+      }
+    }
     setGuards(nextGuards);
     const nextDanger = computeVisibleDangerSet(map, nextGuards);
     setVisibleDangerSet(nextDanger);
 
-    if (nextDanger.has(keyOf(nextPos.r, nextPos.c))) {
+    const onGuard = nextGuards.some((g) => g.r === nextPos.r && g.c === nextPos.c);
+    if (onGuard || nextDanger.has(keyOf(nextPos.r, nextPos.c))) {
       // 발각 연출
       setRedFlash(true);
       window.setTimeout(() => setRedFlash(false), 500);
       showToast('들켰다! 조심해!', 1100);
       audio.playSfx('wrong', 0.85);
-      setPos(lastSafePos);
+      setPos(prev);
       setLockInput(false);
       return;
     }
 
-    // 쌀가마니(4) 획득
+    // 쌀(4) 획득: 들고 있지 않을 때만 1개 집기(서이면사무소에 3개)
     if (nextTile === 4) {
-      if (!hasRice) {
-        setHasRice(true);
-        showToast('쌀가마니를 되찾았다!', 1200);
+      if (carryingRice >= 1) {
+        showToast('지금은 쌀가마니를 하나만 들 수 있어!', 1200);
+      } else {
+        setCarryingRice(1);
+        showToast('쌀가마니를 챙겼다! 배달하러 가자!', 1200);
         audio.playUrl('/assets/sounds/sfx_unlock.mp3', 0.85);
+        // 해당 쌀은 가져가서 빈 자리(길)로 변경
+        setMap((prevMap) => {
+          const next = cloneMap(prevMap);
+          if (next[nr][nc] === 4) next[nr][nc] = 1;
+          return next;
+        });
       }
-      // 이후 길(1)처럼 통과
-      setMap((prevMap) => {
-        const next = cloneMap(prevMap);
-        if (next[nr][nc] === 4) next[nr][nc] = 1;
-        return next;
-      });
+    }
+
+    // 배달 지점(5): 쌀을 들고 있으면 배달(각 지점 1회)
+    if (nextTile === 5) {
+      const k = keyOf(nr, nc);
+      if (deliveredSet.has(k)) {
+        showToast('여긴 이미 배달했어!', 1100);
+      } else if (carryingRice <= 0) {
+        showToast('쌀가마니를 먼저 챙겨야 해!', 1100);
+      } else {
+        setCarryingRice(0);
+        setDeliveredSet((prevSet) => {
+          const next = new Set(prevSet);
+          next.add(k);
+          return next;
+        });
+        showToast(`배달 성공! (${deliveredCount + 1}/${targetDeliveryCount})`, 1200);
+        audio.playSfx('correct', 0.8);
+      }
     }
 
     // 함정(퀴즈) 트리거: 길(1)처럼 보이되, 지정 좌표에서만 인카운터
@@ -286,8 +413,15 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
       return;
     }
 
-    // GOAL(3): 쌀 획득 후에만 클리어
-    if (nextTile === 3 && hasRice) {
+    // GOAL(3): 배달 3곳 완료 후에만 클리어
+    if (nextTile === 3) {
+      const nextDeliveredCount = deliveredSet.size;
+      if (nextDeliveredCount < targetDeliveryCount) {
+        showToast(`아직 배달이 남았어! (${targetDeliveryCount}곳 모두 배달)`, 1200);
+        audio.playSfx('wrong', 0.75);
+        setLockInput(false);
+        return;
+      }
       audio.playUrl('/assets/sounds/sfx_fanfare.mp3', 0.85);
       setPhase('FINALE');
       setLockInput(false);
@@ -447,6 +581,8 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
                       const isGoal = t === 3;
                       const isStart = t === 2;
                       const isRice = t === 4;
+                      const isDelivery = t === 5;
+                      const deliveryDone = isDelivery ? deliveredSet.has(keyOf(r, c)) : false;
                       return (
                         <div
                           key={`${r}-${c}`}
@@ -458,8 +594,12 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
                             isStart ? 'bg-sky-100/65 border-ink/20' : '',
                             // 쌀 타일은 더 눈에 띄게(획득 전)
                             isRice ? 'bg-amber-300/85 border-ink/35 animate-pulse' : '',
-                            // 쌀을 찾은 뒤에는 탈출구를 유도
-                            isGoal && hasRice ? 'ring-2 ring-emerald-500/80 animate-pulse' : '',
+                            // 배달 지점은 보라색으로 표시
+                            isDelivery ? 'bg-violet-200/80 border-ink/30' : '',
+                            // 배달 완료 후에는 더 초록으로
+                            deliveryDone ? 'bg-emerald-200/80' : '',
+                            // 3곳 배달 완료 후 탈출구를 유도
+                            isGoal && deliveredSet.size >= DELIVERY_TILES.length ? 'ring-2 ring-emerald-500/80 animate-pulse' : '',
                           ].join(' ')}
                         >
                           {/* 붉은 시야 오버레이 */}
@@ -470,6 +610,12 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
                           {isRice ? (
                             <div className="absolute inset-0 grid place-items-center opacity-80">
                               <RiceBagIcon />
+                            </div>
+                          ) : null}
+
+                          {isDelivery ? (
+                            <div className="absolute inset-0 grid place-items-center opacity-90">
+                              <DeliveryIcon done={deliveryDone} />
                             </div>
                           ) : null}
 
@@ -510,11 +656,16 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
             <div className="rounded-3xl border border-ink/20 bg-paper/70 p-3 flex flex-col gap-2">
               <div className="text-sm font-black">이동</div>
               <div className="text-[11px] opacity-80 leading-relaxed">
-                먼저 서이면사무소에서 쌀가마니를 찾아야 해요. <br />
-                쌀을 찾은 뒤 탈출구로 가면 클리어!
+                서이면사무소에서 쌀 {RICE_SOURCE_TILES.length}개를 챙겨서 <br />
+                마을 {DELIVERY_TILES.length}곳에 배달한 뒤 탈출구로 가요!
               </div>
               <div className="rounded-2xl border border-ink/20 bg-paper2/90 shadow-md px-3 py-2 text-[11px] font-black">
-                쌀 획득: <span className={hasRice ? 'text-olive' : 'text-stamp'}>{hasRice ? '완료' : '미획득'}</span>
+                들고있는 쌀: <span className={carryingRice ? 'text-amber-700' : 'text-stamp'}>{carryingRice ? '1개' : '0개'}</span>
+                <span className="mx-2 opacity-60">|</span>
+                배달:{' '}
+                <span className={deliveredSet.size >= DELIVERY_TILES.length ? 'text-olive' : 'text-stamp'}>
+                  {deliveredSet.size}/{DELIVERY_TILES.length}
+                </span>
               </div>
 
               {/* 십자키 */}
