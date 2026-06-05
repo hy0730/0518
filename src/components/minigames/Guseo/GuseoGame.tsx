@@ -3,20 +3,12 @@ import type { MinigameProps } from '../../../types/game';
 import { storyDataByStageId } from '../../../data/storyData';
 import { audio } from '../../../utils/audio';
 import { getRelicMainImage, getRelicRealImage } from '../../../utils/relicImages';
+import { ANYANG_GRID_MAP, DEFAULT_TRAPS, GUSEO_ASSETS, QUIZ_POOL, START_POS, keyOf } from '../../../data/guseoMazeConfig';
+import type { GuseoTile as Tile, Pos, Quiz } from '../../../data/guseoMazeConfig';
 
 type Phase = 'MAZE' | 'FINALE';
 
-type Tile = 0 | 1 | 2 | 3 | 4; // 0 벽/건물, 1 길, 2 START, 3 GOAL, 4 쌀가마니(필수)
-
 type Dir = 'U' | 'D' | 'L' | 'R';
-
-type Quiz = {
-  question: string;
-  options: string[];
-  answerIndex: number;
-};
-
-type Pos = { r: number; c: number };
 
 type Guard = {
   id: number;
@@ -28,88 +20,8 @@ type Guard = {
   visionLen: number;
 };
 
-const MAZE_BG = '/assets/images/relic_seoimyeon_maze.png';
-const ACTIVIST_IMG = '/assets/images/relic_seoimyeon_activist.png';
-const POLICEMAN_IMG = '/assets/images/relic_seoimyeon_policeman.png';
-const RICE_IMG = '/assets/images/relic_seoimyeon_ricesack.png';
-
-// 함정(퀴즈) - 1회 인카운터 = 1문항
-const QUIZ_POOL: Quiz[] = [
-  {
-    question: '구서이면사무소는 일제강점기 때 어떤 곳이었을까요?',
-    options: ['안양 지역 관청', '영화관'],
-    answerIndex: 0,
-  },
-  {
-    question: '수탈당하는 쌀과 나라를 구하기 위해 애쓴 안양의 독립운동가는?',
-    options: ['원태우 지사', '홍길동'],
-    answerIndex: 0,
-  },
-  {
-    question: '일제강점기에는 농민들이 낸 쌀이 어디로 많이 빼앗겨 갔을까요?',
-    options: ['일본으로', '우주로'],
-    answerIndex: 0,
-  },
-  {
-    question: '독립운동가들은 몰래 어떤 일을 했을까요?',
-    options: ['나라를 되찾기 위한 활동', '보물찾기 게임만 하기'],
-    answerIndex: 0,
-  },
-  {
-    question: '“잠입 작전”에서 가장 중요한 것은 무엇일까요?',
-    options: ['들키지 않기', '크게 소리치기'],
-    answerIndex: 0,
-  },
-  {
-    question: '일제강점기 ‘수탈’의 뜻에 가장 가까운 것은?',
-    options: ['빼앗아 가기', '선물 주기'],
-    answerIndex: 0,
-  },
-  {
-    question: '쌀가마니를 되찾은 뒤에는 어디로 가야 할까요?',
-    options: ['탈출구', '벽 안쪽'],
-    answerIndex: 0,
-  },
-  {
-    question: '만세운동에서 사람들이 외친 말은 무엇일까요?',
-    options: ['대한 독립 만세', '점심 먹자'],
-    answerIndex: 0,
-  },
-];
-
-// 새 맵 데이터(15x10)
-const ANYANG_GRID_MAP: Tile[][] = [
-  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-  [0, 2, 1, 1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
-  [0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 1, 1, 0],
-  [0, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 1, 0],
-  [0, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 0],
-  [0, 1, 1, 1, 1, 1, 0, 4, 1, 1, 1, 0, 0, 1, 0],
-  [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0],
-  [0, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 3],
-  [0, 1, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
-  [0, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0],
-];
-
-type Pos = { r: number; c: number };
-
-function findFirst(m: Tile[][], target: Tile): Pos {
-  for (let r = 0; r < m.length; r += 1) {
-    for (let c = 0; c < (m[r]?.length ?? 0); c += 1) {
-      if (m[r][c] === target) return { r, c };
-    }
-  }
-  return { r: 1, c: 1 };
-}
-
-const START_POS = findFirst(ANYANG_GRID_MAP, 2);
-
 function cloneMap(m: Tile[][]) {
   return m.map((row) => row.slice()) as Tile[][];
-}
-
-function keyOf(r: number, c: number) {
-  return `${r},${c}`;
 }
 
 function dirFromDelta(dr: number, dc: number): Dir {
@@ -145,15 +57,8 @@ function computeVisibleDangerSet(map: Tile[][], guards: Guard[]) {
   return set;
 }
 
-// 길(1) 타일 중 일부 좌표를 "숨겨진 함정(퀴즈)"로 지정
-const DEFAULT_TRAPS: Pos[] = [
-  { r: 1, c: 5 },
-  { r: 3, c: 10 },
-  { r: 7, c: 6 },
-];
-
 function RiceBagIcon() {
-  return <img src={RICE_IMG} alt="" className="w-7 h-7 object-contain" draggable={false} />;
+  return <img src={GUSEO_ASSETS.ricesack} alt="" className="w-7 h-7 object-contain" draggable={false} />;
 }
 
 function ExitIcon() {
@@ -187,7 +92,7 @@ function PoliceIcon() {
 }
 
 function GuardMarker() {
-  return <img src={POLICEMAN_IMG} alt="순사" className="w-7 h-7 object-contain drop-shadow" draggable={false} />;
+  return <img src={GUSEO_ASSETS.policeman} alt="순사" className="w-7 h-7 object-contain drop-shadow" draggable={false} />;
 }
 
 export default function GuseoGame({ stageId, onComplete, regionData }: MinigameProps) {
@@ -514,7 +419,7 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
                 {/* 타일 뒷배경(미로 전용 이미지) */}
                 <div
                   className="absolute inset-0 bg-cover bg-center opacity-90 pointer-events-none"
-                  style={{ backgroundImage: `url('${MAZE_BG}')` }}
+                  style={{ backgroundImage: `url('${GUSEO_ASSETS.mazeBg}')` }}
                 />
                 <div
                   className="relative z-10 grid"
@@ -570,7 +475,7 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
 
                           {isPlayer ? (
                             <div className="absolute inset-0 grid place-items-center">
-                              <img src={ACTIVIST_IMG} alt="독립운동가" className="w-7 h-7 object-contain drop-shadow" draggable={false} />
+                              <img src={GUSEO_ASSETS.activist} alt="독립운동가" className="w-7 h-7 object-contain drop-shadow" draggable={false} />
                             </div>
                           ) : null}
 
@@ -644,9 +549,9 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
               {encounter.policeShow && (
                 <div className="grid place-items-center guardFx">
                   <div className="rounded-3xl border-2 border-ink/30 bg-paper/70 px-5 py-3 shadow-paper">
-                    <div className="text-sm font-black text-stamp text-center">삑! 순사가 나타났다!</div>
+                    <div className="text-sm font-black text-stamp text-center">불심검문! 신분을 확인하겠다!</div>
                     <div className="mt-2 grid place-items-center">
-                      <img src={POLICEMAN_IMG} alt="일본 순사" className="w-[160px] h-[160px] object-contain" draggable={false} />
+                      <img src={GUSEO_ASSETS.policeman} alt="일본 순사" className="w-[160px] h-[160px] object-contain" draggable={false} />
                     </div>
                   </div>
                 </div>
