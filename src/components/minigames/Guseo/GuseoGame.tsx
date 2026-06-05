@@ -282,6 +282,74 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
     setVisibleDangerSet(computeVisibleDangerSet(map, guards));
   }, [map, guards]);
 
+  const computeNextGuards = (playerPos: Pos) => {
+    const next: Guard[] = [];
+    // 1) 순찰 가드(서이면사무소 주변)
+    {
+      const g = guards[0];
+      const nextIdx = (g.patrolIdx + 1) % g.patrol.length;
+      const nextP = g.patrol[nextIdx];
+      const dr = nextP.r - g.r;
+      const dc = nextP.c - g.c;
+      const facing = dr === 0 && dc === 0 ? g.dirFacing : dirFromDelta(dr, dc);
+      next.push({ ...g, r: nextP.r, c: nextP.c, patrolIdx: nextIdx, dirFacing: facing });
+    }
+    // 2) 추격 가드(거리 6 이내면 BFS로 한 칸 추격)
+    {
+      const g = guards[1];
+      const dist = manhattan({ r: g.r, c: g.c }, playerPos);
+      const blocked = new Set<string>([keyOf(next[0].r, next[0].c)]);
+      let nextP: Pos | null = null;
+      if (dist <= 6) {
+        nextP = bfsNextStep(map, { r: g.r, c: g.c }, playerPos, blocked);
+      }
+      if (!nextP) {
+        const nextIdx = (g.patrolIdx + 1) % g.patrol.length;
+        nextP = g.patrol[nextIdx];
+        const dr = nextP.r - g.r;
+        const dc = nextP.c - g.c;
+        const facing = dr === 0 && dc === 0 ? g.dirFacing : dirFromDelta(dr, dc);
+        next.push({ ...g, r: nextP.r, c: nextP.c, patrolIdx: nextIdx, dirFacing: facing });
+      } else {
+        const dr = nextP.r - g.r;
+        const dc = nextP.c - g.c;
+        const facing = dr === 0 && dc === 0 ? g.dirFacing : dirFromDelta(dr, dc);
+        next.push({ ...g, r: nextP.r, c: nextP.c, dirFacing: facing });
+      }
+    }
+    return next;
+  };
+
+  const processGuardTurnAndDetect = (playerPos: Pos, rollbackPos: Pos) => {
+    const nextGuards = computeNextGuards(playerPos);
+    setGuards(nextGuards);
+    const nextDanger = computeVisibleDangerSet(map, nextGuards);
+    setVisibleDangerSet(nextDanger);
+
+    const onGuard = nextGuards.some((g) => g.r === playerPos.r && g.c === playerPos.c);
+    const inSight = nextDanger.has(keyOf(playerPos.r, playerPos.c));
+    if (onGuard || inSight) {
+      setRedFlash(true);
+      window.setTimeout(() => setRedFlash(false), 500);
+      showToast('들켰다! 조심해!', 1100);
+      audio.playSfx('wrong', 0.85);
+      setPos(rollbackPos);
+      return true;
+    }
+    return false;
+  };
+
+  const waitTurn = () => {
+    startIfNeeded();
+    if (movingLocked) return;
+    setLockInput(true);
+    const detected = processGuardTurnAndDetect(pos, lastSafePos);
+    if (!detected) {
+      // 대기 턴은 안전지대 갱신 없음
+    }
+    setLockInput(false);
+  };
+
   const tryMove = (dir: Dir) => {
     startIfNeeded();
     if (movingLocked) return;
@@ -300,7 +368,6 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
 
     setLockInput(true);
     const prev = pos;
-    setLastSafePos(prev);
 
     const deliveredCount = deliveredSet.size;
     const targetDeliveryCount = DELIVERY_TILES.length;
@@ -309,53 +376,9 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
     const nextPos = { r: nr, c: nc };
     setPos(nextPos);
 
-    // 턴제: 플레이어 이동 성공 직후 가드 1칸 이동(순찰/추격) → 시야 업데이트 → 발각 검사
-    const nextGuards: Guard[] = [];
-    // 1) 순찰 가드(서이면사무소 주변)
-    {
-      const g = guards[0];
-      const nextIdx = (g.patrolIdx + 1) % g.patrol.length;
-      const nextP = g.patrol[nextIdx];
-      const dr = nextP.r - g.r;
-      const dc = nextP.c - g.c;
-      const facing = dr === 0 && dc === 0 ? g.dirFacing : dirFromDelta(dr, dc);
-      nextGuards.push({ ...g, r: nextP.r, c: nextP.c, patrolIdx: nextIdx, dirFacing: facing });
-    }
-    // 2) 추격 가드(거리 6 이내면 BFS로 한 칸 추격)
-    {
-      const g = guards[1];
-      const dist = manhattan({ r: g.r, c: g.c }, nextPos);
-      const blocked = new Set<string>([keyOf(nextGuards[0].r, nextGuards[0].c)]);
-      let nextP: Pos | null = null;
-      if (dist <= 6) {
-        nextP = bfsNextStep(map, { r: g.r, c: g.c }, nextPos, blocked);
-      }
-      if (!nextP) {
-        const nextIdx = (g.patrolIdx + 1) % g.patrol.length;
-        nextP = g.patrol[nextIdx];
-        const dr = nextP.r - g.r;
-        const dc = nextP.c - g.c;
-        const facing = dr === 0 && dc === 0 ? g.dirFacing : dirFromDelta(dr, dc);
-        nextGuards.push({ ...g, r: nextP.r, c: nextP.c, patrolIdx: nextIdx, dirFacing: facing });
-      } else {
-        const dr = nextP.r - g.r;
-        const dc = nextP.c - g.c;
-        const facing = dr === 0 && dc === 0 ? g.dirFacing : dirFromDelta(dr, dc);
-        nextGuards.push({ ...g, r: nextP.r, c: nextP.c, dirFacing: facing });
-      }
-    }
-    setGuards(nextGuards);
-    const nextDanger = computeVisibleDangerSet(map, nextGuards);
-    setVisibleDangerSet(nextDanger);
-
-    const onGuard = nextGuards.some((g) => g.r === nextPos.r && g.c === nextPos.c);
-    if (onGuard || nextDanger.has(keyOf(nextPos.r, nextPos.c))) {
-      // 발각 연출
-      setRedFlash(true);
-      window.setTimeout(() => setRedFlash(false), 500);
-      showToast('들켰다! 조심해!', 1100);
-      audio.playSfx('wrong', 0.85);
-      setPos(prev);
+    // 턴제: 이동 성공 직후 가드 턴 + 발각 검사
+    const detected = processGuardTurnAndDetect(nextPos, lastSafePos);
+    if (detected) {
       setLockInput(false);
       return;
     }
@@ -428,6 +451,8 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
       return;
     }
 
+    // 발각/함정/클리어가 아니면 현재 위치를 안전지대로 갱신
+    setLastSafePos(nextPos);
     setLockInput(false);
   };
 
@@ -439,6 +464,7 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
       if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') tryMove('D');
       if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') tryMove('L');
       if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') tryMove('R');
+      if (e.code === 'Space' || e.key === ' ') waitTurn();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -699,8 +725,17 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
                 </div>
               </div>
 
+              <button
+                type="button"
+                className="mt-2 w-full note-btn-primary"
+                onClick={waitTurn}
+                disabled={movingLocked}
+              >
+                대기(턴 넘기기)
+              </button>
+
               <div className="mt-auto text-[11px] opacity-80">
-                키보드: 방향키 / WASD
+                키보드: 방향키 / WASD · 대기: Space
               </div>
             </div>
           </div>
