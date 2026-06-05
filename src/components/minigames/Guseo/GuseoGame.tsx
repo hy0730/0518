@@ -29,8 +29,12 @@ type Guard = {
 };
 
 const MAZE_BG = '/assets/images/relic_seoimyeon_maze.png';
+const ACTIVIST_IMG = '/assets/images/relic_seoimyeon_activist.png';
+const POLICEMAN_IMG = '/assets/images/relic_seoimyeon_policeman.png';
+const RICE_IMG = '/assets/images/relic_seoimyeon_ricesack.png';
 
-const QUIZZES: Quiz[] = [
+// 함정(퀴즈) - 1회 인카운터 = 1문항
+const QUIZ_POOL: Quiz[] = [
   {
     question: '구서이면사무소는 일제강점기 때 어떤 곳이었을까요?',
     options: ['안양 지역 관청', '영화관'],
@@ -39,6 +43,36 @@ const QUIZZES: Quiz[] = [
   {
     question: '수탈당하는 쌀과 나라를 구하기 위해 애쓴 안양의 독립운동가는?',
     options: ['원태우 지사', '홍길동'],
+    answerIndex: 0,
+  },
+  {
+    question: '일제강점기에는 농민들이 낸 쌀이 어디로 많이 빼앗겨 갔을까요?',
+    options: ['일본으로', '우주로'],
+    answerIndex: 0,
+  },
+  {
+    question: '독립운동가들은 몰래 어떤 일을 했을까요?',
+    options: ['나라를 되찾기 위한 활동', '보물찾기 게임만 하기'],
+    answerIndex: 0,
+  },
+  {
+    question: '“잠입 작전”에서 가장 중요한 것은 무엇일까요?',
+    options: ['들키지 않기', '크게 소리치기'],
+    answerIndex: 0,
+  },
+  {
+    question: '일제강점기 ‘수탈’의 뜻에 가장 가까운 것은?',
+    options: ['빼앗아 가기', '선물 주기'],
+    answerIndex: 0,
+  },
+  {
+    question: '쌀가마니를 되찾은 뒤에는 어디로 가야 할까요?',
+    options: ['탈출구', '벽 안쪽'],
+    answerIndex: 0,
+  },
+  {
+    question: '만세운동에서 사람들이 외친 말은 무엇일까요?',
+    options: ['대한 독립 만세', '점심 먹자'],
     answerIndex: 0,
   },
 ];
@@ -57,8 +91,7 @@ const ANYANG_GRID_MAP: Tile[][] = [
   [0, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0],
 ];
 
-const ROWS = 10;
-const COLS = 15;
+type Pos = { r: number; c: number };
 
 function findFirst(m: Tile[][], target: Tile): Pos {
   for (let r = 0; r < m.length; r += 1) {
@@ -120,20 +153,7 @@ const DEFAULT_TRAPS: Pos[] = [
 ];
 
 function RiceBagIcon() {
-  return (
-    <svg width="26" height="26" viewBox="0 0 64 64" aria-hidden="true">
-      <path
-        d="M22 10c4 4 16 4 20 0 3 5 4 10 4 13 0 2-1 3-2 4 6 8 8 17 8 23 0 7-6 10-30 10S10 61 10 54c0-6 2-15 8-23-1-1-2-2-2-4 0-3 1-8 6-13Z"
-        fill="#F2E6C9"
-        stroke="#4A3728"
-        strokeWidth="3"
-        strokeLinejoin="round"
-      />
-      <path d="M20 28h24" stroke="#4A3728" strokeWidth="3" strokeLinecap="round" />
-      <path d="M24 42h16" stroke="#4A3728" strokeWidth="3" strokeLinecap="round" opacity="0.7" />
-      <path d="M26 50h12" stroke="#4A3728" strokeWidth="3" strokeLinecap="round" opacity="0.55" />
-    </svg>
-  );
+  return <img src={RICE_IMG} alt="" className="w-7 h-7 object-contain" draggable={false} />;
 }
 
 function ExitIcon() {
@@ -167,14 +187,7 @@ function PoliceIcon() {
 }
 
 function GuardMarker() {
-  return (
-    <div
-      className="w-5 h-5 rounded-full bg-ink/80 text-white grid place-items-center border border-white/20 shadow-md"
-      title="순사"
-    >
-      <div className="text-[10px] font-black">순</div>
-    </div>
-  );
+  return <img src={POLICEMAN_IMG} alt="순사" className="w-7 h-7 object-contain drop-shadow" draggable={false} />;
 }
 
 export default function GuseoGame({ stageId, onComplete, regionData }: MinigameProps) {
@@ -237,11 +250,10 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
   const rows = map.length;
   const cols = map[0]?.length ?? 0;
 
-  // 15x10 고정 규격(세로 10줄, 가로 15칸)
-  // 렌더 컨테이너는 픽셀 크기를 유지하되, grid는 1fr로 균등 분할
+  // 10x15를 보기 좋게
   const cell = 30;
-  const gridW = COLS * cell;
-  const gridH = ROWS * cell;
+  const gridW = cols * cell;
+  const gridH = rows * cell;
 
   // UI 상태
   const [toast, setToast] = useState<string | null>(null);
@@ -261,9 +273,10 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
   const [encounter, setEncounter] = useState<{
     active: boolean;
     tile: { r: number; c: number } | null;
-    quizIdx: number;
+    quizId: number;
     policeShow: boolean;
-  }>({ active: false, tile: null, quizIdx: 0, policeShow: false });
+  }>({ active: false, tile: null, quizId: 0, policeShow: false });
+  const [usedQuizIds, setUsedQuizIds] = useState<Set<number>>(() => new Set());
 
   const movingLocked = lockInput || encounter.active || phase !== 'MAZE';
 
@@ -317,12 +330,7 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
     const nextDanger = computeVisibleDangerSet(map, nextGuards);
     setVisibleDangerSet(nextDanger);
 
-    // 본체 충돌(가드와 같은 칸)도 발각 처리
-    const guardCollision =
-      guards.some((g) => g.r === nextPos.r && g.c === nextPos.c) ||
-      nextGuards.some((g) => g.r === nextPos.r && g.c === nextPos.c);
-
-    if (guardCollision || nextDanger.has(keyOf(nextPos.r, nextPos.c))) {
+    if (nextDanger.has(keyOf(nextPos.r, nextPos.c))) {
       // 발각 연출
       setRedFlash(true);
       window.setTimeout(() => setRedFlash(false), 500);
@@ -352,7 +360,15 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
     if (trapSet.has(keyOf(nr, nc))) {
       audio.playUrl('/assets/sounds/sfx_negative_beep.mp3', 0.85);
       audio.playUrl('/assets/sounds/sfx_pop.mp3', 0.7);
-      setEncounter({ active: true, tile: { r: nr, c: nc }, quizIdx: 0, policeShow: true });
+      // 1회 인카운터 = 1문항(반복 방지: 가능한 한 새 문제 선택)
+      const pool = QUIZ_POOL.length ? QUIZ_POOL : [];
+      const available = pool
+        .map((_, idx) => idx)
+        .filter((idx) => !usedQuizIds.has(idx));
+      const candidates = available.length ? available : pool.map((_, idx) => idx);
+      const quizId = candidates[Math.floor(Math.random() * candidates.length)] ?? 0;
+      if (!available.length) setUsedQuizIds(new Set()); // 풀을 다 썼으면 리셋
+      setEncounter({ active: true, tile: { r: nr, c: nc }, quizId, policeShow: true });
       setLockInput(false);
       return;
     }
@@ -383,19 +399,14 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
 
   const answerQuiz = (choiceIdx: number) => {
     if (!encounter.active) return;
-    const quiz = QUIZZES[encounter.quizIdx];
-    const isCorrect = choiceIdx === quiz.answerIndex;
+    const quiz = QUIZ_POOL[encounter.quizId] ?? QUIZ_POOL[0];
+    const isCorrect = choiceIdx === quiz?.answerIndex;
 
     if (isCorrect) {
       audio.playSfx('correct', 0.75);
       showToast('정답입니다!', 900);
 
-      if (encounter.quizIdx < QUIZZES.length - 1) {
-        setEncounter((prev) => ({ ...prev, quizIdx: prev.quizIdx + 1, policeShow: false }));
-        return;
-      }
-
-      // 최종 정답: 순사 사라짐 + 해당 타일 2 -> 0 영구 변경
+      // 정답: 해당 함정 해제(영구 안전 길)
       const t = encounter.tile;
       if (t) {
         // 함정 해제: 해당 좌표를 안전 길로 만듦(좌표 Set에서 제거)
@@ -406,7 +417,12 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
         });
         setLastSafePos({ r: t.r, c: t.c });
       }
-      setEncounter({ active: false, tile: null, quizIdx: 0, policeShow: false });
+      setUsedQuizIds((prev) => {
+        const next = new Set(prev);
+        next.add(encounter.quizId);
+        return next;
+      });
+      setEncounter({ active: false, tile: null, quizId: 0, policeShow: false });
       return;
     }
 
@@ -417,7 +433,7 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
     showToast('오답! 다시 숨어서 이동해보자.', 1100);
     window.setTimeout(() => setShake(false), 420);
     setPos(lastSafePos);
-    setEncounter({ active: false, tile: null, quizIdx: 0, policeShow: false });
+    setEncounter({ active: false, tile: null, quizId: 0, policeShow: false });
   };
 
   // 피날레(흑백 → 컬러) + 만세 + 꽃잎
@@ -503,8 +519,8 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
                 <div
                   className="relative z-10 grid"
                   style={{
-                    gridTemplateColumns: `repeat(${COLS}, 1fr)`,
-                    gridTemplateRows: `repeat(${ROWS}, 1fr)`,
+                    gridTemplateColumns: `repeat(${cols}, ${cell}px)`,
+                    gridTemplateRows: `repeat(${rows}, ${cell}px)`,
                     gap: '0px',
                   }}
                 >
@@ -513,8 +529,10 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
                       const isPlayer = pos.r === r && pos.c === c;
                       const isGuard = guards.some((g) => g.r === r && g.c === c);
                       const isDanger = visibleDangerSet.has(keyOf(r, c));
-                      // 요청: 0(벽)은 투명, 나머지(길/시작/목표/쌀)는 옅은 흰색 바탕
-                      const base = t === 0 ? 'bg-transparent border-transparent' : 'bg-white/10 border-white/10';
+                      const base =
+                        t === 0
+                          ? 'bg-ink/25 border-ink/35'
+                          : 'bg-transparent border-ink/10';
                       const isGoal = t === 3;
                       const isStart = t === 2;
                       const isRice = t === 4;
@@ -552,7 +570,7 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
 
                           {isPlayer ? (
                             <div className="absolute inset-0 grid place-items-center">
-                              <div className="w-5 h-5 rounded-full bg-stamp shadow-md border border-ink/25" />
+                              <img src={ACTIVIST_IMG} alt="독립운동가" className="w-7 h-7 object-contain drop-shadow" draggable={false} />
                             </div>
                           ) : null}
 
@@ -628,7 +646,7 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
                   <div className="rounded-3xl border-2 border-ink/30 bg-paper/70 px-5 py-3 shadow-paper">
                     <div className="text-sm font-black text-stamp text-center">삑! 순사가 나타났다!</div>
                     <div className="mt-2 grid place-items-center">
-                      <PoliceIcon />
+                      <img src={POLICEMAN_IMG} alt="일본 순사" className="w-[160px] h-[160px] object-contain" draggable={false} />
                     </div>
                   </div>
                 </div>
@@ -637,9 +655,9 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
               {/* 퀴즈 */}
               <div className="mt-3">
                 <div className="text-sm font-black">미니 퀴즈</div>
-                <div className="mt-2 text-sm leading-relaxed">{QUIZZES[encounter.quizIdx].question}</div>
+                <div className="mt-2 text-sm leading-relaxed">{(QUIZ_POOL[encounter.quizId] ?? QUIZ_POOL[0])?.question}</div>
                 <div className="mt-3 grid grid-cols-2 gap-2">
-                  {QUIZZES[encounter.quizIdx].options.map((op, idx) => (
+                  {(QUIZ_POOL[encounter.quizId] ?? QUIZ_POOL[0])?.options.map((op, idx) => (
                     <button
                       key={op}
                       type="button"
