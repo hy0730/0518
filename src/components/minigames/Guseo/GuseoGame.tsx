@@ -57,7 +57,8 @@ const ANYANG_GRID_MAP: Tile[][] = [
   [0, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0],
 ];
 
-type Pos = { r: number; c: number };
+const ROWS = 10;
+const COLS = 15;
 
 function findFirst(m: Tile[][], target: Tile): Pos {
   for (let r = 0; r < m.length; r += 1) {
@@ -236,10 +237,11 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
   const rows = map.length;
   const cols = map[0]?.length ?? 0;
 
-  // 10x15를 보기 좋게
+  // 15x10 고정 규격(세로 10줄, 가로 15칸)
+  // 렌더 컨테이너는 픽셀 크기를 유지하되, grid는 1fr로 균등 분할
   const cell = 30;
-  const gridW = cols * cell;
-  const gridH = rows * cell;
+  const gridW = COLS * cell;
+  const gridH = ROWS * cell;
 
   // UI 상태
   const [toast, setToast] = useState<string | null>(null);
@@ -315,7 +317,12 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
     const nextDanger = computeVisibleDangerSet(map, nextGuards);
     setVisibleDangerSet(nextDanger);
 
-    if (nextDanger.has(keyOf(nextPos.r, nextPos.c))) {
+    // 본체 충돌(가드와 같은 칸)도 발각 처리
+    const guardCollision =
+      guards.some((g) => g.r === nextPos.r && g.c === nextPos.c) ||
+      nextGuards.some((g) => g.r === nextPos.r && g.c === nextPos.c);
+
+    if (guardCollision || nextDanger.has(keyOf(nextPos.r, nextPos.c))) {
       // 발각 연출
       setRedFlash(true);
       window.setTimeout(() => setRedFlash(false), 500);
@@ -496,8 +503,8 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
                 <div
                   className="relative z-10 grid"
                   style={{
-                    gridTemplateColumns: `repeat(${cols}, ${cell}px)`,
-                    gridTemplateRows: `repeat(${rows}, ${cell}px)`,
+                    gridTemplateColumns: `repeat(${COLS}, 1fr)`,
+                    gridTemplateRows: `repeat(${ROWS}, 1fr)`,
                     gap: '0px',
                   }}
                 >
@@ -506,10 +513,8 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
                       const isPlayer = pos.r === r && pos.c === c;
                       const isGuard = guards.some((g) => g.r === r && g.c === c);
                       const isDanger = visibleDangerSet.has(keyOf(r, c));
-                      const base =
-                        t === 0
-                          ? 'bg-ink/25 border-ink/35'
-                          : 'bg-transparent border-ink/10';
+                      // 요청: 0(벽)은 투명, 나머지(길/시작/목표/쌀)는 옅은 흰색 바탕
+                      const base = t === 0 ? 'bg-transparent border-transparent' : 'bg-white/10 border-white/10';
                       const isGoal = t === 3;
                       const isStart = t === 2;
                       const isRice = t === 4;
