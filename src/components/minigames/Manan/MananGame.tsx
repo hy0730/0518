@@ -55,7 +55,8 @@ function makeSlots() {
   });
 }
 
-const SLOTS = makeSlots();
+// 기본 좌표(캘리브레이션 이전 기준)
+const DEFAULT_SLOTS = makeSlots();
 
 type PuzzlePiece = { index: number; id: string; src: string };
 
@@ -79,6 +80,8 @@ const PUZZLE_PIECES: PuzzlePiece[] = [
   { index: 11, id: 'right_2', src: '/assets/images/right_2.png' },
   { index: 12, id: 'right_1', src: '/assets/images/right_1.png' },
 ];
+
+type PieceOffset = { dx: number; dy: number };
 
 export default function MananGame({ stageId, onComplete, regionData }: MinigameProps) {
   const stageTitle = useMemo(
@@ -111,6 +114,29 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
   const dragThreshold = 3;
 
   const boardRef = useRef<HTMLDivElement | null>(null);
+
+  // ---- 개발용 캘리브레이션 패널 ----
+  const [calibOpen, setCalibOpen] = useState(true);
+  const [cx, setCx] = useState(400);
+  const [cy, setCy] = useState(350);
+  const [r, setR] = useState(200);
+  const [thetaOffsetDeg, setThetaOffsetDeg] = useState(0);
+  const [selectedIndex, setSelectedIndex] = useState<number>(0);
+  const [offsets, setOffsets] = useState<PieceOffset[]>(
+    () => Array.from({ length: SLOT_COUNT }, () => ({ dx: 0, dy: 0 }))
+  );
+
+  const slots = useMemo(() => {
+    // 13개 슬롯(0~12)을 반원 궤도로 생성 + 전체 각도 오프셋 적용
+    return Array.from({ length: SLOT_COUNT }).map((_, index) => {
+      const theta = 180 - index * 15 + thetaOffsetDeg; // deg
+      const radian = theta * (Math.PI / 180);
+      const x = cx + r * Math.cos(radian);
+      const y = cy - r * Math.sin(radian);
+      const o = offsets[index] ?? { dx: 0, dy: 0 };
+      return { index, theta, x: x + o.dx, y: y + o.dy };
+    });
+  }, [cx, cy, r, thetaOffsetDeg, offsets]);
 
   // 튜토리얼: "처음 1번 돌(left_1)"을 끼울 때만 노출
   const tutorialActive = phase === 'BUILD' && slotPieces[0] == null;
@@ -245,6 +271,39 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
     placeToSlot(idx, ended.pieceIndex);
   };
 
+  const exportCalibration = async () => {
+    const payload = {
+      cx,
+      cy,
+      r,
+      thetaOffsetDeg,
+      offsets,
+    };
+    const text = JSON.stringify(payload, null, 2);
+    // eslint-disable-next-line no-console
+    console.log('[Manan calibration]', text);
+
+    try {
+      await navigator.clipboard.writeText(text);
+      showToast('Save & Export: 클립보드에 복사했어요!', 1400);
+    } catch {
+      // clipboard 권한 실패 시 fallback
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        showToast('Save & Export: 복사 완료!', 1400);
+      } catch {
+        showToast('복사에 실패했어요. 콘솔 로그를 확인해 주세요.', 1600);
+      }
+    }
+  };
+
   // 퍼즐 완성 시: 완성 이미지(BG_COMPLETE) + "완성" 팝업 → 클릭 시 FORCE로 진행
   useEffect(() => {
     if (phase !== 'BUILD') return;
@@ -335,8 +394,8 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
             />
             {phase === 'BUILD' ? (
               <div
-                className="absolute inset-0 bg-center bg-no-repeat bg-contain opacity-90 pointer-events-none"
-                style={{ backgroundImage: `url('${BG_BLUEPRINT}')` }}
+                className="absolute inset-0 bg-center bg-no-repeat bg-contain pointer-events-none"
+                style={{ backgroundImage: `url('${BG_BLUEPRINT}')`, opacity: 0.15 }}
               />
             ) : phase === 'INTRO' ? null : (
               <div
@@ -348,7 +407,7 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
             {/* 다리 본체(중앙) */}
             <div className="absolute inset-0">
               {/* 슬롯(반원 궤도) + 배치된 퍼즐 */}
-              {(phase === 'BUILD' || phase === 'COMPLETE' || phase === 'FORCE' || phase === 'RESULT') && SLOTS.map((s) => {
+              {(phase === 'BUILD' || phase === 'COMPLETE' || phase === 'FORCE' || phase === 'RESULT') && slots.map((s) => {
                 const pieceIndex = slotPieces[s.index];
                 const piece = pieceIndex != null ? PUZZLE_PIECES.find((p) => p.index === pieceIndex) : null;
                 const isBuild = phase === 'BUILD';
@@ -493,6 +552,103 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
           {toast && (
             <div className="absolute left-1/2 top-2 -translate-x-1/2 z-[9000] pointer-events-none">
               <div className="rounded-xl border border-ink/25 bg-paper2 px-3 py-2 text-xs font-black shadow-paper">{toast}</div>
+            </div>
+          )}
+        </div>
+
+        {/* 캘리브레이션 패널 (개발용) */}
+        <div className="absolute right-2 top-2 z-[15000]">
+          <button
+            type="button"
+            className="rounded-xl border border-ink/25 bg-paper2/90 px-3 py-2 text-xs font-black shadow-md hover:opacity-95"
+            onClick={() => setCalibOpen((v) => !v)}
+          >
+            {calibOpen ? '튜닝 패널 숨기기' : '튜닝 패널 보이기'}
+          </button>
+
+          {calibOpen && (
+            <div className="mt-2 w-[260px] rounded-2xl border border-ink/25 bg-paper/90 p-3 shadow-paper">
+              <div className="text-xs font-black">좌표 튜닝(개발용)</div>
+
+              <div className="mt-2 text-[11px] font-black opacity-80">글로벌</div>
+              <label className="mt-1 block text-[11px]">
+                cx: <span className="font-black">{cx}</span>
+                <input type="range" min={300} max={500} step={1} value={cx} onChange={(e) => setCx(Number(e.target.value))} className="w-full" />
+              </label>
+              <label className="mt-1 block text-[11px]">
+                cy: <span className="font-black">{cy}</span>
+                <input type="range" min={200} max={430} step={1} value={cy} onChange={(e) => setCy(Number(e.target.value))} className="w-full" />
+              </label>
+              <label className="mt-1 block text-[11px]">
+                r: <span className="font-black">{r}</span>
+                <input type="range" min={140} max={260} step={1} value={r} onChange={(e) => setR(Number(e.target.value))} className="w-full" />
+              </label>
+              <label className="mt-1 block text-[11px]">
+                thetaOffset: <span className="font-black">{thetaOffsetDeg}°</span>
+                <input
+                  type="range"
+                  min={-20}
+                  max={20}
+                  step={0.5}
+                  value={thetaOffsetDeg}
+                  onChange={(e) => setThetaOffsetDeg(Number(e.target.value))}
+                  className="w-full"
+                />
+              </label>
+
+              <div className="mt-3 text-[11px] font-black opacity-80">개별 조각</div>
+              <label className="mt-1 block text-[11px]">
+                선택:
+                <select
+                  className="ml-2 rounded-md border border-ink/20 bg-paper2 px-2 py-1 text-[11px]"
+                  value={selectedIndex}
+                  onChange={(e) => setSelectedIndex(Number(e.target.value))}
+                >
+                  {PUZZLE_PIECES.map((p) => (
+                    <option key={p.id} value={p.index}>
+                      {p.id}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="mt-1 block text-[11px]">
+                dx: <span className="font-black">{offsets[selectedIndex]?.dx ?? 0}px</span>
+                <input
+                  type="range"
+                  min={-30}
+                  max={30}
+                  step={1}
+                  value={offsets[selectedIndex]?.dx ?? 0}
+                  onChange={(e) => {
+                    const v = Number(e.target.value);
+                    setOffsets((prev) => prev.map((o, i) => (i === selectedIndex ? { ...o, dx: v } : o)));
+                  }}
+                  className="w-full"
+                />
+              </label>
+              <label className="mt-1 block text-[11px]">
+                dy: <span className="font-black">{offsets[selectedIndex]?.dy ?? 0}px</span>
+                <input
+                  type="range"
+                  min={-30}
+                  max={30}
+                  step={1}
+                  value={offsets[selectedIndex]?.dy ?? 0}
+                  onChange={(e) => {
+                    const v = Number(e.target.value);
+                    setOffsets((prev) => prev.map((o, i) => (i === selectedIndex ? { ...o, dy: v } : o)));
+                  }}
+                  className="w-full"
+                />
+              </label>
+
+              <button
+                type="button"
+                className="mt-3 w-full rounded-xl bg-olive text-white border border-ink/25 font-black py-2 shadow-md hover:opacity-95"
+                onClick={exportCalibration}
+              >
+                Save & Export
+              </button>
             </div>
           )}
         </div>
