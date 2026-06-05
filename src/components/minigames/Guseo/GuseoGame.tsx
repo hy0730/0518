@@ -796,7 +796,8 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
 
               {/* 십자키 */}
               <div className="mt-2 grid place-items-center">
-                <div className="grid grid-cols-3 grid-rows-3 gap-3">
+                {/* 모바일에서 아래 버튼이 잘리는 문제 방지: ↓를 가운데로 올려 2줄로 배치 */}
+                <div className="grid grid-cols-3 grid-rows-2 gap-3">
                   <div />
                   <button
                     type="button"
@@ -807,18 +808,30 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
                     ↑
                   </button>
                   <div />
-                  <button type="button" className="note-btn w-14 h-14 text-2xl rounded-2xl" onClick={() => tryMove('L')} disabled={movingLocked}>
+                  <button
+                    type="button"
+                    className="note-btn w-14 h-14 text-2xl rounded-2xl"
+                    onClick={() => tryMove('L')}
+                    disabled={movingLocked}
+                  >
                     ←
                   </button>
-                  <div />
-                  <button type="button" className="note-btn w-14 h-14 text-2xl rounded-2xl" onClick={() => tryMove('R')} disabled={movingLocked}>
-                    →
-                  </button>
-                  <div />
-                  <button type="button" className="note-btn w-14 h-14 text-2xl rounded-2xl" onClick={() => tryMove('D')} disabled={movingLocked}>
+                  <button
+                    type="button"
+                    className="note-btn w-14 h-14 text-2xl rounded-2xl"
+                    onClick={() => tryMove('D')}
+                    disabled={movingLocked}
+                  >
                     ↓
                   </button>
-                  <div />
+                  <button
+                    type="button"
+                    className="note-btn w-14 h-14 text-2xl rounded-2xl"
+                    onClick={() => tryMove('R')}
+                    disabled={movingLocked}
+                  >
+                    →
+                  </button>
                 </div>
               </div>
 
