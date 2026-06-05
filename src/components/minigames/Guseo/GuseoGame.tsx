@@ -16,6 +16,18 @@ type Quiz = {
   answerIndex: number;
 };
 
+type Pos = { r: number; c: number };
+
+type Guard = {
+  id: number;
+  r: number;
+  c: number;
+  patrol: Pos[];
+  patrolIdx: number;
+  dirFacing: Dir;
+  visionLen: number;
+};
+
 const QUIZZES: Quiz[] = [
   {
     question: '구서이면사무소는 일제강점기 때 어떤 곳이었을까요?',
@@ -62,6 +74,39 @@ function cloneMap(m: Tile[][]) {
 
 function keyOf(r: number, c: number) {
   return `${r},${c}`;
+}
+
+function dirFromDelta(dr: number, dc: number): Dir {
+  if (dr === -1 && dc === 0) return 'U';
+  if (dr === 1 && dc === 0) return 'D';
+  if (dr === 0 && dc === -1) return 'L';
+  return 'R';
+}
+
+function computeVisibleDangerSet(map: Tile[][], guards: Guard[]) {
+  const rows = map.length;
+  const cols = map[0]?.length ?? 0;
+  const set = new Set<string>();
+
+  const deltaByDir: Record<Dir, { dr: number; dc: number }> = {
+    U: { dr: -1, dc: 0 },
+    D: { dr: 1, dc: 0 },
+    L: { dr: 0, dc: -1 },
+    R: { dr: 0, dc: 1 },
+  };
+
+  for (const g of guards) {
+    const d = deltaByDir[g.dirFacing];
+    for (let i = 1; i <= g.visionLen; i += 1) {
+      const rr = g.r + d.dr * i;
+      const cc = g.c + d.dc * i;
+      if (rr < 0 || rr >= rows || cc < 0 || cc >= cols) break;
+      // 벽(0)을 만나면 시야 차단
+      if (map[rr][cc] === 0) break;
+      set.add(keyOf(rr, cc));
+    }
+  }
+  return set;
 }
 
 // 길(1) 타일 중 일부 좌표를 "숨겨진 함정(퀴즈)"로 지정
@@ -118,6 +163,17 @@ function PoliceIcon() {
   );
 }
 
+function GuardMarker() {
+  return (
+    <div
+      className="w-5 h-5 rounded-full bg-ink/80 text-white grid place-items-center border border-white/20 shadow-md"
+      title="순사"
+    >
+      <div className="text-[10px] font-black">순</div>
+    </div>
+  );
+}
+
 export default function GuseoGame({ stageId, onComplete, regionData }: MinigameProps) {
   const stageTitle = useMemo(
     () => storyDataByStageId[stageId]?.title ?? regionData?.map?.nodes?.[stageId - 1]?.title ?? `스테이지 ${stageId}`,
@@ -139,6 +195,41 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
   const [lastSafePos, setLastSafePos] = useState(START_POS);
   const [hasRice, setHasRice] = useState(false);
   const [trapSet, setTrapSet] = useState<Set<string>>(() => new Set(DEFAULT_TRAPS.map((p) => keyOf(p.r, p.c))));
+
+  const [guards, setGuards] = useState<Guard[]>(() => [
+    {
+      id: 1,
+      r: 3,
+      c: 9,
+      patrol: [
+        { r: 3, c: 9 },
+        { r: 3, c: 10 },
+        { r: 3, c: 11 },
+        { r: 3, c: 10 }, // 왕복
+      ],
+      patrolIdx: 0,
+      dirFacing: 'R',
+      visionLen: 1,
+    },
+  ]);
+  const [visibleDangerSet, setVisibleDangerSet] = useState<Set<string>>(() => computeVisibleDangerSet(ANYANG_GRID_MAP, [
+    {
+      id: 1,
+      r: 3,
+      c: 9,
+      patrol: [
+        { r: 3, c: 9 },
+        { r: 3, c: 10 },
+        { r: 3, c: 11 },
+        { r: 3, c: 10 },
+      ],
+      patrolIdx: 0,
+      dirFacing: 'R',
+      visionLen: 1,
+    },
+  ]));
+  const [lockInput, setLockInput] = useState(false);
+  const [redFlash, setRedFlash] = useState(false);
 
   const rows = map.length;
   const cols = map[0]?.length ?? 0;
@@ -170,7 +261,12 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
     policeShow: boolean;
   }>({ active: false, tile: null, quizIdx: 0, policeShow: false });
 
-  const movingLocked = encounter.active || phase !== 'MAZE';
+  const movingLocked = lockInput || encounter.active || phase !== 'MAZE';
+
+  // 가드/맵 변경 시 시야 재계산
+  useEffect(() => {
+    setVisibleDangerSet(computeVisibleDangerSet(map, guards));
+  }, [map, guards]);
 
   const tryMove = (dir: Dir) => {
     startIfNeeded();
@@ -188,6 +284,7 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
       return;
     }
 
+    setLockInput(true);
     const prev = pos;
     setLastSafePos(prev);
 
@@ -195,11 +292,37 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
     if (nextTile === 3 && !hasRice) {
       showToast('서이면사무소에서 쌀을 먼저 찾아야 해!', 1200);
       audio.playSfx('wrong', 0.75);
+      setLockInput(false);
       return;
     }
 
     // 이동 확정
-    setPos({ r: nr, c: nc });
+    const nextPos = { r: nr, c: nc };
+    setPos(nextPos);
+
+    // 턴제: 플레이어 이동 성공 직후 가드 1칸 이동 → 시야 업데이트 → 발각 검사
+    const nextGuards = guards.map((g) => {
+      const nextIdx = (g.patrolIdx + 1) % g.patrol.length;
+      const nextP = g.patrol[nextIdx];
+      const dr = nextP.r - g.r;
+      const dc = nextP.c - g.c;
+      const facing = dr === 0 && dc === 0 ? g.dirFacing : dirFromDelta(dr, dc);
+      return { ...g, r: nextP.r, c: nextP.c, patrolIdx: nextIdx, dirFacing: facing };
+    });
+    setGuards(nextGuards);
+    const nextDanger = computeVisibleDangerSet(map, nextGuards);
+    setVisibleDangerSet(nextDanger);
+
+    if (nextDanger.has(keyOf(nextPos.r, nextPos.c))) {
+      // 발각 연출
+      setRedFlash(true);
+      window.setTimeout(() => setRedFlash(false), 500);
+      showToast('들켰다! 조심해!', 1100);
+      audio.playSfx('wrong', 0.85);
+      setPos(lastSafePos);
+      setLockInput(false);
+      return;
+    }
 
     // 쌀가마니(4) 획득
     if (nextTile === 4) {
@@ -221,6 +344,7 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
       audio.playUrl('/assets/sounds/sfx_negative_beep.mp3', 0.85);
       audio.playUrl('/assets/sounds/sfx_pop.mp3', 0.7);
       setEncounter({ active: true, tile: { r: nr, c: nc }, quizIdx: 0, policeShow: true });
+      setLockInput(false);
       return;
     }
 
@@ -228,8 +352,11 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
     if (nextTile === 3 && hasRice) {
       audio.playUrl('/assets/sounds/sfx_fanfare.mp3', 0.85);
       setPhase('FINALE');
+      setLockInput(false);
       return;
     }
+
+    setLockInput(false);
   };
 
   // 키보드 이동
@@ -338,6 +465,9 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
       </div>
 
       <div className="mt-2 flex-1 min-h-0 rounded-3xl border border-ink/30 bg-paper2/90 shadow-paper overflow-hidden relative">
+        {/* 발각 레드 플래시 */}
+        {redFlash && <div className="absolute inset-0 z-[10500] bg-red-600/25 pointer-events-none" />}
+
         {/* 배경 */}
         <div
           className="absolute inset-0 bg-cover bg-center"
@@ -367,6 +497,8 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
                   {map.flatMap((row, r) =>
                     row.map((t, c) => {
                       const isPlayer = pos.r === r && pos.c === c;
+                      const isGuard = guards.some((g) => g.r === r && g.c === c);
+                      const isDanger = visibleDangerSet.has(keyOf(r, c));
                       const base =
                         t === 0
                           ? 'bg-ink/18 border-ink/25'
@@ -385,6 +517,9 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
                             isRice ? 'bg-amber-100/70 border-ink/20' : '',
                           ].join(' ')}
                         >
+                          {/* 붉은 시야 오버레이 */}
+                          {isDanger && <div className="absolute inset-0 bg-red-500/30" />}
+
                           {isRice ? (
                             <div className="absolute inset-0 grid place-items-center opacity-80">
                               <RiceBagIcon />
@@ -406,6 +541,12 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
                           {isPlayer ? (
                             <div className="absolute inset-0 grid place-items-center">
                               <div className="w-5 h-5 rounded-full bg-stamp shadow-md border border-ink/25" />
+                            </div>
+                          ) : null}
+
+                          {isGuard ? (
+                            <div className="absolute inset-0 grid place-items-center">
+                              <GuardMarker />
                             </div>
                           ) : null}
                         </div>
