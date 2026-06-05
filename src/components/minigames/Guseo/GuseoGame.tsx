@@ -17,7 +17,7 @@ import {
 } from '../../../data/guseoMazeConfig';
 import type { GuseoTile as Tile, Pos, Quiz } from '../../../data/guseoMazeConfig';
 
-type Phase = 'MAZE' | 'FINALE';
+type Phase = 'INTRO' | 'MAZE' | 'FINALE';
 
 type Dir = 'U' | 'D' | 'L' | 'R';
 
@@ -206,7 +206,8 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
   const mainBg = useMemo(() => getRelicMainImage(stageId), [stageId]);
   const realImg = useMemo(() => getRelicRealImage(stageId), [stageId]);
 
-  const [phase, setPhase] = useState<Phase>('MAZE');
+  const [phase, setPhase] = useState<Phase>('INTRO');
+  const [introStatus, setIntroStatus] = useState<'SHOW' | 'FADE' | 'DONE'>('SHOW');
   const [attempts, setAttempts] = useState(0);
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const startIfNeeded = () => {
@@ -584,7 +585,7 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
 
       <div className="flex items-center justify-between gap-2">
         <div className="text-sm font-black tracking-tight">스테이지 {stageId} · {stageTitle}</div>
-        <div className="text-xs font-bold opacity-80">{phase === 'MAZE' ? 'Phase 1: 잠입 미로' : 'Phase 2: 피날레'}</div>
+        <div className="text-xs font-bold opacity-80">{phase === 'FINALE' ? 'Phase 2: 피날레' : 'Phase 1: 잠입 미로'}</div>
       </div>
 
       <div className="mt-2 flex-1 min-h-0 rounded-3xl border border-ink/30 bg-paper2/90 shadow-paper overflow-hidden relative">
@@ -601,9 +602,57 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
           }}
         />
 
+        {/* INTRO 오버레이: maze 이미지를 전면에 보여주고 스토리텔링 */}
+        {introStatus !== 'DONE' && (
+          <button
+            type="button"
+            className={[
+              'absolute inset-0 z-[12000] p-4 text-left',
+              'transition-opacity duration-700',
+              introStatus === 'FADE' ? 'opacity-0 pointer-events-none' : 'opacity-100',
+            ].join(' ')}
+            onClick={() => {
+              if (introStatus !== 'SHOW') return;
+              setIntroStatus('FADE');
+              // 맵이 서서히 나타나는 동안 입력을 막고, 페이드 완료 후 정리
+              setPhase('MAZE');
+              window.setTimeout(() => setIntroStatus('DONE'), 720);
+            }}
+            onTouchStart={() => {
+              if (introStatus !== 'SHOW') return;
+              setIntroStatus('FADE');
+              setPhase('MAZE');
+              window.setTimeout(() => setIntroStatus('DONE'), 720);
+            }}
+          >
+            <div
+              className="absolute inset-0 bg-cover bg-center"
+              style={{ backgroundImage: `url('${GUSEO_ASSETS.mazeBg}')` }}
+            />
+            <div className="absolute inset-0 bg-ink/45" />
+            <div className="relative z-10 h-full grid place-items-center">
+              <div className="note-panel max-w-[620px] px-5 py-4">
+                <div className="text-lg font-black">구서이면사무소 잠입 작전</div>
+                <div className="mt-2 text-sm leading-relaxed opacity-95">
+                  구서이면사무소 한가운데에 수탈된 쌀가마니가 숨겨져 있어요.
+                  <br />
+                  순사의 눈을 피해 쌀을 되찾고, 마을 3곳에 배달해 주민들에게 돌려주세요!
+                </div>
+                <div className="mt-3 text-sm font-black text-stamp">화면을 터치하면 작전을 시작합니다.</div>
+              </div>
+            </div>
+          </button>
+        )}
+
         {/* 미로 */}
         <div className="absolute inset-0 p-3">
-          <div className="h-full grid grid-cols-[1fr_220px] gap-3">
+          <div
+            className="h-full grid grid-cols-[1fr_220px] gap-3"
+            style={{
+              opacity: introStatus === 'SHOW' ? 0 : 1,
+              transition: 'opacity 800ms ease',
+            }}
+          >
             <div className={['relative rounded-3xl border border-ink/20 bg-paper/55 overflow-hidden', shake ? 'shakeFx' : ''].join(' ')}>
               <div
                 className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 relative"
