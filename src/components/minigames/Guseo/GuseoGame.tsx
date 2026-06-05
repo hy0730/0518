@@ -796,29 +796,26 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
 
               {/* 십자키 */}
               <div className="mt-2 grid place-items-center">
-                <div className="grid grid-cols-3 grid-rows-3 gap-2">
+                <div className="grid grid-cols-3 grid-rows-3 gap-3">
                   <div />
                   <button
                     type="button"
-                    className="note-btn"
+                    className="note-btn w-14 h-14 text-2xl rounded-2xl"
                     onClick={() => tryMove('U')}
                     disabled={movingLocked}
                   >
                     ↑
                   </button>
                   <div />
-                  <button type="button" className="note-btn" onClick={() => tryMove('L')} disabled={movingLocked}>
+                  <button type="button" className="note-btn w-14 h-14 text-2xl rounded-2xl" onClick={() => tryMove('L')} disabled={movingLocked}>
                     ←
                   </button>
-                  <div className="rounded-2xl border border-ink/20 bg-paper2/90 shadow-md grid place-items-center text-[11px] font-black">
-                    {attempts}
-                    <div className="text-[10px] opacity-70">실수</div>
-                  </div>
-                  <button type="button" className="note-btn" onClick={() => tryMove('R')} disabled={movingLocked}>
+                  <div />
+                  <button type="button" className="note-btn w-14 h-14 text-2xl rounded-2xl" onClick={() => tryMove('R')} disabled={movingLocked}>
                     →
                   </button>
                   <div />
-                  <button type="button" className="note-btn" onClick={() => tryMove('D')} disabled={movingLocked}>
+                  <button type="button" className="note-btn w-14 h-14 text-2xl rounded-2xl" onClick={() => tryMove('D')} disabled={movingLocked}>
                     ↓
                   </button>
                   <div />
