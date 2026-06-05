@@ -3,6 +3,7 @@ import type { MinigameProps } from '../../../types/game';
 import { storyDataByStageId } from '../../../data/storyData';
 import { audio } from '../../../utils/audio';
 import { getRelicMainImage, getRelicRealImage } from '../../../utils/relicImages';
+import { useToast } from '../common/useToast';
 
 type Phase = 'ASSEMBLE' | 'QUIZ';
 type PartId = 'base' | 'pillar' | 'pole' | 'flag';
@@ -52,18 +53,7 @@ export default function JungchosaGame({ stageId, onComplete, regionData }: Minig
   });
   const nextPart = useMemo(() => partOrder.find((p) => !assembled[p]) ?? null, [assembled]);
 
-  const [toast, setToast] = useState<string | null>(null);
-  const toastTimer = useRef<number | null>(null);
-  const showToast = (msg: string) => {
-    setToast(msg);
-    if (toastTimer.current) window.clearTimeout(toastTimer.current);
-    toastTimer.current = window.setTimeout(() => setToast(null), 1200);
-  };
-  useEffect(() => {
-    return () => {
-      if (toastTimer.current) window.clearTimeout(toastTimer.current);
-    };
-  }, []);
+  const { toast, showToast } = useToast(1200);
 
   const [shake, setShake] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);

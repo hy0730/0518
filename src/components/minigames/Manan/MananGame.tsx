@@ -3,6 +3,7 @@ import type { MinigameProps } from '../../../types/game';
 import { storyDataByStageId } from '../../../data/storyData';
 import { audio } from '../../../utils/audio';
 import { getRelicMainImage, getRelicRealImage } from '../../../utils/relicImages';
+import { useToast } from '../common/useToast';
 
 type Phase = 'INTRO' | 'BUILD' | 'MERGE' | 'BRIDGE_REVEAL' | 'FORCE' | 'RESULT';
 
@@ -127,18 +128,7 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
 
   // (요청) 팝업은 left_1을 "끼울 때"만 1회 출력
   const [showFirstPopup, setShowFirstPopup] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
-  const toastTimer = useRef<number | null>(null);
-  const showToast = (msg: string, ms = 1300) => {
-    setToast(msg);
-    if (toastTimer.current) window.clearTimeout(toastTimer.current);
-    toastTimer.current = window.setTimeout(() => setToast(null), ms);
-  };
-  useEffect(() => {
-    return () => {
-      if (toastTimer.current) window.clearTimeout(toastTimer.current);
-    };
-  }, []);
+  const { toast, showToast } = useToast(1300);
 
   const beginDrag = (e: React.PointerEvent, pieceIndex: number, origin: DragState['origin'], originSlotIdx: number | null) => {
     startIfNeeded();

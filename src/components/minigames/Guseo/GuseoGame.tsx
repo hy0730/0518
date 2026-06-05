@@ -16,6 +16,7 @@ import {
   keyOf,
 } from '../../../data/guseoMazeConfig';
 import type { GuseoTile as Tile, Pos, Quiz } from '../../../data/guseoMazeConfig';
+import { useToast } from '../common/useToast';
 
 type Phase = 'INTRO' | 'MAZE' | 'FINALE';
 
@@ -274,18 +275,7 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
   const gridH = rows * cell;
 
   // UI 상태
-  const [toast, setToast] = useState<string | null>(null);
-  const toastTimer = useRef<number | null>(null);
-  const showToast = (msg: string, ms = 1400) => {
-    setToast(msg);
-    if (toastTimer.current) window.clearTimeout(toastTimer.current);
-    toastTimer.current = window.setTimeout(() => setToast(null), ms);
-  };
-  useEffect(() => {
-    return () => {
-      if (toastTimer.current) window.clearTimeout(toastTimer.current);
-    };
-  }, []);
+  const { toast, showToast } = useToast(1400);
 
   const [shake, setShake] = useState(false);
   const [encounter, setEncounter] = useState<{
