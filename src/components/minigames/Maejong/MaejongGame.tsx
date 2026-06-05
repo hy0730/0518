@@ -307,8 +307,9 @@ export default function MaejongGame({ stageId, onComplete, regionData }: Minigam
 
         {phase === 'RUBBING' ? (
           <div className="absolute inset-0 grid place-items-center">
-            <div className="relative w-[800px] h-[450px]">
-              <img src={RUBBING_IMG} alt="탁본 이미지" className="absolute inset-0 w-full h-full object-cover" draggable={false} />
+            <div className="relative w-[800px] h-[450px] bg-paper/40">
+              {/* 탁본 이미지가 너무 확대(cover)되어 보이지 않도록 contain으로 전체를 보여줌 */}
+              <img src={RUBBING_IMG} alt="탁본 이미지" className="absolute inset-0 w-full h-full object-contain" draggable={false} />
               {/* 덮개 캔버스 */}
               {!rubbingDone && (
                 <canvas
