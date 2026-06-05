@@ -720,9 +720,12 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
                           ].join(' ')}
                         >
                           {/* 붉은 시야 오버레이 */}
-                          {isDanger && (
+                          {isDanger && !isHide && (
                             <div className="absolute inset-0 bg-red-600/50 ring-2 ring-red-500/90 animate-pulse" />
                           )}
+
+                          {/* 은신처 위에서는 시야가 와도 안전함을 표시 */}
+                          {isDanger && isHide && <div className="absolute inset-0 ring-2 ring-teal-500/90" />}
 
                           {isRice ? (
                             <div className="absolute inset-0 grid place-items-center opacity-80">
