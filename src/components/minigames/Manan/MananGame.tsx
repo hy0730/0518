@@ -4,7 +4,7 @@ import { storyDataByStageId } from '../../../data/storyData';
 import { audio } from '../../../utils/audio';
 import { getRelicMainImage, getRelicRealImage } from '../../../utils/relicImages';
 
-type Phase = 'INTRO' | 'BUILD' | 'COMPLETE' | 'FORCE' | 'RESULT';
+type Phase = 'INTRO' | 'BUILD' | 'MERGE' | 'BRIDGE_REVEAL' | 'FORCE' | 'RESULT';
 
 type DragState = {
   pieceIndex: number;
@@ -25,6 +25,11 @@ const BASE_H = 450;
 const BOARD_SCALE = 0.92;
 // 인벤토리(하단 2줄)와 겹치지 않도록 보드(blueprint+슬롯) 전체를 위로 이동
 const BOARD_SHIFT_Y = -110;
+const ARC_CX = 400;
+const ARC_CY = 350;
+const ARC_R_START = 225;
+const ARC_R_END = 140;
+const THETA_OFFSET_DEG = 0;
 
 const BG_BLUEPRINT = '/assets/images/relic_bridge_blueprint.png';
 const BG_FRONT = '/assets/images/relic_bridge_front.png';
@@ -39,24 +44,15 @@ function shuffle<T>(arr: T[]) {
   return a;
 }
 
-function makeSlots() {
-  // 스펙 기반: 800x450 기준 반원 궤도 자동 계산
-  // Center: (400, 350), Radius: 200
-  const cx = 400;
-  const cy = 350;
-  const r = 200;
-
+function computeSlots(cx: number, cy: number, r: number) {
   return Array.from({ length: SLOT_COUNT }).map((_, index) => {
-    const theta = 180 - index * 15; // deg
+    const theta = 180 - index * 15 + THETA_OFFSET_DEG; // deg
     const radian = theta * (Math.PI / 180);
     const x = cx + r * Math.cos(radian);
     const y = cy - r * Math.sin(radian); // DOM 좌표계 y축 반전
     return { index, theta, x, y };
   });
 }
-
-// 기본 좌표(캘리브레이션 이전 기준)
-const DEFAULT_SLOTS = makeSlots();
 
 type PuzzlePiece = { index: number; id: string; src: string };
 
@@ -81,8 +77,6 @@ const PUZZLE_PIECES: PuzzlePiece[] = [
   { index: 12, id: 'right_1', src: '/assets/images/right_1.png' },
 ];
 
-type PieceOffset = { dx: number; dy: number };
-
 export default function MananGame({ stageId, onComplete, regionData }: MinigameProps) {
   const stageTitle = useMemo(
     () => storyDataByStageId[stageId]?.title ?? regionData?.map?.nodes?.[stageId - 1]?.title ?? `스테이지 ${stageId}`,
@@ -93,7 +87,7 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
   const mainBg = useMemo(() => getRelicMainImage(stageId), [stageId]);
   const realImg = useMemo(() => getRelicRealImage(stageId), [stageId]);
 
-  // 1) relic_bridge_front로 원리 설명 → 2) 조립 시작(blueprint) → 3) 완성 팝업 → 4) 힘의 분산 확인
+  // 1) relic_bridge_front로 원리 설명 → 2) 조립 시작(blueprint) → 3) r 축소로 "합체" → 4) relic_bridge 공개 → 5) 힘의 분산 확인
   const [phase, setPhase] = useState<Phase>('INTRO');
   const [attempts, setAttempts] = useState(0);
   const [startedAt, setStartedAt] = useState<number | null>(null);
@@ -115,33 +109,24 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
 
   const boardRef = useRef<HTMLDivElement | null>(null);
 
-  // ---- 개발용 캘리브레이션 패널 ----
-  const [calibOpen, setCalibOpen] = useState(true);
-  const [cx, setCx] = useState(400);
-  const [cy, setCy] = useState(350);
-  const [r, setR] = useState(200);
-  const [thetaOffsetDeg, setThetaOffsetDeg] = useState(0);
-  const [selectedIndex, setSelectedIndex] = useState<number>(0);
-  const [offsets, setOffsets] = useState<PieceOffset[]>(
-    () => Array.from({ length: SLOT_COUNT }, () => ({ dx: 0, dy: 0 }))
-  );
+  // 합체 연출용 r 값
+  const [arcR, setArcR] = useState<number>(ARC_R_START);
+  const [flash, setFlash] = useState(false);
 
-  const slots = useMemo(() => {
-    // 13개 슬롯(0~12)을 반원 궤도로 생성 + 전체 각도 오프셋 적용
-    return Array.from({ length: SLOT_COUNT }).map((_, index) => {
-      const theta = 180 - index * 15 + thetaOffsetDeg; // deg
-      const radian = theta * (Math.PI / 180);
-      const x = cx + r * Math.cos(radian);
-      const y = cy - r * Math.sin(radian);
-      const o = offsets[index] ?? { dx: 0, dy: 0 };
-      return { index, theta, x: x + o.dx, y: y + o.dy };
-    });
-  }, [cx, cy, r, thetaOffsetDeg, offsets]);
+  const slots = useMemo(() => computeSlots(ARC_CX, ARC_CY, arcR), [arcR]);
 
-  // 튜토리얼: "처음 1번 돌(left_1)"을 끼울 때만 노출
-  const tutorialActive = phase === 'BUILD' && slotPieces[0] == null;
-  const requiredIndex = tutorialActive ? 0 : null;
-  const tutorialText = '왼쪽 1번 주춧돌을 끼워보자!';
+  // (요청) 번호 없이: "다음 슬롯"만 하이라이트로 안내
+  const requiredIndex = useMemo(() => {
+    const order = [0, 12, 1, 11, 2, 10, 3, 9, 4, 8, 5, 7, 6];
+    for (const idx of order) {
+      if (slotPieces[idx] == null) return idx;
+    }
+    return null;
+  }, [slotPieces]);
+  const highlightActive = (phase === 'BUILD' || phase === 'MERGE') && requiredIndex != null;
+
+  // (요청) 팝업은 left_1을 "끼울 때"만 1회 출력
+  const [showFirstPopup, setShowFirstPopup] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef<number | null>(null);
   const showToast = (msg: string, ms = 1300) => {
@@ -158,10 +143,6 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
   const beginDrag = (e: React.PointerEvent, pieceIndex: number, origin: DragState['origin'], originSlotIdx: number | null) => {
     startIfNeeded();
     if (phase !== 'BUILD') return;
-    if (tutorialActive && requiredIndex !== pieceIndex) {
-      showToast('튜토리얼 조각부터 끼워보자!');
-      return;
-    }
     e.preventDefault();
     e.stopPropagation();
     (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
@@ -183,10 +164,6 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
   };
 
   const startDragFromInventory = (e: React.PointerEvent, pieceIndex: number) => {
-    if (tutorialActive && requiredIndex !== pieceIndex) {
-      showToast('아래부터 순서대로 끼워보자!');
-      return;
-    }
     // 재배치 금지: 이미 맞춘 조각은 다시 집을 수 없음
     if (slotPieces.includes(pieceIndex)) {
       showToast('이미 끼운 조각이에요!');
@@ -269,49 +246,59 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
     }
 
     placeToSlot(idx, ended.pieceIndex);
-  };
 
-  const exportCalibration = async () => {
-    const payload = {
-      cx,
-      cy,
-      r,
-      thetaOffsetDeg,
-      offsets,
-    };
-    const text = JSON.stringify(payload, null, 2);
-    // eslint-disable-next-line no-console
-    console.log('[Manan calibration]', text);
-
-    try {
-      await navigator.clipboard.writeText(text);
-      showToast('Save & Export: 클립보드에 복사했어요!', 1400);
-    } catch {
-      // clipboard 권한 실패 시 fallback
-      try {
-        const ta = document.createElement('textarea');
-        ta.value = text;
-        ta.style.position = 'fixed';
-        ta.style.left = '-9999px';
-        document.body.appendChild(ta);
-        ta.select();
-        document.execCommand('copy');
-        document.body.removeChild(ta);
-        showToast('Save & Export: 복사 완료!', 1400);
-      } catch {
-        showToast('복사에 실패했어요. 콘솔 로그를 확인해 주세요.', 1600);
-      }
+    // left_1(=index 0)을 "처음 끼운 순간"에만 팝업 1회 노출
+    if (ended.pieceIndex === 0 && slotPieces[0] == null) {
+      setShowFirstPopup(true);
+      window.setTimeout(() => setShowFirstPopup(false), 1400);
     }
   };
 
-  // 퍼즐 완성 시: 완성 이미지(BG_COMPLETE) + "완성" 팝업 → 클릭 시 FORCE로 진행
+  // BUILD 진입 시 r 초기화
+  useEffect(() => {
+    if (phase !== 'BUILD') return;
+    setArcR(ARC_R_START);
+  }, [phase]);
+
+  // 퍼즐 완성 시: r 225 -> 140로 천천히 줄어드는 "합체" 연출 시작
   useEffect(() => {
     if (phase !== 'BUILD') return;
     if (!allPlaced) return;
     audio.playUrl('/assets/sounds/sfx_completed.mp3', 0.9);
-    const t = window.setTimeout(() => setPhase('COMPLETE'), 350);
-    return () => window.clearTimeout(t);
+    setPhase('MERGE');
   }, [phase, allPlaced]);
+
+  useEffect(() => {
+    if (phase !== 'MERGE') return;
+    const from = ARC_R_START;
+    const to = ARC_R_END;
+    const durationMs = 1400;
+    const t0 = performance.now();
+    let raf = 0;
+
+    const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
+
+    const tick = (now: number) => {
+      const p = Math.min(1, (now - t0) / durationMs);
+      const v = from + (to - from) * easeOutCubic(p);
+      setArcR(Number(v.toFixed(2)));
+      if (p < 1) raf = window.requestAnimationFrame(tick);
+      else {
+        setFlash(true);
+        window.setTimeout(() => setFlash(false), 220);
+        window.setTimeout(() => setPhase('BRIDGE_REVEAL'), 180);
+      }
+    };
+    raf = window.requestAnimationFrame(tick);
+    return () => window.cancelAnimationFrame(raf);
+  }, [phase]);
+
+  // relic_bridge 공개 후, front로 부드럽게 전환하며 힘의 분산 단계로 진행
+  useEffect(() => {
+    if (phase !== 'BRIDGE_REVEAL') return;
+    const t = window.setTimeout(() => setPhase('FORCE'), 900);
+    return () => window.clearTimeout(t);
+  }, [phase]);
 
   // Phase 2(힘의 분산) 시퀀스: COMPLETE 팝업에서 클릭으로 시작
   const [showInfo, setShowInfo] = useState(false);
@@ -369,7 +356,7 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
       <div className="absolute left-0 right-0 top-0 z-50 px-2 pt-2 flex items-center justify-between gap-2 pointer-events-none">
         <div className="text-sm font-black tracking-tight">스테이지 {stageId} · {title}</div>
         <div className="text-xs font-bold opacity-80">
-          {phase === 'INTRO' ? '설명' : phase === 'BUILD' ? '조립' : phase === 'COMPLETE' ? '완성' : '원리'}
+          {phase === 'INTRO' ? '설명' : phase === 'BUILD' ? '조립' : phase === 'MERGE' ? '합체' : phase === 'BRIDGE_REVEAL' ? '완성' : '원리'}
         </div>
       </div>
 
@@ -387,31 +374,31 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
               transformOrigin: 'center',
             }}
           >
-            {/* 배경 레이어: front + blueprint(Phase1) / complete(완성) */}
+            {/* 배경 레이어 */}
             <div
-              className="absolute inset-0 bg-center bg-no-repeat bg-contain pointer-events-none"
-              style={{ backgroundImage: `url('${BG_FRONT}')` }}
+              className="absolute inset-0 bg-center bg-no-repeat bg-contain pointer-events-none transition-opacity duration-500"
+              style={{ backgroundImage: `url('${BG_FRONT}')`, opacity: phase === 'BRIDGE_REVEAL' ? 0 : 1 }}
             />
-            {phase === 'BUILD' ? (
+            {(phase === 'BUILD' || phase === 'MERGE') ? (
               <div
                 className="absolute inset-0 bg-center bg-no-repeat bg-contain pointer-events-none"
-                style={{ backgroundImage: `url('${BG_BLUEPRINT}')`, opacity: 0.15 }}
+                style={{ backgroundImage: `url('${BG_BLUEPRINT}')`, opacity: 1 }}
               />
-            ) : phase === 'INTRO' ? null : (
-              <div
-                className="absolute inset-0 bg-center bg-no-repeat bg-contain pointer-events-none"
-                style={{ backgroundImage: `url('${BG_COMPLETE}')` }}
-              />
-            )}
+            ) : null}
+            <div
+              className="absolute inset-0 bg-center bg-no-repeat bg-contain pointer-events-none transition-opacity duration-500"
+              style={{ backgroundImage: `url('${BG_COMPLETE}')`, opacity: phase === 'BRIDGE_REVEAL' ? 1 : 0 }}
+            />
+            {flash ? <div className="absolute inset-0 bg-white/75 pointer-events-none" /> : null}
 
             {/* 다리 본체(중앙) */}
             <div className="absolute inset-0">
               {/* 슬롯(반원 궤도) + 배치된 퍼즐 */}
-              {(phase === 'BUILD' || phase === 'COMPLETE' || phase === 'FORCE' || phase === 'RESULT') && slots.map((s) => {
+              {(phase === 'BUILD' || phase === 'MERGE') && slots.map((s) => {
                 const pieceIndex = slotPieces[s.index];
                 const piece = pieceIndex != null ? PUZZLE_PIECES.find((p) => p.index === pieceIndex) : null;
                 const isBuild = phase === 'BUILD';
-                const isTutorSlot = tutorialActive && requiredIndex === s.index && !piece;
+                const isTutorSlot = highlightActive && requiredIndex === s.index && !piece;
 
                 return (
                   <div
@@ -510,7 +497,6 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
               {inventoryOrder.map((pieceIndex) => {
                 const piece = PUZZLE_PIECES.find((p) => p.index === pieceIndex)!;
                 const placed = slotPieces.includes(pieceIndex);
-                const isTutorPiece = tutorialActive && requiredIndex === pieceIndex;
                 return (
                   <div
                     key={piece.id}
@@ -519,7 +505,7 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
                       'w-[64px] h-[48px] rounded-2xl border border-ink/20 bg-paper2/90 shadow-md grid place-items-center touch-none select-none relative transition-all',
                       phase !== 'BUILD' ? 'opacity-45' : 'cursor-grab active:cursor-grabbing hover:bg-paper2',
                       placed ? 'opacity-45 cursor-not-allowed' : '',
-                      isTutorPiece ? 'ring-2 ring-amber-300/80 animate-pulse' : '',
+                      // 번호 표시는 없이, 슬롯 하이라이트로만 안내
                     ].join(' ')}
                     onPointerDown={(e) => startDragFromInventory(e, pieceIndex)}
                     onPointerMove={updateDrag}
@@ -536,14 +522,12 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
           </div>
           )}
 
-          {/* 튜토리얼 안내 */}
-          {tutorialActive && (
+          {/* 팝업은 left_1을 끼울 때만 출력 */}
+          {showFirstPopup && (
             <div className="absolute left-1/2 top-14 -translate-x-1/2 z-50 pointer-events-none">
               <div className="note-panel px-4 py-3 max-w-[520px]">
-                <div className="text-sm font-black">튜토리얼</div>
-                <div className="mt-1 text-sm opacity-90">
-                  {tutorialText}
-                </div>
+                <div className="text-sm font-black">좋아!</div>
+                <div className="mt-1 text-sm opacity-90">이제 하이라이트된 칸을 따라 아래에서 위로 끼워보자.</div>
               </div>
             </div>
           )}
@@ -552,103 +536,6 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
           {toast && (
             <div className="absolute left-1/2 top-2 -translate-x-1/2 z-[9000] pointer-events-none">
               <div className="rounded-xl border border-ink/25 bg-paper2 px-3 py-2 text-xs font-black shadow-paper">{toast}</div>
-            </div>
-          )}
-        </div>
-
-        {/* 캘리브레이션 패널 (개발용) */}
-        <div className="absolute right-2 top-2 z-[15000]">
-          <button
-            type="button"
-            className="rounded-xl border border-ink/25 bg-paper2/90 px-3 py-2 text-xs font-black shadow-md hover:opacity-95"
-            onClick={() => setCalibOpen((v) => !v)}
-          >
-            {calibOpen ? '튜닝 패널 숨기기' : '튜닝 패널 보이기'}
-          </button>
-
-          {calibOpen && (
-            <div className="mt-2 w-[260px] rounded-2xl border border-ink/25 bg-paper/90 p-3 shadow-paper">
-              <div className="text-xs font-black">좌표 튜닝(개발용)</div>
-
-              <div className="mt-2 text-[11px] font-black opacity-80">글로벌</div>
-              <label className="mt-1 block text-[11px]">
-                cx: <span className="font-black">{cx}</span>
-                <input type="range" min={300} max={500} step={1} value={cx} onChange={(e) => setCx(Number(e.target.value))} className="w-full" />
-              </label>
-              <label className="mt-1 block text-[11px]">
-                cy: <span className="font-black">{cy}</span>
-                <input type="range" min={200} max={430} step={1} value={cy} onChange={(e) => setCy(Number(e.target.value))} className="w-full" />
-              </label>
-              <label className="mt-1 block text-[11px]">
-                r: <span className="font-black">{r}</span>
-                <input type="range" min={140} max={260} step={1} value={r} onChange={(e) => setR(Number(e.target.value))} className="w-full" />
-              </label>
-              <label className="mt-1 block text-[11px]">
-                thetaOffset: <span className="font-black">{thetaOffsetDeg}°</span>
-                <input
-                  type="range"
-                  min={-20}
-                  max={20}
-                  step={0.5}
-                  value={thetaOffsetDeg}
-                  onChange={(e) => setThetaOffsetDeg(Number(e.target.value))}
-                  className="w-full"
-                />
-              </label>
-
-              <div className="mt-3 text-[11px] font-black opacity-80">개별 조각</div>
-              <label className="mt-1 block text-[11px]">
-                선택:
-                <select
-                  className="ml-2 rounded-md border border-ink/20 bg-paper2 px-2 py-1 text-[11px]"
-                  value={selectedIndex}
-                  onChange={(e) => setSelectedIndex(Number(e.target.value))}
-                >
-                  {PUZZLE_PIECES.map((p) => (
-                    <option key={p.id} value={p.index}>
-                      {p.id}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="mt-1 block text-[11px]">
-                dx: <span className="font-black">{offsets[selectedIndex]?.dx ?? 0}px</span>
-                <input
-                  type="range"
-                  min={-30}
-                  max={30}
-                  step={1}
-                  value={offsets[selectedIndex]?.dx ?? 0}
-                  onChange={(e) => {
-                    const v = Number(e.target.value);
-                    setOffsets((prev) => prev.map((o, i) => (i === selectedIndex ? { ...o, dx: v } : o)));
-                  }}
-                  className="w-full"
-                />
-              </label>
-              <label className="mt-1 block text-[11px]">
-                dy: <span className="font-black">{offsets[selectedIndex]?.dy ?? 0}px</span>
-                <input
-                  type="range"
-                  min={-30}
-                  max={30}
-                  step={1}
-                  value={offsets[selectedIndex]?.dy ?? 0}
-                  onChange={(e) => {
-                    const v = Number(e.target.value);
-                    setOffsets((prev) => prev.map((o, i) => (i === selectedIndex ? { ...o, dy: v } : o)));
-                  }}
-                  className="w-full"
-                />
-              </label>
-
-              <button
-                type="button"
-                className="mt-3 w-full rounded-xl bg-olive text-white border border-ink/25 font-black py-2 shadow-md hover:opacity-95"
-                onClick={exportCalibration}
-              >
-                Save & Export
-              </button>
             </div>
           )}
         </div>
@@ -701,26 +588,7 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
         </div>
       )}
 
-      {/* COMPLETE: 완성 이미지 + 클릭하여 다음 */}
-      {phase === 'COMPLETE' && (
-        <div className="absolute inset-0 z-[12000] grid place-items-center bg-ink/20 p-4">
-          <div className="note-panel px-5 py-4 max-w-[560px]">
-            <div className="text-lg font-black">완성!</div>
-            <div className="mt-1 text-sm opacity-90 leading-relaxed">
-              홍예가 완성되었어요. 이제 힘이 어떻게 분산되는지 확인해볼까요?
-            </div>
-            <button
-              type="button"
-              className="mt-3 w-full rounded-2xl bg-olive text-white border border-ink/25 font-black py-3 shadow-md hover:opacity-95"
-              onClick={() => {
-                setPhase('FORCE');
-              }}
-            >
-              클릭하여 다음
-            </button>
-          </div>
-        </div>
-      )}
+      {/* MERGE/BRIDGE_REVEAL은 자동 연출로 처리(별도 클릭 팝업 없음) */}
 
       {/* 결과 모달 */}
       {resultModal && (
