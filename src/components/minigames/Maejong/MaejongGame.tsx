@@ -30,10 +30,10 @@ const TAGS: { id: TagId; label: string }[] = [
 ];
 
 const ZONES: { id: TagId; label: string; xPct: number; yPct: number }[] = [
-  { id: 'yongnyu', label: '용뉴', xPct: 44, yPct: 18 },
-  { id: 'dangjwa', label: '당좌', xPct: 42, yPct: 50 },
-  { id: 'dangmok', label: '당목', xPct: 68, yPct: 62 },
-  { id: 'monk', label: '스님', xPct: 78, yPct: 72 },
+  { id: 'yongnyu', label: '용뉴', xPct: 55, yPct: 33 },
+  { id: 'dangjwa', label: '당좌', xPct: 57, yPct: 65 },
+  { id: 'dangmok', label: '당목', xPct: 10, yPct: 75 },
+  { id: 'monk', label: '스님', xPct: 27, yPct: 55 },
 ];
 
 function shuffle<T>(arr: T[]) {
@@ -344,7 +344,10 @@ export default function MaejongGame({ stageId, onComplete, regionData }: Minigam
                     data-zone={z.id}
                     className={[
                       'absolute -translate-x-1/2 -translate-y-1/2 w-16 h-16 rounded-full border-2 border-dashed',
-                      placed[z.id] ? 'border-olive/60 bg-olive/15' : 'border-ink/25 bg-paper/35',
+                      // 정답을 넣어야 하는 외곽선이 배경에 묻히지 않도록 대비/두께/광택 강화
+                      placed[z.id]
+                        ? 'border-olive/80 bg-olive/18 ring-2 ring-olive/35'
+                        : 'border-white/90 bg-paper/30 ring-2 ring-ink/25 shadow-[0_0_0_2px_rgba(0,0,0,0.18),0_8px_18px_rgba(0,0,0,0.18)]',
                       !placed[z.id] ? 'animate-pulse' : '',
                     ].join(' ')}
                     style={{ left: `${z.xPct}%`, top: `${z.yPct}%` }}
