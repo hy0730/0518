@@ -6,7 +6,7 @@ import { getRelicMainImage, getRelicRealImage } from '../../../utils/relicImages
 
 type Phase = 'MAZE' | 'FINALE';
 
-type Tile = 0 | 1 | 2 | 3; // 0 길, 1 벽, 2 숨겨진 일본군(함정), 3 도착점(쌀가마니)
+type Tile = 0 | 1 | 2 | 3 | 4; // 0 벽/건물, 1 길, 2 START, 3 GOAL, 4 쌀가마니(필수)
 
 type Dir = 'U' | 'D' | 'L' | 'R';
 
@@ -29,26 +29,47 @@ const QUIZZES: Quiz[] = [
   },
 ];
 
-// 2차원 배열 맵 (유저에겐 2가 0과 똑같이 보이게 렌더)
-const DEFAULT_MAP: Tile[][] = [
-  [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-  [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 2, 0, 1],
-  [1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 0, 1],
-  [1, 0, 1, 0, 0, 0, 0, 2, 1, 0, 0, 0, 0, 1, 0, 1],
-  [1, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 1, 0, 1],
-  [1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1],
-  [1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1],
-  [1, 0, 0, 1, 0, 0, 0, 1, 0, 1, 2, 0, 0, 1, 0, 1],
-  [1, 0, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1],
-  [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 3, 1],
-  [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+// 새 맵 데이터(15x10)
+const ANYANG_GRID_MAP: Tile[][] = [
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+  [0, 2, 1, 1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
+  [0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 1, 1, 0],
+  [0, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 1, 0],
+  [0, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 0],
+  [0, 1, 1, 1, 1, 1, 0, 4, 1, 1, 1, 0, 0, 1, 0],
+  [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0],
+  [0, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 3],
+  [0, 1, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
+  [0, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0],
 ];
 
-const START_POS = { r: 1, c: 1 };
+type Pos = { r: number; c: number };
+
+function findFirst(m: Tile[][], target: Tile): Pos {
+  for (let r = 0; r < m.length; r += 1) {
+    for (let c = 0; c < (m[r]?.length ?? 0); c += 1) {
+      if (m[r][c] === target) return { r, c };
+    }
+  }
+  return { r: 1, c: 1 };
+}
+
+const START_POS = findFirst(ANYANG_GRID_MAP, 2);
 
 function cloneMap(m: Tile[][]) {
   return m.map((row) => row.slice()) as Tile[][];
 }
+
+function keyOf(r: number, c: number) {
+  return `${r},${c}`;
+}
+
+// 길(1) 타일 중 일부 좌표를 "숨겨진 함정(퀴즈)"로 지정
+const DEFAULT_TRAPS: Pos[] = [
+  { r: 1, c: 5 },
+  { r: 3, c: 10 },
+  { r: 7, c: 6 },
+];
 
 function RiceBagIcon() {
   return (
@@ -63,6 +84,23 @@ function RiceBagIcon() {
       <path d="M20 28h24" stroke="#4A3728" strokeWidth="3" strokeLinecap="round" />
       <path d="M24 42h16" stroke="#4A3728" strokeWidth="3" strokeLinecap="round" opacity="0.7" />
       <path d="M26 50h12" stroke="#4A3728" strokeWidth="3" strokeLinecap="round" opacity="0.55" />
+    </svg>
+  );
+}
+
+function ExitIcon() {
+  return (
+    <svg width="26" height="26" viewBox="0 0 64 64" aria-hidden="true">
+      <path
+        d="M12 54V10c0-2 2-4 4-4h20c2 0 4 2 4 4v8"
+        fill="none"
+        stroke="#4A3728"
+        strokeWidth="3"
+        strokeLinejoin="round"
+      />
+      <path d="M24 32h26" stroke="#4A3728" strokeWidth="4" strokeLinecap="round" />
+      <path d="M42 22l12 10-12 10" fill="none" stroke="#4A3728" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M20 54h28" stroke="#4A3728" strokeWidth="3" strokeLinecap="round" />
     </svg>
   );
 }
@@ -96,15 +134,17 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
     if (!startedAt) setStartedAt(Date.now());
   };
 
-  const [map, setMap] = useState<Tile[][]>(() => cloneMap(DEFAULT_MAP));
+  const [map, setMap] = useState<Tile[][]>(() => cloneMap(ANYANG_GRID_MAP));
   const [pos, setPos] = useState(START_POS);
   const [lastSafePos, setLastSafePos] = useState(START_POS);
+  const [hasRice, setHasRice] = useState(false);
+  const [trapSet, setTrapSet] = useState<Set<string>>(() => new Set(DEFAULT_TRAPS.map((p) => keyOf(p.r, p.c))));
 
   const rows = map.length;
   const cols = map[0]?.length ?? 0;
 
-  // 실제로는 11x16을 28로 하면 308x448에 딱 맞음(여백 고려)
-  const cell = 28;
+  // 10x15를 보기 좋게
+  const cell = 30;
   const gridW = cols * cell;
   const gridH = rows * cell;
 
@@ -142,30 +182,53 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
     if (nr < 0 || nr >= rows || nc < 0 || nc >= cols) return;
 
     const nextTile = map[nr][nc];
-    if (nextTile === 1) {
+    // 0: 벽/건물
+    if (nextTile === 0) {
       audio.playUrl('/assets/sounds/sfx_negative_beep.mp3', 0.6);
       return;
     }
 
-    // 안전지대 기록(2는 함정이라 "안전"으로 기록하지 않음)
-    if (map[pos.r][pos.c] !== 2) {
-      setLastSafePos(pos);
-    }
+    const prev = pos;
+    setLastSafePos(prev);
 
-    setPos({ r: nr, c: nc });
-
-    // 도착점
-    if (nextTile === 3) {
-      audio.playUrl('/assets/sounds/sfx_fanfare.mp3', 0.85);
-      setPhase('FINALE');
+    // GOAL(3): 쌀 획득 전에는 탈출 불가
+    if (nextTile === 3 && !hasRice) {
+      showToast('서이면사무소에서 쌀을 먼저 찾아야 해!', 1200);
+      audio.playSfx('wrong', 0.75);
       return;
     }
 
-    // 함정 밟기
-    if (nextTile === 2) {
+    // 이동 확정
+    setPos({ r: nr, c: nc });
+
+    // 쌀가마니(4) 획득
+    if (nextTile === 4) {
+      if (!hasRice) {
+        setHasRice(true);
+        showToast('쌀가마니를 되찾았다!', 1200);
+        audio.playUrl('/assets/sounds/sfx_unlock.mp3', 0.85);
+      }
+      // 이후 길(1)처럼 통과
+      setMap((prevMap) => {
+        const next = cloneMap(prevMap);
+        if (next[nr][nc] === 4) next[nr][nc] = 1;
+        return next;
+      });
+    }
+
+    // 함정(퀴즈) 트리거: 길(1)처럼 보이되, 지정 좌표에서만 인카운터
+    if (trapSet.has(keyOf(nr, nc))) {
       audio.playUrl('/assets/sounds/sfx_negative_beep.mp3', 0.85);
       audio.playUrl('/assets/sounds/sfx_pop.mp3', 0.7);
       setEncounter({ active: true, tile: { r: nr, c: nc }, quizIdx: 0, policeShow: true });
+      return;
+    }
+
+    // GOAL(3): 쌀 획득 후에만 클리어
+    if (nextTile === 3 && hasRice) {
+      audio.playUrl('/assets/sounds/sfx_fanfare.mp3', 0.85);
+      setPhase('FINALE');
+      return;
     }
   };
 
@@ -199,11 +262,13 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
       // 최종 정답: 순사 사라짐 + 해당 타일 2 -> 0 영구 변경
       const t = encounter.tile;
       if (t) {
-        setMap((prev) => {
-          const next = cloneMap(prev);
-          if (next[t.r][t.c] === 2) next[t.r][t.c] = 0;
+        // 함정 해제: 해당 좌표를 안전 길로 만듦(좌표 Set에서 제거)
+        setTrapSet((prevSet) => {
+          const next = new Set(prevSet);
+          next.delete(keyOf(t.r, t.c));
           return next;
         });
+        setLastSafePos({ r: t.r, c: t.c });
       }
       setEncounter({ active: false, tile: null, quizIdx: 0, policeShow: false });
       return;
@@ -302,25 +367,39 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
                   {map.flatMap((row, r) =>
                     row.map((t, c) => {
                       const isPlayer = pos.r === r && pos.c === c;
-                      // IMPORTANT: 2는 0과 완전히 동일하게 렌더
-                      const visibleType: Tile = t === 2 ? 0 : t;
                       const base =
-                        visibleType === 1
+                        t === 0
                           ? 'bg-ink/18 border-ink/25'
                           : 'bg-paper/70 border-ink/10';
-                      const isGoal = visibleType === 3;
+                      const isGoal = t === 3;
+                      const isStart = t === 2;
+                      const isRice = t === 4;
                       return (
                         <div
                           key={`${r}-${c}`}
                           className={[
                             'relative border',
                             base,
-                            isGoal ? 'bg-amber-100/70 border-ink/20' : '',
+                            isGoal ? 'bg-emerald-100/70 border-ink/20' : '',
+                            isStart ? 'bg-sky-100/65 border-ink/20' : '',
+                            isRice ? 'bg-amber-100/70 border-ink/20' : '',
                           ].join(' ')}
                         >
-                          {isGoal ? (
+                          {isRice ? (
                             <div className="absolute inset-0 grid place-items-center opacity-80">
                               <RiceBagIcon />
+                            </div>
+                          ) : null}
+
+                          {isGoal ? (
+                            <div className="absolute inset-0 grid place-items-center opacity-85">
+                              <ExitIcon />
+                            </div>
+                          ) : null}
+
+                          {isStart ? (
+                            <div className="absolute left-1 top-1 text-[9px] font-black opacity-80">
+                              START
                             </div>
                           ) : null}
 
@@ -341,8 +420,11 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
             <div className="rounded-3xl border border-ink/20 bg-paper/70 p-3 flex flex-col gap-2">
               <div className="text-sm font-black">이동</div>
               <div className="text-[11px] opacity-80 leading-relaxed">
-                길을 따라 쌀가마니까지 잠입해보자. <br />
-                (숨겨진 함정이 있어요!)
+                먼저 서이면사무소에서 쌀가마니를 찾아야 해요. <br />
+                쌀을 찾은 뒤 탈출구로 가면 클리어!
+              </div>
+              <div className="rounded-2xl border border-ink/20 bg-paper2/90 shadow-md px-3 py-2 text-[11px] font-black">
+                쌀 획득: <span className={hasRice ? 'text-olive' : 'text-stamp'}>{hasRice ? '완료' : '미획득'}</span>
               </div>
 
               {/* 십자키 */}
