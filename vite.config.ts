@@ -8,8 +8,8 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       manifest: {
-        name: '문화재 탐험',
-        short_name: '문화재탐험',
+        name: '안양 문화유산 탐험',
+        short_name: '문화유산 탐험',
         description: '데이터 주도형 모바일 반응형 문화재 탐험 게임',
         theme_color: '#0b0b0b',
         background_color: '#0b0b0b',

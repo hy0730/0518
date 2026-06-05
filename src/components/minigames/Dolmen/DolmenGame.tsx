@@ -265,7 +265,7 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
         // Step 3: 채석 (떼돌 낙하)
         setRockFallen(true);
         audio.playUrl('/assets/sounds/sfx_stone_hit.mp3', 0.95);
-        setFeedback('쿵! 떼돌이 떨어졌어요!');
+        setFeedback('쿵! 덮개돌이 떨어졌어요!');
         window.setTimeout(() => setFeedback(null), 1000);
         setPhase('BIND');
       }, QUARRY_SHAKE_MS);

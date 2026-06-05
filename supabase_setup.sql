@@ -44,7 +44,7 @@ values (
     "nodes": [
       {
         "id": "node_guseo_office",
-        "title": "구서면사무소",
+        "title": "구서이면사무소",
         "icon": "/assets/anyang/nodes/guseo.png",
         "position": { "x": 28, "y": 22 },
         "dialogId": "dlg_guseo_office"

@@ -35,8 +35,8 @@ export default function IntroScreen() {
     step === 1 ? '/assets/images/thumnail_1.png' : step === 2 ? '/assets/images/map_real.png' : '/assets/images/map_main.png';
 
   const typingSource = useMemo(() => {
-    if (step === 2) return '우리는 문화유산연구원이야.\n문화유산을 발굴하고 보존하는 일을 하지!';
-    if (step === 3) return '앗! 안양 문화유산의 기록이 사라지고 있어!';
+    if (step === 2) return '안녕? 나는 한양문화유산연구원의 한이야.\n문화유산을 발굴하고 보존하는 일을 하지!';
+    if (step === 3) return '나는 양이야! 만나서 반가워! 앗, 무슨 일이지? 안양의 문화유산들이 사라지고 있어!';
     return '';
   }, [step]);
 

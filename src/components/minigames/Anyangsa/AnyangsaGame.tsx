@@ -46,6 +46,15 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
     if (!startedAt) setStartedAt(Date.now());
   };
 
+  // 게임 시작 팝업(비희의 소원) - 1회 클릭으로 시작
+  const [introStatus, setIntroStatus] = useState<'SHOW' | 'FADE' | 'DONE'>('SHOW');
+  const introTimerRef = useRef<number | null>(null);
+  useEffect(() => {
+    return () => {
+      if (introTimerRef.current) window.clearTimeout(introTimerRef.current);
+    };
+  }, []);
+
   // Phase1
   const [collected, setCollected] = useState<Record<FragmentId, boolean>>({ f1: false, f2: false, f3: false });
   const allCollected = collected.f1 && collected.f2 && collected.f3;
@@ -57,6 +66,7 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
 
   const startDrag = (e: React.PointerEvent, f: { id: FragmentId; label: string; img: string }) => {
     if (phase !== 'FRAGMENTS') return;
+    if (introStatus !== 'DONE') return;
     if (collected[f.id]) return;
     startIfNeeded();
     e.preventDefault();
@@ -103,6 +113,10 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
 
   const endDrag = (e: React.PointerEvent) => {
     if (!drag) return;
+    if (introStatus !== 'DONE') {
+      setDrag(null);
+      return;
+    }
     const ended = drag;
     setDrag(null);
 
@@ -194,18 +208,47 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
           }}
         />
 
-        {phase === 'FRAGMENTS' ? (
-          <div className="absolute inset-0 p-3">
-            {/* 말풍선 */}
-            <div className="absolute left-1/2 top-3 -translate-x-1/2 w-[min(520px,92%)] popInFx">
-              <div className="note-panel px-4 py-3">
-                <div className="text-sm font-black">비희(거북이)의 소원</div>
-                <div className="mt-1 text-sm opacity-90 leading-relaxed">
-                  앗, 내 등에 있던 비석이 깨져버렸어! 나는 무거운 걸 짊어지는 걸 좋아하는데… 흩어진 비석 조각들을 찾아줘!
+        {/* 시작 팝업: 비희의 소원 (클릭하면 시작) */}
+        {introStatus !== 'DONE' && (
+          <button
+            type="button"
+            className={[
+              'absolute inset-0 z-[12000] p-4 text-left',
+              'transition-opacity duration-700',
+              introStatus === 'FADE' ? 'opacity-0 pointer-events-none' : 'opacity-100',
+            ].join(' ')}
+            onClick={() => {
+              if (introStatus !== 'SHOW') return;
+              startIfNeeded();
+              audio.playUrl('/assets/sounds/sfx_paper_slide.mp3', 0.75);
+              setIntroStatus('FADE');
+              introTimerRef.current = window.setTimeout(() => setIntroStatus('DONE'), 720);
+            }}
+            onTouchStart={() => {
+              if (introStatus !== 'SHOW') return;
+              startIfNeeded();
+              audio.playUrl('/assets/sounds/sfx_paper_slide.mp3', 0.75);
+              setIntroStatus('FADE');
+              introTimerRef.current = window.setTimeout(() => setIntroStatus('DONE'), 720);
+            }}
+          >
+            <div className="absolute inset-0 bg-ink/45" />
+            <div className="relative z-10 h-full grid place-items-center">
+              <div className="note-panel max-w-[620px] px-5 py-4">
+                <div className="text-lg font-black">비희(거북이)의 소원</div>
+                <div className="mt-2 text-sm opacity-90 leading-relaxed">
+                  앗, 내 등에 있던 비석이 깨져버렸어!
+                  <br />
+                  흩어진 비석 조각들을 찾아서 내 등에 다시 올려줘!
                 </div>
+                <div className="mt-3 text-sm font-black text-stamp">화면을 터치하면 시작해요.</div>
               </div>
             </div>
+          </button>
+        )}
 
+        {phase === 'FRAGMENTS' ? (
+          <div className="absolute inset-0 p-3">
             {/* 귀부(비석 없음) */}
             <div className="absolute left-1/2 bottom-2 -translate-x-1/2 w-[min(520px,88%)]">
               <img src={GUIBU_EMPTY} alt="귀부" className="w-full object-contain drop-shadow-[0_18px_40px_rgba(74,55,40,0.18)]" draggable={false} />
@@ -289,7 +332,7 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
                   type="text"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  placeholder="예: 수호대 파이팅!"
+                  placeholder="예: 문화유산 수호대 파이팅!"
                   className="flex-1 rounded-2xl border-2 border-ink/25 bg-paper2 px-3 py-3 text-sm font-bold outline-none"
                   disabled={engraving || !!engraved}
                 />
