@@ -27,10 +27,6 @@ const GUIBU_EMPTY = '/assets/images/relic_gwibu_base_front.png';
 const GUIBU_FULL = '/assets/images/relic_gwibu_complete.png';
 const STELE_BODY = '/assets/images/relic_gwibu_body.png';
 
-// 세로모드(450x800) 기준 캔버스 + scale-to-fit
-const BASE_W = 450;
-const BASE_H = 800;
-
 const FRAGMENTS: { id: FragmentId; label: string; img: string; x: number; y: number }[] = [
   { id: 'f1', label: '비석 조각', img: '/assets/images/relic_gwibu_head.png', x: 14, y: 18 },
   { id: 'f2', label: '비석 조각', img: '/assets/images/relic_gwibu_body.png', x: 78, y: 22 },
@@ -50,24 +46,6 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
   const startIfNeeded = () => {
     if (!startedAt) setStartedAt(Date.now());
   };
-
-  // 세로모드 권장 표시 + scale-to-fit
-  const stageHostRef = useRef<HTMLDivElement | null>(null);
-  const [stageScale, setStageScale] = useState(1);
-  const [isPortrait, setIsPortrait] = useState(() => window.innerHeight >= window.innerWidth);
-
-  useEffect(() => {
-    const host = stageHostRef.current;
-    if (!host) return;
-    const ro = new ResizeObserver(() => {
-      const rect = host.getBoundingClientRect();
-      const s = Math.min(rect.width / BASE_W, rect.height / BASE_H);
-      setStageScale(Number.isFinite(s) && s > 0 ? s : 1);
-      setIsPortrait(window.innerHeight >= window.innerWidth);
-    });
-    ro.observe(host);
-    return () => ro.disconnect();
-  }, []);
 
   // 게임 시작 팝업(비희의 소원) - 1회 클릭으로 시작
   const [introStatus, setIntroStatus] = useState<'SHOW' | 'FADE' | 'DONE'>('SHOW');
@@ -152,8 +130,10 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
     const zone = dropRef.current;
     if (!zone) return;
     const z = zone.getBoundingClientRect();
-    const dropX = e.clientX - (ended.offsetX ?? 0);
-    const dropY = e.clientY - (ended.offsetY ?? 0);
+    // 드래그 프리뷰를 실제로 따라다니게 렌더링하지 않는 구조라,
+    // 포인터 위치 기준으로 Drop Zone 내부 판정하는 것이 가장 직관적이고 안정적이다.
+    const dropX = e.clientX;
+    const dropY = e.clientY;
     const inside = dropX >= z.left && dropX <= z.right && dropY >= z.top && dropY <= z.bottom;
     if (inside) {
       collectOne(ended.id);
@@ -179,18 +159,7 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
   const [engraving, setEngraving] = useState(false);
   const [resultModal, setResultModal] = useState(false);
 
-  // 종이에 쓰고 → 비석에 덮는 애니메이션 → 돌 깎는 소리로 새기는 연출
-  const paperRef = useRef<HTMLDivElement | null>(null);
-  const stoneTargetRef = useRef<HTMLDivElement | null>(null);
-  const [paperAnim, setPaperAnim] = useState<null | {
-    text: string;
-    from: DOMRect;
-    to: DOMRect;
-    animate: boolean;
-    fadeOut: boolean;
-  }>(null);
-
-  const startEngrave = () => {
+  const finishEngrave = () => {
     startIfNeeded();
     if (phase !== 'ENGRAVE') return;
     const text = input.trim();
@@ -199,45 +168,17 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
       audio.playSfx('wrong', 0.7);
       return;
     }
-    if (!paperRef.current || !stoneTargetRef.current) {
-      // fallback: 즉시 새김
-      setEngraving(true);
-      audio.playUrl('/assets/sounds/sfx_hit.mp3', 0.9);
-      setTimeout(() => audio.playUrl('/assets/sounds/sfx_hit.mp3', 0.8), 260);
-      setTimeout(() => audio.playUrl('/assets/sounds/sfx_hit.mp3', 0.75), 520);
-      setTimeout(() => {
-        setEngraved(text);
-        setEngraving(false);
-        audio.playUrl('/assets/sounds/sfx_completed.mp3', 0.9);
-        setTimeout(() => setResultModal(true), 520);
-      }, 900);
-      return;
-    }
-
     setEngraving(true);
-    const from = paperRef.current.getBoundingClientRect();
-    const to = stoneTargetRef.current.getBoundingClientRect();
-    setPaperAnim({ text, from, to, animate: false, fadeOut: false });
-    // 다음 프레임에 애니메이션 시작
-    window.setTimeout(() => setPaperAnim((p) => (p ? { ...p, animate: true } : p)), 20);
+    audio.playUrl('/assets/sounds/sfx_hit.mp3', 0.9);
+    setTimeout(() => audio.playUrl('/assets/sounds/sfx_hit.mp3', 0.8), 260);
+    setTimeout(() => audio.playUrl('/assets/sounds/sfx_hit.mp3', 0.75), 520);
 
-    // 이동(종이 덮기) 후 → 돌 깎는 소리로 "새김" → 종이 사라짐
-    window.setTimeout(() => {
-      audio.playUrl('/assets/sounds/sfx_hit.mp3', 0.9);
-      window.setTimeout(() => audio.playUrl('/assets/sounds/sfx_hit.mp3', 0.8), 260);
-      window.setTimeout(() => audio.playUrl('/assets/sounds/sfx_hit.mp3', 0.75), 520);
-
-      // 종이 배경은 사라지고 글씨만 돌에 남는 느낌
-      setPaperAnim((p) => (p ? { ...p, fadeOut: true } : p));
-
-      window.setTimeout(() => {
-        setEngraved(text);
-        setEngraving(false);
-        setPaperAnim(null);
-        audio.playUrl('/assets/sounds/sfx_completed.mp3', 0.9);
-        window.setTimeout(() => setResultModal(true), 520);
-      }, 720);
-    }, 650);
+    setTimeout(() => {
+      setEngraved(text);
+      setEngraving(false);
+      audio.playUrl('/assets/sounds/sfx_completed.mp3', 0.9);
+      setTimeout(() => setResultModal(true), 520);
+    }, 900);
   };
 
   return (
@@ -259,20 +200,10 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
       {/* 상단 바 */}
       <div className="flex items-center justify-between gap-2">
         <div className="text-sm font-black tracking-tight">스테이지 {stageId} · {title}</div>
-        <div className="flex items-center gap-2">
-          {!isPortrait ? (
-            <span className="text-[11px] font-black rounded-xl border border-ink/20 bg-paper/70 px-2 py-1">
-              세로모드 권장
-            </span>
-          ) : null}
-          <div className="text-xs font-bold opacity-80">{phase === 'FRAGMENTS' ? 'Phase 1' : 'Phase 2'}</div>
-        </div>
+        <div className="text-xs font-bold opacity-80">{phase === 'FRAGMENTS' ? 'Phase 1' : 'Phase 2'}</div>
       </div>
 
-      <div
-        ref={stageHostRef}
-        className="mt-2 flex-1 min-h-0 rounded-3xl border border-ink/30 bg-paper2/90 shadow-paper overflow-hidden relative"
-      >
+      <div className="mt-2 flex-1 min-h-0 rounded-3xl border border-ink/30 bg-paper2/90 shadow-paper overflow-hidden relative">
         {/* 배경 */}
         <div
           className="absolute inset-0 bg-cover bg-center"
@@ -280,31 +211,6 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
             backgroundImage: `linear-gradient(rgba(244,235,217,0.12), rgba(244,235,217,0.30)), url('${BG}')`,
           }}
         />
-
-        {/* 종이 → 비석으로 덮는 연출(고정 레이어) */}
-        {paperAnim && (
-          <div
-            className="fixed z-[99999] pointer-events-none"
-            style={{
-              left: paperAnim.from.left,
-              top: paperAnim.from.top,
-              width: paperAnim.from.width,
-              height: paperAnim.from.height,
-              transformOrigin: 'top left',
-              transform: paperAnim.animate
-                ? `translate(${paperAnim.to.left - paperAnim.from.left}px, ${paperAnim.to.top - paperAnim.from.top}px) scale(${paperAnim.to.width / paperAnim.from.width}, ${paperAnim.to.height / paperAnim.from.height})`
-                : 'translate(0px, 0px) scale(1, 1)',
-              transition: 'transform 650ms cubic-bezier(.2,.9,.2,1), opacity 420ms ease',
-              opacity: paperAnim.fadeOut ? 0 : 1,
-            }}
-          >
-            <div className="w-full h-full rounded-2xl bg-white border-2 border-ink/25 shadow-paper p-3 overflow-hidden">
-              <div className="text-[14px] font-black text-ink/80" style={{ whiteSpace: 'pre-wrap', lineHeight: 1.25 }}>
-                {paperAnim.text}
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* 시작 팝업: 비희의 소원 (클릭하면 시작) */}
         {introStatus !== 'DONE' && (
@@ -345,19 +251,8 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
           </button>
         )}
 
-        {/* 세로모드 캔버스(450x800)를 화면에 contain 스케일로 맞춤 */}
-        <div className="absolute inset-0 grid place-items-center">
-          <div
-            className="relative"
-            style={{
-              width: `${BASE_W}px`,
-              height: `${BASE_H}px`,
-              transform: `scale(${stageScale})`,
-              transformOrigin: 'center',
-            }}
-          >
-            {phase === 'FRAGMENTS' ? (
-              <div className="absolute inset-0 p-3">
+        {phase === 'FRAGMENTS' ? (
+          <div className="absolute inset-0 p-3">
             {/* 귀부(비석 없음) */}
             <div className="absolute left-1/2 bottom-2 -translate-x-1/2 w-[min(520px,88%)]">
               <img
@@ -415,19 +310,17 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
                 </div>
               );
             })}
-              </div>
-            ) : (
-              <div className="absolute inset-0 p-3 grid place-items-center">
+          </div>
+        ) : (
+          <div className="absolute inset-0 p-3 grid place-items-center">
             {/* 세로 모드 스테이지 */}
             <div className="w-[min(460px,92%)] h-full max-h-[820px] flex flex-col gap-3">
               <div className="note-panel px-4 py-3">
                 <div className="text-sm font-black">비석 글씨 새기기</div>
-                <div className="mt-1 text-sm opacity-90 leading-relaxed">
-                  하얀 종이에 글씨를 쓰고, 버튼을 눌러 비석에 새겨보자! (엔터로 줄바꿈 가능)
-                </div>
+                <div className="mt-1 text-sm opacity-90 leading-relaxed">비석 몸통에 남기고 싶은 말을 적어보자! (엔터로 줄바꿈 가능)</div>
               </div>
 
-              <div className="flex-1 min-h-0 rounded-3xl border border-ink/20 bg-white/80 overflow-hidden relative">
+              <div className="flex-1 min-h-0 rounded-3xl border border-ink/20 bg-paper/55 overflow-hidden relative">
                 {/* 몸통만 표시 */}
                 <img
                   src={STELE_BODY}
@@ -436,12 +329,8 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
                   draggable={false}
                 />
 
-                {/* 종이가 덮이는 목표 영역 */}
-                <div ref={stoneTargetRef} className="absolute left-1/2 top-[22%] -translate-x-1/2 w-[72%] h-[34%]" />
-
-                {/* 새겨진 글씨(음각 느낌) */}
-                {engraved && (
-                  <div className="absolute left-1/2 top-[22%] -translate-x-1/2 w-[72%] text-center engraveFx">
+                {/* 실시간 타이핑(음각 느낌) */}
+                <div className="absolute left-1/2 top-[22%] -translate-x-1/2 w-[72%] text-center">
                   <div
                     className="text-[18px] md:text-[22px] font-black tracking-tight"
                     style={{
@@ -454,26 +343,22 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
                       lineHeight: 1.25,
                     }}
                   >
-                    {engraved}
+                    {engraved ?? input}
                   </div>
-                  </div>
-                )}
+                </div>
               </div>
 
               <div className="rounded-3xl border border-ink/20 bg-paper/70 p-3 flex flex-col gap-2">
-                {/* 하얀 종이(사용자 작성 영역) */}
-                <div ref={paperRef} className="rounded-2xl bg-white border-2 border-ink/25 shadow-md p-3">
-                  <textarea
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    placeholder="예:\n문화유산 수호대 파이팅!\n우리 동네 유산을 지켜요!"
-                    className="w-full min-h-[96px] bg-transparent text-sm font-black outline-none resize-none"
-                    disabled={engraving || !!engraved}
-                  />
-                </div>
+                <textarea
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  placeholder="예:\n문화유산 수호대 파이팅!\n우리 동네 유산을 지켜요!"
+                  className="w-full min-h-[96px] rounded-2xl border-2 border-ink/25 bg-paper2 px-3 py-3 text-sm font-bold outline-none resize-none"
+                  disabled={engraving || !!engraved}
+                />
                 <button
                   type="button"
-                  onClick={startEngrave}
+                  onClick={finishEngrave}
                   disabled={engraving || !!engraved}
                   className={[
                     'rounded-2xl px-4 py-3 font-black border shadow-md',
@@ -482,14 +367,12 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
                       : 'bg-stamp text-white border-ink/25 hover:opacity-95',
                   ].join(' ')}
                 >
-                  {engraving ? '새기는 중…' : '비석에 새기기'}
+                  {engraving ? '새기는 중…' : '완료'}
                 </button>
               </div>
             </div>
-              </div>
-            )}
           </div>
-        </div>
+        )}
 
         {/* 드래그 고스트 */}
         {drag && (
