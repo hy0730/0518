@@ -3,7 +3,18 @@ import type { MinigameProps } from '../../../types/game';
 import { storyDataByStageId } from '../../../data/storyData';
 import { audio } from '../../../utils/audio';
 import { getRelicMainImage, getRelicRealImage } from '../../../utils/relicImages';
-import { ANYANG_GRID_MAP, DEFAULT_TRAPS, DELIVERY_TILES, GUSEO_ASSETS, QUIZ_POOL, RICE_SOURCE_TILES, START_POS, keyOf } from '../../../data/guseoMazeConfig';
+import {
+  ANYANG_GRID_MAP,
+  DEFAULT_TRAPS,
+  DELIVERY_SPOT_BY_KEY,
+  DELIVERY_SPOTS,
+  DELIVERY_TILES,
+  GUSEO_ASSETS,
+  QUIZ_POOL,
+  RICE_SOURCE_TILES,
+  START_POS,
+  keyOf,
+} from '../../../data/guseoMazeConfig';
 import type { GuseoTile as Tile, Pos, Quiz } from '../../../data/guseoMazeConfig';
 
 type Phase = 'MAZE' | 'FINALE';
@@ -140,6 +151,14 @@ function DeliveryIcon({ done }: { done: boolean }) {
   );
 }
 
+function HideIcon() {
+  return (
+    <div className="w-8 h-8 rounded-full bg-white/85 border-2 border-ink/50 shadow-md grid place-items-center">
+      <div className="text-[11px] font-black text-ink/80">숨기</div>
+    </div>
+  );
+}
+
 function ExitIcon() {
   return (
     <svg width="26" height="26" viewBox="0 0 64 64" aria-hidden="true">
@@ -198,6 +217,7 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
   const [pos, setPos] = useState(START_POS);
   const [lastSafePos, setLastSafePos] = useState(START_POS);
   const [carryingRice, setCarryingRice] = useState(0);
+  // 배달 완료는 "스팟 id" 단위로 기록 (각 스팟은 2칸)
   const [deliveredSet, setDeliveredSet] = useState<Set<string>>(() => new Set());
   const [trapSet, setTrapSet] = useState<Set<string>>(() => new Set(DEFAULT_TRAPS.map((p) => keyOf(p.r, p.c))));
 
@@ -327,7 +347,9 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
     setVisibleDangerSet(nextDanger);
 
     const onGuard = nextGuards.some((g) => g.r === playerPos.r && g.c === playerPos.c);
-    const inSight = nextDanger.has(keyOf(playerPos.r, playerPos.c));
+    const playerTile = map[playerPos.r]?.[playerPos.c];
+    // 은신처(6) 위에서는 시야에 들어와도 발각되지 않음
+    const inSight = playerTile === 6 ? false : nextDanger.has(keyOf(playerPos.r, playerPos.c));
     if (onGuard || inSight) {
       setRedFlash(true);
       window.setTimeout(() => setRedFlash(false), 500);
@@ -370,7 +392,7 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
     const prev = pos;
 
     const deliveredCount = deliveredSet.size;
-    const targetDeliveryCount = DELIVERY_TILES.length;
+    const targetDeliveryCount = DELIVERY_SPOTS.length;
 
     // 이동 확정
     const nextPos = { r: nr, c: nc };
@@ -403,7 +425,10 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
     // 배달 지점(5): 쌀을 들고 있으면 배달(각 지점 1회)
     if (nextTile === 5) {
       const k = keyOf(nr, nc);
-      if (deliveredSet.has(k)) {
+      const spotId = DELIVERY_SPOT_BY_KEY[k];
+      if (!spotId) {
+        // 안전장치: 잘못된 설정이면 그냥 통과
+      } else if (deliveredSet.has(spotId)) {
         showToast('여긴 이미 배달했어!', 1100);
       } else if (carryingRice <= 0) {
         showToast('쌀가마니를 먼저 챙겨야 해!', 1100);
@@ -411,7 +436,7 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
         setCarryingRice(0);
         setDeliveredSet((prevSet) => {
           const next = new Set(prevSet);
-          next.add(k);
+          next.add(spotId);
           return next;
         });
         showToast(`배달 성공! (${deliveredCount + 1}/${targetDeliveryCount})`, 1200);
@@ -608,7 +633,8 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
                       const isStart = t === 2;
                       const isRice = t === 4;
                       const isDelivery = t === 5;
-                      const deliveryDone = isDelivery ? deliveredSet.has(keyOf(r, c)) : false;
+                      const isHide = t === 6;
+                      const deliveryDone = isDelivery ? deliveredSet.has(DELIVERY_SPOT_BY_KEY[keyOf(r, c)] ?? '') : false;
                       return (
                         <div
                           key={`${r}-${c}`}
@@ -625,7 +651,9 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
                             // 배달 완료 후에는 더 초록으로
                             deliveryDone ? 'bg-emerald-200/80' : '',
                             // 3곳 배달 완료 후 탈출구를 유도
-                            isGoal && deliveredSet.size >= DELIVERY_TILES.length ? 'ring-2 ring-emerald-500/80 animate-pulse' : '',
+                            isGoal && deliveredSet.size >= DELIVERY_SPOTS.length ? 'ring-2 ring-emerald-500/80 animate-pulse' : '',
+                            // 은신처는 청록색으로 표시
+                            isHide ? 'bg-teal-200/80 border-ink/25' : '',
                           ].join(' ')}
                         >
                           {/* 붉은 시야 오버레이 */}
@@ -642,6 +670,12 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
                           {isDelivery ? (
                             <div className="absolute inset-0 grid place-items-center opacity-90">
                               <DeliveryIcon done={deliveryDone} />
+                            </div>
+                          ) : null}
+
+                          {isHide ? (
+                            <div className="absolute inset-0 grid place-items-center opacity-90">
+                              <HideIcon />
                             </div>
                           ) : null}
 
@@ -683,14 +717,14 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
               <div className="text-sm font-black">이동</div>
               <div className="text-[11px] opacity-80 leading-relaxed">
                 서이면사무소에서 쌀 {RICE_SOURCE_TILES.length}개를 챙겨서 <br />
-                마을 {DELIVERY_TILES.length}곳에 배달한 뒤 탈출구로 가요!
+                마을 {DELIVERY_SPOTS.length}곳에 배달한 뒤 탈출구로 가요!
               </div>
               <div className="rounded-2xl border border-ink/20 bg-paper2/90 shadow-md px-3 py-2 text-[11px] font-black">
                 들고있는 쌀: <span className={carryingRice ? 'text-amber-700' : 'text-stamp'}>{carryingRice ? '1개' : '0개'}</span>
                 <span className="mx-2 opacity-60">|</span>
                 배달:{' '}
-                <span className={deliveredSet.size >= DELIVERY_TILES.length ? 'text-olive' : 'text-stamp'}>
-                  {deliveredSet.size}/{DELIVERY_TILES.length}
+                <span className={deliveredSet.size >= DELIVERY_SPOTS.length ? 'text-olive' : 'text-stamp'}>
+                  {deliveredSet.size}/{DELIVERY_SPOTS.length}
                 </span>
               </div>
 
