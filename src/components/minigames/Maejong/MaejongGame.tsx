@@ -3,6 +3,7 @@ import type { MinigameProps } from '../../../types/game';
 import { storyDataByStageId } from '../../../data/storyData';
 import { audio } from '../../../utils/audio';
 import { getRelicMainImage, getRelicRealImage } from '../../../utils/relicImages';
+import { useToast } from '../common/useToast';
 
 type Phase = 'RUBBING' | 'LABEL';
 
@@ -62,19 +63,8 @@ export default function MaejongGame({ stageId, onComplete, regionData }: Minigam
     if (!startedAt) setStartedAt(Date.now());
   };
 
-  // 공통 토스트
-  const [toast, setToast] = useState<string | null>(null);
-  const toastTimer = useRef<number | null>(null);
-  const showToast = (msg: string) => {
-    setToast(msg);
-    if (toastTimer.current) window.clearTimeout(toastTimer.current);
-    toastTimer.current = window.setTimeout(() => setToast(null), 1400);
-  };
-  useEffect(() => {
-    return () => {
-      if (toastTimer.current) window.clearTimeout(toastTimer.current);
-    };
-  }, []);
+  // 공통 토스트(기존 1400ms 유지)
+  const { toast, showToast } = useToast(1400);
 
   // Phase 1: 탁본(스크래치)
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
