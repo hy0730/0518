@@ -3,6 +3,7 @@ import type { MinigameProps } from '../../../types/game';
 import { audio } from '../../../utils/audio';
 import { storyDataByStageId } from '../../../data/storyData';
 import { getRelicMainImage, getRelicRealImage } from '../../../utils/relicImages';
+import { useToast } from '../common/useToast';
 
 type Phase = 'QUARRY' | 'BIND' | 'PREPARE' | 'MOVE';
 type TutorialMode = 'DIALOGUE' | 'WEDGE' | 'LOG' | 'PULL' | 'DONE';
@@ -55,8 +56,7 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
   const [tText, setTText] = useState('');
   const [tTyping, setTTyping] = useState(false);
   const tTimer = useRef<number | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
-  const toastTimer = useRef<number | null>(null);
+  const { toast, showToast } = useToast(1200);
 
   // 통나무 배치 이후(당기기 안내) 대사 모달
   const [postModalOpen, setPostModalOpen] = useState(false);
@@ -85,12 +85,6 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
     }
     return '';
   }, [feedback, phase, tutorialMode]);
-
-  const showToast = (msg: string) => {
-    setToast(msg);
-    if (toastTimer.current) window.clearTimeout(toastTimer.current);
-    toastTimer.current = window.setTimeout(() => setToast(null), 1200);
-  };
 
   const tutorialLines = useMemo(
     () => [
@@ -140,7 +134,6 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
   useEffect(() => {
     return () => {
       if (tTimer.current) window.clearInterval(tTimer.current);
-      if (toastTimer.current) window.clearTimeout(toastTimer.current);
       if (postTimer.current) window.clearInterval(postTimer.current);
     };
   }, []);

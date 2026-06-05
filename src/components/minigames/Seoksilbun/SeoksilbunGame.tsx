@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { MinigameProps } from '../../../types/game';
 import { storyDataByStageId } from '../../../data/storyData';
 import { getRelicMainImage, getRelicRealImage } from '../../../utils/relicImages';
+import { useToast } from '../common/useToast';
 
 type Phase = 'INTRO' | 'TUTORIAL' | 'MAIN' | 'QUIZ';
 
@@ -136,16 +137,9 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
   const [dragHint, setDragHint] = useState<string | null>(null);
 
   // 피드백(툭 튕기기/잘못된 드롭 등)
-  const [toast, setToast] = useState<string | null>(null);
+  const { toast, showToast } = useToast(900);
   const [shakeSlot, setShakeSlot] = useState<1 | 2 | null>(null);
-  const toastTimer = useRef<number | null>(null);
   const dragThreshold = 3; // 모바일 드래그 인식 개선(너무 높으면 클릭으로 오인)
-
-  const showToast = (msg: string) => {
-    setToast(msg);
-    if (toastTimer.current) window.clearTimeout(toastTimer.current);
-    toastTimer.current = window.setTimeout(() => setToast(null), 900);
-  };
 
   const bg = useMemo(() => {
     if (phase === 'INTRO') {

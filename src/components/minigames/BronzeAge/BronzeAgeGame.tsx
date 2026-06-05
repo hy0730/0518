@@ -3,6 +3,7 @@ import type { MinigameProps } from '../../../types/game';
 import { audio } from '../../../utils/audio';
 import { storyDataByStageId } from '../../../data/storyData';
 import { getRelicMainImage, getRelicRealImage } from '../../../utils/relicImages';
+import { useToast } from '../common/useToast';
 
 type IngredientId = 'clay' | 'fire' | 'stone' | 'wood' | 'straw' | 'copper' | 'tin' | 'rope';
 type RelicId = 'pottery' | 'sickle' | 'mirror' | 'arrow' | 'hut';
@@ -78,8 +79,7 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
   const [flash, setFlash] = useState<'success' | 'fail' | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [sparkle, setSparkle] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
-  const toastTimer = useRef<number | null>(null);
+  const { toast, showToast } = useToast(1100);
 
   // 튜토리얼(첫 진입 시 청동 거울 제작 연습)
   const [tutorialMode, setTutorialMode] = useState<'DIALOGUE' | 'MAKE_MIRROR' | 'DONE'>('DIALOGUE');
@@ -97,12 +97,6 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
   const realImg = useMemo(() => getRelicRealImage(stageId), [stageId]);
   const mainImg = useMemo(() => getRelicMainImage(stageId), [stageId]);
 
-  const showToast = (msg: string) => {
-    setToast(msg);
-    if (toastTimer.current) window.clearTimeout(toastTimer.current);
-    toastTimer.current = window.setTimeout(() => setToast(null), 1100);
-  };
-
   const setFlashSafe = (next: 'success' | 'fail' | null, msg?: string) => {
     if (flashTimer.current) window.clearTimeout(flashTimer.current);
     setFlash(next);
@@ -116,7 +110,6 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
   useEffect(() => {
     return () => {
       if (flashTimer.current) window.clearTimeout(flashTimer.current);
-      if (toastTimer.current) window.clearTimeout(toastTimer.current);
       if (tTimer.current) window.clearInterval(tTimer.current);
     };
   }, []);

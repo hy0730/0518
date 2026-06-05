@@ -3,6 +3,7 @@ import type { MinigameProps } from '../../../types/game';
 import { storyDataByStageId } from '../../../data/storyData';
 import { audio } from '../../../utils/audio';
 import { getRelicRealImage } from '../../../utils/relicImages';
+import { useToast } from '../common/useToast';
 
 type Phase = 'FIRE' | 'DIG';
 
@@ -77,18 +78,7 @@ export default function BisanGame({ stageId, onComplete, regionData }: MinigameP
   };
 
   // 공통 토스트
-  const [toast, setToast] = useState<string | null>(null);
-  const toastTimer = useRef<number | null>(null);
-  const showToast = (msg: string, ms = 1600) => {
-    setToast(msg);
-    if (toastTimer.current) window.clearTimeout(toastTimer.current);
-    toastTimer.current = window.setTimeout(() => setToast(null), ms);
-  };
-  useEffect(() => {
-    return () => {
-      if (toastTimer.current) window.clearTimeout(toastTimer.current);
-    };
-  }, []);
+  const { toast, showToast } = useToast(1600);
 
   // Phase 1: 온도 올리기 + 대류 화살표 연출
   const [temp, setTemp] = useState(0);
