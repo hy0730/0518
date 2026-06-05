@@ -12,15 +12,15 @@ type MapNode = {
 
 // 9개 문화유산 노드 위치 (원하는대로 숫자만 미세 조정하면 됨)
 const NODES: MapNode[] = [
-  { stageId: 1, left: 20, top: 28, icon: '/assets/images/relic_gwanyang_main.png' },
-  { stageId: 2, left: 35, top: 42, icon: '/assets/images/relic_pyeongchon_main.png' },
-  { stageId: 3, left: 52, top: 30, icon: '/assets/images/relic_seoksu_main.png' },
-  { stageId: 4, left: 64, top: 44, icon: '/assets/images/relic_jungcho_main.png' },
-  { stageId: 5, left: 76, top: 30, icon: '/assets/images/relic_bell_main.png' },
-  { stageId: 6, left: 18, top: 58, icon: '/assets/images/relic_turtle_main.png' },
-  { stageId: 7, left: 40, top: 66, icon: '/assets/images/relic_bisan_main.png' },
-  { stageId: 8, left: 62, top: 68, icon: '/assets/images/relic_bridge_main.png' },
-  { stageId: 9, left: 82, top: 58, icon: '/assets/images/relic_seoimyeon_main.png' },
+  { stageId: 1, left: 90, top: 58, icon: '/assets/images/relic_gwanyang_main.png' },
+  { stageId: 2, left: 64, top: 78, icon: '/assets/images/relic_pyeongchon_main.png' },
+  { stageId: 3, left: 52, top: 10, icon: '/assets/images/relic_seoksu_main.png' },
+  { stageId: 4, left: 50, top: 30, icon: '/assets/images/relic_jungcho_main.png' },
+  { stageId: 5, left: 55, top: 35, icon: '/assets/images/relic_bell_main.png' },
+  { stageId: 6, left: 60, top: 40, icon: '/assets/images/relic_turtle_main.png' },
+  { stageId: 7, left: 80, top: 45, icon: '/assets/images/relic_bisan_main.png' },
+  { stageId: 8, left: 20, top: 70, icon: '/assets/images/relic_bridge_main.png' },
+  { stageId: 9, left: 50, top: 80, icon: '/assets/images/relic_seoimyeon_main.png' },
 ];
 
 export default function MapScreen() {

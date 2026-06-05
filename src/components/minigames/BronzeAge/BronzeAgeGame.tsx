@@ -46,7 +46,7 @@ const RELIC_DESC: Record<RelicId, string> = {
   pottery: '무늬가 없는 청동기 시대의 대표적인 토기로, 곡식을 보관하거나 요리할 때 사용했어요.',
   sickle:
     '곡식의 이삭을 자를 때 사용하던 청동기 시대의 농기구예요. 가운뎃구멍에 끈을 꿰어 손에 걸고 사용했답니다.',
-  mirror: '청동기 시대 지배층(족장)이 사용하던 귀중한 물건으로, 햇빛을 반사시켜 권력을 상징했어요.',
+  mirror: '청동기 시대 족장이 사용하던 귀중한 물건으로, 햇빛을 반사시켜 권력을 상징했어요.',
   arrow: '돌촉을 끼워 만든 화살이에요. 사냥이나 전투에 사용되며, 당시 생활과 기술을 보여줘요.',
   hut: '땅을 파서 바닥을 낮추고 나무 기둥과 짚 지붕으로 만든 집이에요. 바람을 막고 따뜻하게 지냈답니다.',
 };
@@ -132,15 +132,15 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
       },
       {
         speaker: 'yang' as const,
-        text: '앗, 큰일이야! 데이터가 날아가면서 유물들이 전부 돌, 나무 같은 기본 재료로 쪼개져 버렸어.',
+        text: '앗, 큰일이야! 자료가 날아가면서 유물들이 전부 돌, 나무 같은 기본 재료로 쪼개져 버렸어.',
       },
       {
         speaker: 'han' as const,
-        text: '우리가 직접 재료를 조합해서 원래 유물로 복원해야 해. 아래 재료를 클릭(또는 드래그)해서 작업대 빈칸에 올려놔 봐!',
+        text: '우리가 직접 재료를 조합해서 원래 유물로 복원해야 해. 아래 재료를 클릭해서 작업대 빈칸에 올려놔 봐!',
       },
       {
         speaker: 'yang' as const,
-        text: "오른쪽 아래 '레시피 힌트'를 보면 어떤 재료를 섞어야 하는지 알 수 있어.",
+        text: "오른쪽 아래 '조합 방법'을 보면 어떤 재료를 섞어야 하는지 알 수 있어.",
       },
       {
         speaker: 'han' as const,
@@ -530,7 +530,7 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
               tutorialHighlightHint ? 'ring-4 ring-amber-300/60' : '',
             ].join(' ')}
           >
-            <div className="text-[10px] font-black opacity-90 mb-1">레시피 힌트</div>
+            <div className="text-[10px] font-black opacity-90 mb-1">조합 방법</div>
             <div className="text-[10px] opacity-85 leading-relaxed">
               흙+불 / 돌+돌 / 구리+주석+불 / 돌+나무+밧줄 / 밧줄+나무+짚
             </div>
@@ -544,7 +544,7 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
         <div className="absolute inset-0 z-[11000] bg-ink/35 grid place-items-center p-4">
           <div className="w-full max-w-[560px] rounded-3xl border-2 border-ink/35 bg-paper2 text-ink shadow-paper">
             <div className="p-5">
-              <div className="text-xs font-black opacity-85">튜토리얼 · 청동 거울 만들기</div>
+              <div className="text-xs font-black opacity-85">연습하기 · 청동 거울 만들기</div>
               <div className="mt-3 flex items-start gap-3">
                 <div className="w-14 h-14 rounded-2xl overflow-hidden border border-ink/25 bg-paper/60 flex-shrink-0">
                   <img
@@ -592,7 +592,7 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
       {tutorialMode === 'MAKE_MIRROR' && (
         <div className="absolute left-2 right-2 bottom-2 z-[9000] pointer-events-none">
           <div className="rounded-xl border border-amber-300/30 bg-amber-300/10 p-2 text-center text-xs font-black">
-            튜토리얼: 구리 + 주석 + 불 → 청동 거울을 만들어보자!
+            연습하기: 구리 + 주석 + 불 → 청동 거울을 만들어보자!
           </div>
         </div>
       )}
@@ -661,7 +661,7 @@ export default function BronzeAgeGame({ stageId, onComplete, regionData }: Minig
                       if (tutorialMode === 'MAKE_MIRROR' && relicModal.id === 'mirror') {
                         // 연습 완료 후 본게임 시작
                         setTutorialMode('DONE');
-                        showToast('튜토리얼 완료! 이제 나머지 유물도 복원해보자!');
+                        showToast('연습 완료! 이제 나머지 유물도 복원해보자!');
                       }
                       if (tutorialMode === 'DONE' && next.length >= targetRelics) setResultModal(true);
                       return next;

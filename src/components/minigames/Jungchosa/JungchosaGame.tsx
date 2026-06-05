@@ -228,13 +228,26 @@ export default function JungchosaGame({ stageId, onComplete, regionData }: Minig
                   />
                 </div>
 
-                {/* 세로 슬롯 4개 */}
+                {/* 세로 슬롯 4개 (시각적 형태: 위=깃발, 아래=기단) */}
                 <div className="absolute inset-0 px-5 py-4 flex flex-col justify-between gap-3">
-                  <div className="flex-1 rounded-3xl border-2 border-dashed border-paper/70 bg-paper/55 grid place-items-center">
-                    {assembled.base ? (
-                      <div className="w-[78%] h-[34px] rounded-2xl bg-ink/20 border border-ink/25" />
+                  <div className="flex-1 rounded-3xl border-2 border-dashed border-paper/70 bg-paper/45 grid place-items-center">
+                    {assembled.flag ? (
+                      <img
+                        src="/assets/images/items/jungcho_flag_line.png"
+                        alt=""
+                        className="h-[90%] object-contain"
+                        draggable={false}
+                      />
                     ) : (
-                      <div className="text-sm font-black text-white/90">① 기단(받침돌)</div>
+                      <div className="text-sm font-black text-white/90">④ 당(깃발)</div>
+                    )}
+                  </div>
+
+                  <div className="flex-[2] rounded-3xl border-2 border-dashed border-paper/70 bg-paper/40 grid place-items-center">
+                    {assembled.pole ? (
+                      <img src="/assets/images/items/jungcho_pole.png" alt="" className="h-[92%] object-contain" draggable={false} />
+                    ) : (
+                      <div className="text-sm font-black text-white/90">③ 당간(장대)</div>
                     )}
                   </div>
 
@@ -251,24 +264,11 @@ export default function JungchosaGame({ stageId, onComplete, regionData }: Minig
                     )}
                   </div>
 
-                  <div className="flex-[2] rounded-3xl border-2 border-dashed border-paper/70 bg-paper/40 grid place-items-center">
-                    {assembled.pole ? (
-                      <img src="/assets/images/items/jungcho_pole.png" alt="" className="h-[92%] object-contain" draggable={false} />
+                  <div className="flex-1 rounded-3xl border-2 border-dashed border-paper/70 bg-paper/55 grid place-items-center">
+                    {assembled.base ? (
+                      <div className="w-[78%] h-[34px] rounded-2xl bg-ink/20 border border-ink/25" />
                     ) : (
-                      <div className="text-sm font-black text-white/90">③ 당간(장대)</div>
-                    )}
-                  </div>
-
-                  <div className="flex-1 rounded-3xl border-2 border-dashed border-paper/70 bg-paper/45 grid place-items-center">
-                    {assembled.flag ? (
-                      <img
-                        src="/assets/images/items/jungcho_flag_line.png"
-                        alt=""
-                        className="h-[90%] object-contain"
-                        draggable={false}
-                      />
-                    ) : (
-                      <div className="text-sm font-black text-white/90">④ 당(깃발)</div>
+                      <div className="text-sm font-black text-white/90">① 기단(받침돌)</div>
                     )}
                   </div>
                 </div>
@@ -452,4 +452,3 @@ export default function JungchosaGame({ stageId, onComplete, regionData }: Minig
     </div>
   );
 }
-
