@@ -497,6 +497,7 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
               {inventoryOrder.map((pieceIndex) => {
                 const piece = PUZZLE_PIECES.find((p) => p.index === pieceIndex)!;
                 const placed = slotPieces.includes(pieceIndex);
+                const isHintPiece = highlightActive && requiredIndex === pieceIndex && !placed;
                 return (
                   <div
                     key={piece.id}
@@ -505,7 +506,8 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
                       'w-[64px] h-[48px] rounded-2xl border border-ink/20 bg-paper2/90 shadow-md grid place-items-center touch-none select-none relative transition-all',
                       phase !== 'BUILD' ? 'opacity-45' : 'cursor-grab active:cursor-grabbing hover:bg-paper2',
                       placed ? 'opacity-45 cursor-not-allowed' : '',
-                      // 번호 표시는 없이, 슬롯 하이라이트로만 안내
+                      // 슬롯 하이라이트 + 인벤토리에서도 같은 조각을 깜빡이며 유도
+                      isHintPiece ? 'ring-2 ring-amber-300/80 animate-pulse' : '',
                     ].join(' ')}
                     onPointerDown={(e) => startDragFromInventory(e, pieceIndex)}
                     onPointerMove={updateDrag}
