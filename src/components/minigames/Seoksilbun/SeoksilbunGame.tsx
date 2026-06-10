@@ -56,12 +56,6 @@ const ARTIFACTS: ArtifactDef[] = [
     desc: '반짝이는 구슬은 장식품이자 지위의 상징일 수 있어요.',
   },
   {
-    id: 'earrings',
-    name: '귀걸이',
-    img: '/assets/images/items/item_seoksu_earrings.png',
-    desc: '귀한 금속/장신구는 지배층이나 부유한 사람의 무덤에서 발견되기도 해요.',
-  },
-  {
     id: 'armor',
     name: '갑옷',
     img: '/assets/images/items/item_seoksu_armor.png',
