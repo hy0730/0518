@@ -49,8 +49,8 @@ export default function JungchosaGame({ stageId, onComplete, regionData }: Minig
   const quizOrder: QuizId[] = ['A', 'B', 'C', 'D'];
   const quizTexts: Record<QuizId, string> = {
     A: '보력 2년(826년)',
-    B: '승악(관악산)',
-    C: '9월 1일',
+    B: '중초사',
+    C: '승악(관악산)',
     D: '정미년(827년)',
   };
   const [quizSlots, setQuizSlots] = useState<(QuizId | null)[]>([null, null, null, null]);
