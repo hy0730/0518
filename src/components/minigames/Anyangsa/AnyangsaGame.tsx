@@ -162,6 +162,9 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
   const INSCRIBE_BOX_SIZE = { widthPct: 30, heightPct: 40 };
   const [inscribePos, setInscribePos] = useState({ topPct: 10, rightPct: 20 });
   const [inscribeTunerOpen, setInscribeTunerOpen] = useState(false);
+  const INSCRIBE_TUNER_VERSION = 'v2';
+  const STEP = 2; // 1%는 변화가 잘 안 보여서 기본 이동 단위를 키움
+  const BIG_STEP = 6;
   const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
   const moveInscribe = (patch: Partial<typeof inscribePos>) => {
     setInscribePos((prev) => ({
@@ -364,7 +367,7 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
                     </div>
 
                     <div className="mt-1 text-[10px] font-bold opacity-80">
-                      top {inscribePos.topPct}% · right {inscribePos.rightPct}%
+                      {INSCRIBE_TUNER_VERSION} · top {inscribePos.topPct}% · right {inscribePos.rightPct}%
                     </div>
 
                     <div className="mt-2 grid grid-cols-3 gap-1 text-[11px] font-black">
@@ -375,7 +378,7 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
                         onClick={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
-                          moveInscribe({ topPct: inscribePos.topPct - 1 });
+                          moveInscribe({ topPct: inscribePos.topPct - STEP });
                         }}
                       >
                         위
@@ -387,7 +390,7 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
                         onClick={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
-                          moveInscribe({ rightPct: inscribePos.rightPct + 1 });
+                          moveInscribe({ rightPct: inscribePos.rightPct + STEP });
                         }}
                       >
                         왼
@@ -409,7 +412,7 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
                         onClick={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
-                          moveInscribe({ rightPct: inscribePos.rightPct - 1 });
+                          moveInscribe({ rightPct: inscribePos.rightPct - STEP });
                         }}
                       >
                         오
@@ -421,12 +424,59 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
                         onClick={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
-                          moveInscribe({ topPct: inscribePos.topPct + 1 });
+                          moveInscribe({ topPct: inscribePos.topPct + STEP });
                         }}
                       >
                         아래
                       </button>
                       <div />
+                    </div>
+
+                    <div className="mt-2 grid grid-cols-2 gap-1 text-[11px] font-black">
+                      <button
+                        type="button"
+                        className="rounded-xl border border-ink/20 bg-paper py-2"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          moveInscribe({ topPct: inscribePos.topPct - BIG_STEP });
+                        }}
+                      >
+                        위 +{BIG_STEP}%
+                      </button>
+                      <button
+                        type="button"
+                        className="rounded-xl border border-ink/20 bg-paper py-2"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          moveInscribe({ topPct: inscribePos.topPct + BIG_STEP });
+                        }}
+                      >
+                        아래 +{BIG_STEP}%
+                      </button>
+                      <button
+                        type="button"
+                        className="rounded-xl border border-ink/20 bg-paper py-2"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          moveInscribe({ rightPct: inscribePos.rightPct + BIG_STEP });
+                        }}
+                      >
+                        왼 +{BIG_STEP}%
+                      </button>
+                      <button
+                        type="button"
+                        className="rounded-xl border border-ink/20 bg-paper py-2"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          moveInscribe({ rightPct: inscribePos.rightPct - BIG_STEP });
+                        }}
+                      >
+                        오 +{BIG_STEP}%
+                      </button>
                     </div>
                   </div>
                 ) : (
@@ -460,11 +510,12 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
                       top: `${inscribePos.topPct}%`,
                       width: `${INSCRIBE_BOX_SIZE.widthPct}%`,
                       height: `${INSCRIBE_BOX_SIZE.heightPct}%`,
+                      transition: 'top 120ms ease, right 120ms ease',
                     }}
                   >
                     {/* 튜너가 열려있을 때는 글씨 영역이 어디인지 보이도록 가이드 표시 */}
                     {inscribeTunerOpen && (
-                      <div className="absolute inset-0 pointer-events-none rounded-md border-2 border-dashed border-amber-400/80 bg-amber-200/10" />
+                      <div className="absolute inset-0 pointer-events-none rounded-md border-2 border-dashed border-amber-400/90 bg-amber-200/15" />
                     )}
                     <div
                       className="h-full w-full font-black"
