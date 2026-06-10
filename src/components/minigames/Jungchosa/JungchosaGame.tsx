@@ -25,7 +25,6 @@ export default function JungchosaGame({ stageId, onComplete, regionData }: Minig
   const title = `${stageTitle} · 당간지주`;
 
   const mainBg = useMemo(() => getRelicMainImage(stageId), [stageId]);
-  const stoneBg = '/assets/images/relic_jungcho_stone.png';
   const realImg = useMemo(() => getRelicRealImage(stageId), [stageId]);
 
   const [phase] = useState<Phase>('QUIZ');
@@ -126,19 +125,20 @@ export default function JungchosaGame({ stageId, onComplete, regionData }: Minig
 
       {/* 세로(450x800) 최적화 메인 */}
       <div className="mt-2 flex-1 min-h-0 rounded-3xl border border-ink/30 bg-paper2/90 shadow-paper overflow-hidden relative">
-        <div className="h-full p-2 grid grid-cols-[minmax(0,1.05fr)_minmax(0,0.9fr)_minmax(0,1.05fr)] gap-2">
-            {/* 왼쪽: 명문 이미지 */}
+        <div className="h-full p-2 grid grid-cols-[minmax(0,0.82fr)_minmax(0,1.16fr)_minmax(0,0.82fr)] gap-2">
+            {/* 왼쪽: 명문 해석본 */}
             <div className="min-h-0 min-w-0 rounded-3xl border border-ink/20 bg-paper/88 overflow-hidden relative">
               <div className="h-full px-2 py-2 flex flex-col gap-2">
-                <div className="text-sm font-black">명문 이미지</div>
-                <div className="flex-1 min-h-0 rounded-2xl border border-ink/20 bg-paper2/70 overflow-hidden relative">
-                  <img
-                    src={stoneBg}
-                    alt="당간지주 명문 이미지"
-                    className="absolute inset-2 w-[calc(100%-1rem)] h-[calc(100%-1rem)] object-contain"
-                    draggable={false}
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-b from-paper/10 to-paper/20 pointer-events-none" />
+                <div className="text-sm font-black">명문 해석본</div>
+                <div className="flex-1 min-h-0 grid grid-rows-4 gap-1.5">
+                  {quizOrder.map((id) => (
+                    <div
+                      key={id}
+                      className="rounded-2xl border border-ink/20 bg-paper2/78 px-2 py-2 flex items-center justify-center text-center"
+                    >
+                      <span className="text-[13px] leading-tight font-black text-ink/90">{quizTexts[id]}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
@@ -172,7 +172,7 @@ export default function JungchosaGame({ stageId, onComplete, regionData }: Minig
                     </div>
                   ))}
                 </div>
-                <div className="text-[11px] opacity-80">A → B → C → D 순서로 눌러 넣어보자.</div>
+                <div className="text-[11px] opacity-80">왼쪽 해석본을 참고해서 순서대로 채워보자.</div>
               </div>
             </div>
 
