@@ -344,10 +344,11 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
                 {inscribeTunerOpen ? (
                   <div
                     className="absolute right-2 top-2 z-20 rounded-2xl border border-ink/20 bg-paper2/92 px-2 py-2 shadow-paper"
-                    onPointerDownCapture={(e) => {
+                    onPointerDown={(e) => {
+                      // 조절 패널 조작이 게임 입력(드래그 등)으로 전달되지 않게만 막는다.
                       e.stopPropagation();
                     }}
-                    onClickCapture={(e) => {
+                    onClick={(e) => {
                       e.stopPropagation();
                     }}
                   >
@@ -532,8 +533,9 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
                         letterSpacing: '0.08em',
                         writingMode: 'vertical-rl',
                         textOrientation: 'mixed',
-                        direction: 'rtl',
-                        textAlign: 'start',
+                        // 위에서 아래로(요청): 방향 뒤집기 금지
+                        direction: 'ltr',
+                        textAlign: 'left',
                         WebkitTextStroke: '0.55px rgba(18, 12, 9, 0.22)',
                       }}
                     >
