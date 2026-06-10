@@ -48,6 +48,7 @@ const DEFAULT_LAYOUT_TUNES: Record<number, LayoutTune> = {
 };
 
 const OUTER_TUNES_STORAGE_KEY = 'outerLayoutTunes_v1';
+const OUTER_TUNES_LOCKED_KEY = 'outerLayoutTunes_locked_v1';
 
 export default function MiniGameManager() {
   const currentStageId = useGameStore((s) => s.currentStageId);
@@ -63,6 +64,15 @@ export default function MiniGameManager() {
       return { ...DEFAULT_LAYOUT_TUNES, ...parsed };
     } catch {
       return DEFAULT_LAYOUT_TUNES;
+    }
+  });
+  const [lockedTunes, setLockedTunes] = useState<Record<number, LayoutTune>>(() => {
+    try {
+      const raw = window.localStorage.getItem(OUTER_TUNES_LOCKED_KEY);
+      if (!raw) return {};
+      return JSON.parse(raw) as Record<number, LayoutTune>;
+    } catch {
+      return {};
     }
   });
   const [outerTunerOpen, setOuterTunerOpen] = useState(true);
@@ -92,8 +102,13 @@ export default function MiniGameManager() {
     );
   }
 
-  const currentTune = layoutTunes[currentStageId] ?? DEFAULT_LAYOUT_TUNES[currentStageId] ?? DEFAULT_LAYOUT_TUNES[1];
+  const currentTune =
+    lockedTunes[currentStageId] ??
+    layoutTunes[currentStageId] ??
+    DEFAULT_LAYOUT_TUNES[currentStageId] ??
+    DEFAULT_LAYOUT_TUNES[1];
   const fit = { baseWidth: currentTune.baseWidth, baseHeight: currentTune.baseHeight };
+  const isLocked = !!lockedTunes[currentStageId];
 
   // dev에서 HMR/리렌더가 있어도 값이 유지되게 저장
   useEffect(() => {
@@ -103,6 +118,14 @@ export default function MiniGameManager() {
       // ignore
     }
   }, [layoutTunes]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(OUTER_TUNES_LOCKED_KEY, JSON.stringify(lockedTunes));
+    } catch {
+      // ignore
+    }
+  }, [lockedTunes]);
 
   const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
 
@@ -120,6 +143,7 @@ export default function MiniGameManager() {
   };
 
   const setTune = (key: keyof LayoutTune, value: number, min: number, max: number) => {
+    if (isLocked) return;
     setLayoutTunes((prev) => {
       const base = prev[currentStageId] ?? DEFAULT_LAYOUT_TUNES[currentStageId] ?? DEFAULT_LAYOUT_TUNES[1];
       return {
@@ -177,6 +201,42 @@ export default function MiniGameManager() {
             </div>
 
             <div className="mt-2 text-[10px] font-bold opacity-80 max-w-[250px] leading-snug">{tuneText}</div>
+            <div className="mt-1 flex items-center justify-between gap-2">
+              <div className={['text-[10px] font-black', isLocked ? 'text-stamp' : 'text-ink/70'].join(' ')}>
+                {isLocked ? '확정됨(잠금)' : '조절 중'}
+              </div>
+              {isLocked ? (
+                <button
+                  type="button"
+                  className="px-2 py-1 rounded-lg border border-ink/20 bg-paper text-[10px] font-black"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setLockedTunes((prev) => {
+                      const next = { ...prev };
+                      delete next[currentStageId];
+                      return next;
+                    });
+                  }}
+                >
+                  확정 해제
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="px-2 py-1 rounded-lg border border-ink/20 bg-stamp text-white text-[10px] font-black"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    // 현재 화면(stage)의 값을 "확정"으로 저장 (이후 슬라이더/입력 비활성화)
+                    setLockedTunes((prev) => ({
+                      ...prev,
+                      [currentStageId]: { ...currentTune },
+                    }));
+                  }}
+                >
+                  이 값 확정
+                </button>
+              )}
+            </div>
 
             <div className="mt-2 flex flex-col gap-2 text-[10px]">
               <div className="flex items-center gap-2">
@@ -189,12 +249,14 @@ export default function MiniGameManager() {
                   value={currentTune.baseWidth}
                   onChange={(e) => setTune('baseWidth', Number(e.target.value), 300, 1600)}
                   className="w-[140px]"
+                  disabled={isLocked}
                 />
                 <input
                   type="number"
                   className="w-[70px] rounded-lg border border-ink/20 bg-paper px-2 py-1 font-black"
                   value={currentTune.baseWidth}
                   onChange={(e) => setTune('baseWidth', Number(e.target.value || 0), 300, 1600)}
+                  disabled={isLocked}
                 />
               </div>
 
@@ -208,12 +270,14 @@ export default function MiniGameManager() {
                   value={currentTune.baseHeight}
                   onChange={(e) => setTune('baseHeight', Number(e.target.value), 300, 1600)}
                   className="w-[140px]"
+                  disabled={isLocked}
                 />
                 <input
                   type="number"
                   className="w-[70px] rounded-lg border border-ink/20 bg-paper px-2 py-1 font-black"
                   value={currentTune.baseHeight}
                   onChange={(e) => setTune('baseHeight', Number(e.target.value || 0), 300, 1600)}
+                  disabled={isLocked}
                 />
               </div>
 
@@ -227,12 +291,14 @@ export default function MiniGameManager() {
                   value={currentTune.top}
                   onChange={(e) => setTune('top', Number(e.target.value), -200, 200)}
                   className="w-[140px]"
+                  disabled={isLocked}
                 />
                 <input
                   type="number"
                   className="w-[70px] rounded-lg border border-ink/20 bg-paper px-2 py-1 font-black"
                   value={currentTune.top}
                   onChange={(e) => setTune('top', Number(e.target.value || 0), -200, 200)}
+                  disabled={isLocked}
                 />
               </div>
 
@@ -246,12 +312,14 @@ export default function MiniGameManager() {
                   value={currentTune.bottom}
                   onChange={(e) => setTune('bottom', Number(e.target.value), -200, 200)}
                   className="w-[140px]"
+                  disabled={isLocked}
                 />
                 <input
                   type="number"
                   className="w-[70px] rounded-lg border border-ink/20 bg-paper px-2 py-1 font-black"
                   value={currentTune.bottom}
                   onChange={(e) => setTune('bottom', Number(e.target.value || 0), -200, 200)}
+                  disabled={isLocked}
                 />
               </div>
 
@@ -265,12 +333,14 @@ export default function MiniGameManager() {
                   value={currentTune.left}
                   onChange={(e) => setTune('left', Number(e.target.value), -200, 200)}
                   className="w-[140px]"
+                  disabled={isLocked}
                 />
                 <input
                   type="number"
                   className="w-[70px] rounded-lg border border-ink/20 bg-paper px-2 py-1 font-black"
                   value={currentTune.left}
                   onChange={(e) => setTune('left', Number(e.target.value || 0), -200, 200)}
+                  disabled={isLocked}
                 />
               </div>
 
@@ -284,12 +354,14 @@ export default function MiniGameManager() {
                   value={currentTune.right}
                   onChange={(e) => setTune('right', Number(e.target.value), -200, 200)}
                   className="w-[140px]"
+                  disabled={isLocked}
                 />
                 <input
                   type="number"
                   className="w-[70px] rounded-lg border border-ink/20 bg-paper px-2 py-1 font-black"
                   value={currentTune.right}
                   onChange={(e) => setTune('right', Number(e.target.value || 0), -200, 200)}
+                  disabled={isLocked}
                 />
               </div>
 
@@ -298,6 +370,11 @@ export default function MiniGameManager() {
                 className="mt-1 px-2 py-1 rounded-lg border border-ink/20 bg-stamp text-white font-black"
                 onClick={(e) => {
                   e.stopPropagation();
+                  setLockedTunes((prev) => {
+                    const next = { ...prev };
+                    delete next[currentStageId];
+                    return next;
+                  });
                   setLayoutTunes((prev) => ({
                     ...prev,
                     [currentStageId]: DEFAULT_LAYOUT_TUNES[currentStageId] ?? DEFAULT_LAYOUT_TUNES[1],
