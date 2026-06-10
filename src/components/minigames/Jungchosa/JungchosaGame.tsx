@@ -98,7 +98,7 @@ export default function JungchosaGame({ stageId, onComplete, regionData }: Minig
   }, [phase, quizSlots]);
 
   return (
-    <div className="w-full h-full p-2 text-ink flex flex-col relative">
+    <div className="w-full h-full p-0 text-ink flex flex-col relative">
       <style>{`
         @keyframes shakeX {
           0% { transform: translateX(0); }
@@ -119,13 +119,13 @@ export default function JungchosaGame({ stageId, onComplete, regionData }: Minig
       `}</style>
 
       {/* 세로(450x800) 최적화 메인 - 상단까지 최대한 사용 */}
-      <div className="flex-1 min-h-0 rounded-3xl border border-ink/30 bg-paper2/90 shadow-paper overflow-hidden relative">
-        <div className="absolute left-3 top-3 z-10 rounded-xl border border-ink/20 bg-paper2/85 px-3 py-2 pointer-events-none">
-          <div className="text-sm font-black tracking-tight">{title}</div>
-          <div className="text-[11px] font-bold opacity-80">명문 해독</div>
+      <div className="flex-1 min-h-0 rounded-[22px] border border-ink/30 bg-paper2/90 shadow-paper overflow-hidden relative">
+        <div className="absolute left-2 top-2 z-10 rounded-xl border border-ink/20 bg-paper2/88 px-2.5 py-1.5 pointer-events-none">
+          <div className="text-[13px] font-black tracking-tight leading-tight">{title}</div>
+          <div className="text-[10px] font-bold opacity-80">명문 해독</div>
         </div>
 
-        <div className="h-full p-2 pt-16 grid grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)_minmax(0,0.9fr)] gap-2">
+        <div className="h-full p-1.5 pt-12 grid grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)_minmax(0,0.9fr)] gap-1.5">
             {/* 왼쪽: 명문 이미지 */}
             <div className="min-h-0 min-w-0 rounded-3xl border border-ink/20 bg-paper/88 overflow-hidden relative">
               <div className="h-full px-2 py-2 flex flex-col gap-2">
