@@ -342,11 +342,9 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
                   <div
                     className="absolute right-2 top-2 z-20 rounded-2xl border border-ink/20 bg-paper2/92 px-2 py-2 shadow-paper"
                     onPointerDownCapture={(e) => {
-                      e.preventDefault();
                       e.stopPropagation();
                     }}
                     onClickCapture={(e) => {
-                      e.preventDefault();
                       e.stopPropagation();
                     }}
                   >
@@ -363,6 +361,10 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
                       >
                         접기
                       </button>
+                    </div>
+
+                    <div className="mt-1 text-[10px] font-bold opacity-80">
+                      top {inscribePos.topPct}% · right {inscribePos.rightPct}%
                     </div>
 
                     <div className="mt-2 grid grid-cols-3 gap-1 text-[11px] font-black">
@@ -460,6 +462,10 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
                       height: `${INSCRIBE_BOX_SIZE.heightPct}%`,
                     }}
                   >
+                    {/* 튜너가 열려있을 때는 글씨 영역이 어디인지 보이도록 가이드 표시 */}
+                    {inscribeTunerOpen && (
+                      <div className="absolute inset-0 pointer-events-none rounded-md border-2 border-dashed border-amber-400/80 bg-amber-200/10" />
+                    )}
                     <div
                       className="h-full w-full font-black"
                       style={{
