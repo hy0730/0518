@@ -144,7 +144,7 @@ export default function App() {
       {/* 오리엔테이션 “권장” 안내(터치 1회로 닫힘) - 스테이지별 정책 */}
       <OrientationOverlay
         enabled={appPhase !== 'INTRO'}
-        recommended={appPhase === 'MINIGAME' && currentStageId === 4 ? 'portrait' : 'landscape'}
+        recommended="landscape"
         contextKey={`${appPhase}-${currentStageId ?? ''}`}
       />
 
