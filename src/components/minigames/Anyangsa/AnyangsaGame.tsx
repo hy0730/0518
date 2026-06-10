@@ -160,18 +160,8 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
   const [resultModal, setResultModal] = useState(false);
   // 글씨창(요청): 폭 30%, 높이 40% 고정 + 위치(top/right)만 조절 가능
   const INSCRIBE_BOX_SIZE = { widthPct: 30, heightPct: 40 };
-  const [inscribePos, setInscribePos] = useState({ topPct: 10, rightPct: 20 });
-  const [inscribeTunerOpen, setInscribeTunerOpen] = useState(false);
-  const INSCRIBE_TUNER_VERSION = 'v2';
-  const STEP = 2; // 1%는 변화가 잘 안 보여서 기본 이동 단위를 키움
-  const BIG_STEP = 6;
-  const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
-  const moveInscribe = (patch: Partial<typeof inscribePos>) => {
-    setInscribePos((prev) => ({
-      topPct: clamp(patch.topPct ?? prev.topPct, 0, 40),
-      rightPct: clamp(patch.rightPct ?? prev.rightPct, 0, 50),
-    }));
-  };
+  // 최종 고정 위치(요청)
+  const INSCRIBE_BOX_POS = { topPct: 30, rightPct: 34 };
   // 세로쓰기에서 "줄"은 개행 기준으로 계산(5줄 초과 시 자동 축소)
   const lineCount = useMemo(() => (engraved ?? input).split('\n').length, [engraved, input]);
   const fontScale = useMemo(() => (lineCount > 5 ? 5 / lineCount : 1), [lineCount]);
@@ -340,160 +330,6 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
             {/* 좌우 분할 스테이지: 왼쪽 비석 몸통 / 오른쪽 입력 */}
             <div className="w-full h-full grid grid-cols-2 gap-3">
               <div className="min-h-0 rounded-3xl border border-ink/20 bg-paper/55 overflow-hidden relative">
-                {/* 글씨창 위치 조절(레이아웃 조절창처럼 오버레이로 표시) */}
-                {inscribeTunerOpen ? (
-                  <div
-                    className="absolute right-2 top-2 z-20 rounded-2xl border border-ink/20 bg-paper2/92 px-2 py-2 shadow-paper"
-                    onPointerDown={(e) => {
-                      // 조절 패널 조작이 게임 입력(드래그 등)으로 전달되지 않게만 막는다.
-                      e.stopPropagation();
-                    }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                    }}
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="text-[11px] font-black">글씨창 위치 조절</div>
-                      <button
-                        type="button"
-                        className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper text-[10px] font-black"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setInscribeTunerOpen(false);
-                        }}
-                      >
-                        접기
-                      </button>
-                    </div>
-
-                    <div className="mt-1 text-[10px] font-bold opacity-80">
-                      {INSCRIBE_TUNER_VERSION} · top {inscribePos.topPct}% · right {inscribePos.rightPct}%
-                    </div>
-
-                    <div className="mt-2 grid grid-cols-3 gap-1 text-[11px] font-black">
-                      <div />
-                      <button
-                        type="button"
-                        className="rounded-xl border border-ink/20 bg-paper py-2"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          moveInscribe({ topPct: inscribePos.topPct - STEP });
-                        }}
-                      >
-                        위
-                      </button>
-                      <div />
-                      <button
-                        type="button"
-                        className="rounded-xl border border-ink/20 bg-paper py-2"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          moveInscribe({ rightPct: inscribePos.rightPct + STEP });
-                        }}
-                      >
-                        왼
-                      </button>
-                      <button
-                        type="button"
-                        className="rounded-xl border border-ink/20 bg-paper py-2"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setInscribePos({ topPct: 10, rightPct: 20 });
-                        }}
-                      >
-                        초기화
-                      </button>
-                      <button
-                        type="button"
-                        className="rounded-xl border border-ink/20 bg-paper py-2"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          moveInscribe({ rightPct: inscribePos.rightPct - STEP });
-                        }}
-                      >
-                        오
-                      </button>
-                      <div />
-                      <button
-                        type="button"
-                        className="rounded-xl border border-ink/20 bg-paper py-2"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          moveInscribe({ topPct: inscribePos.topPct + STEP });
-                        }}
-                      >
-                        아래
-                      </button>
-                      <div />
-                    </div>
-
-                    <div className="mt-2 grid grid-cols-2 gap-1 text-[11px] font-black">
-                      <button
-                        type="button"
-                        className="rounded-xl border border-ink/20 bg-paper py-2"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          moveInscribe({ topPct: inscribePos.topPct - BIG_STEP });
-                        }}
-                      >
-                        위 +{BIG_STEP}%
-                      </button>
-                      <button
-                        type="button"
-                        className="rounded-xl border border-ink/20 bg-paper py-2"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          moveInscribe({ topPct: inscribePos.topPct + BIG_STEP });
-                        }}
-                      >
-                        아래 +{BIG_STEP}%
-                      </button>
-                      <button
-                        type="button"
-                        className="rounded-xl border border-ink/20 bg-paper py-2"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          moveInscribe({ rightPct: inscribePos.rightPct + BIG_STEP });
-                        }}
-                      >
-                        왼 +{BIG_STEP}%
-                      </button>
-                      <button
-                        type="button"
-                        className="rounded-xl border border-ink/20 bg-paper py-2"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          moveInscribe({ rightPct: inscribePos.rightPct - BIG_STEP });
-                        }}
-                      >
-                        오 +{BIG_STEP}%
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    className="absolute right-2 top-2 z-20 px-3 py-2 rounded-2xl border border-ink/20 bg-paper2/92 text-ink font-black shadow-md"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setInscribeTunerOpen(true);
-                    }}
-                  >
-                    글씨창
-                  </button>
-                )}
-
                 <div className="absolute inset-0 p-2 md:p-3">
                   {/* 몸통만 표시: 가능한 한 크게 보여 태블릿에서도 잘 보이게 */}
                   <img
@@ -507,17 +343,12 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
                   <div
                     className="absolute"
                     style={{
-                      right: `${inscribePos.rightPct}%`,
-                      top: `${inscribePos.topPct}%`,
+                      right: `${INSCRIBE_BOX_POS.rightPct}%`,
+                      top: `${INSCRIBE_BOX_POS.topPct}%`,
                       width: `${INSCRIBE_BOX_SIZE.widthPct}%`,
                       height: `${INSCRIBE_BOX_SIZE.heightPct}%`,
-                      transition: 'top 120ms ease, right 120ms ease',
                     }}
                   >
-                    {/* 튜너가 열려있을 때는 글씨 영역이 어디인지 보이도록 가이드 표시 */}
-                    {inscribeTunerOpen && (
-                      <div className="absolute inset-0 pointer-events-none rounded-md border-2 border-dashed border-amber-400/90 bg-amber-200/15" />
-                    )}
                     <div
                       className="h-full w-full font-black"
                       style={{
@@ -555,16 +386,21 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
 
                 <div className="text-sm font-black">글씨 쓰는 칸</div>
                 <div className="text-xs opacity-80 leading-relaxed">
-                  엔터로 줄을 바꿀 수 있어요. 5줄을 넘기면 글씨가 자동으로 작아져서 비석을 벗어나지 않게 돼요.
+                  엔터로 줄을 바꿀 수 있어요. 4줄을 넘기면 더 이상 입력되지 않아요.
                 </div>
 
                 <textarea
-                  value={input}
+                  onChange={(e) => {
+                    const next = e.target.value;
+                    const lines = next.split('\n');
+                    // 4줄 초과 입력은 차단(요청)
+                    if (lines.length > 4) return;
+                    setInput(next);
+                  }}
                   onChange={(e) => setInput(e.target.value)}
                   placeholder={'예:\n안양의 문화유산을\n오래오래 지켜요\n우리 모두 함께해요'}
                   className="flex-1 min-h-[240px] rounded-2xl border-2 border-ink/25 bg-paper2 px-3 py-3 text-sm font-bold outline-none resize-none"
                   disabled={engraving || !!engraved}
-                />
                 <button
                   type="button"
                   onClick={finishEngrave}
