@@ -53,6 +53,7 @@ export default function MiniGameManager() {
   const setAppPhase = useGameStore((s) => s.setAppPhase);
   const regionData = useGameStore((s) => s.regionData);
   const [layoutTunes, setLayoutTunes] = useState<Record<number, LayoutTune>>(DEFAULT_LAYOUT_TUNES);
+  const [outerTunerOpen, setOuterTunerOpen] = useState(true);
 
   if (!currentStageId) return null;
 
@@ -111,8 +112,21 @@ export default function MiniGameManager() {
           ← 뒤로
         </button>
 
-        <div className="absolute right-4 top-16 z-50 rounded-2xl border border-ink/30 bg-paper2/92 px-2 py-2 shadow-md">
-            <div className="text-[11px] font-black">바깥 레이아웃 조절</div>
+        {/* 바깥 레이아웃 조절 패널(접기/펼치기) */}
+        {outerTunerOpen ? (
+          <div className="absolute right-4 top-16 z-50 rounded-2xl border border-ink/30 bg-paper2/92 px-2 py-2 shadow-md">
+            <div className="flex items-center justify-between gap-2">
+              <div className="text-[11px] font-black">바깥 레이아웃 조절</div>
+              <button
+                type="button"
+                className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper text-[10px] font-black"
+                onClick={() => setOuterTunerOpen(false)}
+                title="접기"
+              >
+                접기
+              </button>
+            </div>
+
             <div className="mt-1 flex flex-col gap-1 text-[10px]">
               <div className="flex items-center gap-1">
                 <span className="w-10">가로</span>
@@ -164,6 +178,16 @@ export default function MiniGameManager() {
               </button>
             </div>
           </div>
+        ) : (
+          <button
+            type="button"
+            className="absolute right-4 top-16 z-50 px-3 py-2 rounded-2xl border border-ink/30 bg-paper2/92 text-ink font-black shadow-md"
+            onClick={() => setOuterTunerOpen(true)}
+            title="바깥 레이아웃 조절 열기"
+          >
+            레이아웃
+          </button>
+        )}
 
         <div
           className="absolute"
