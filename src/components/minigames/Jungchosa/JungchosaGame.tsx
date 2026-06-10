@@ -126,14 +126,18 @@ export default function JungchosaGame({ stageId, onComplete, regionData }: Minig
 
       {/* 세로(450x800) 최적화 메인 */}
       <div className="mt-2 flex-1 min-h-0 rounded-3xl border border-ink/30 bg-paper2/90 shadow-paper overflow-hidden relative">
-        <div className="h-full p-3 grid grid-cols-[minmax(0,0.95fr)_minmax(0,0.8fr)_minmax(0,1.05fr)] gap-3">
+        <div className="h-full p-2 grid grid-cols-[minmax(0,1.05fr)_minmax(0,0.9fr)_minmax(0,1.05fr)] gap-2">
             {/* 왼쪽: 명문 이미지 */}
             <div className="min-h-0 min-w-0 rounded-3xl border border-ink/20 bg-paper/88 overflow-hidden relative">
-              <div className="h-full px-3 py-3 flex flex-col gap-3">
+              <div className="h-full px-2 py-2 flex flex-col gap-2">
                 <div className="text-sm font-black">명문 이미지</div>
-                <div className="text-[11px] opacity-80">당간지주에 새겨진 실제 명문 모습을 살펴보자.</div>
                 <div className="flex-1 min-h-0 rounded-2xl border border-ink/20 bg-paper2/70 overflow-hidden relative">
-                  <img src={stoneBg} alt="당간지주 명문 이미지" className="absolute inset-0 w-full h-full object-cover" draggable={false} />
+                  <img
+                    src={stoneBg}
+                    alt="당간지주 명문 이미지"
+                    className="absolute inset-2 w-[calc(100%-1rem)] h-[calc(100%-1rem)] object-contain"
+                    draggable={false}
+                  />
                   <div className="absolute inset-0 bg-gradient-to-b from-paper/10 to-paper/20 pointer-events-none" />
                 </div>
               </div>
@@ -148,15 +152,14 @@ export default function JungchosaGame({ stageId, onComplete, regionData }: Minig
             >
               {glow && <div className="absolute inset-0 bg-gradient-to-b from-amber-200/12 to-transparent animate-pulse pointer-events-none" />}
 
-              <div className="h-full px-4 py-4 flex flex-col gap-3">
+              <div className="h-full px-2 py-2 flex flex-col gap-2">
                 <div className="text-sm font-black">명문 빈칸</div>
-                <div className="text-[11px] opacity-80">이미지를 보고 알맞은 해독을 순서대로 채워보자.</div>
-                <div className="flex-1 min-h-0 grid grid-rows-4 gap-2">
+                <div className="flex-1 min-h-0 grid grid-rows-4 gap-1.5">
                   {quizSlots.map((q, i) => (
                     <div
                       key={i}
                       className={[
-                        'rounded-3xl border-2 border-dashed px-3 py-3 text-center font-black',
+                        'rounded-2xl border-2 border-dashed px-2 py-2 text-center font-black flex items-center justify-center',
                         'border-ink/25 bg-paper/70',
                         q
                           ? glow
@@ -165,7 +168,7 @@ export default function JungchosaGame({ stageId, onComplete, regionData }: Minig
                           : 'text-ink/50',
                       ].join(' ')}
                     >
-                      {q ? quizTexts[q] : `빈칸 ${i + 1}`}
+                      <span className="text-[13px] leading-tight">{q ? quizTexts[q] : `빈칸 ${i + 1}`}</span>
                     </div>
                   ))}
                 </div>
@@ -174,10 +177,9 @@ export default function JungchosaGame({ stageId, onComplete, regionData }: Minig
             </div>
 
             {/* 오른쪽: 해독 */}
-            <div className="min-h-0 min-w-0 rounded-3xl border border-ink/20 bg-paper/88 p-3 flex flex-col overflow-hidden">
+            <div className="min-h-0 min-w-0 rounded-3xl border border-ink/20 bg-paper/88 p-2 flex flex-col overflow-hidden">
               <div className="text-sm font-black">해독</div>
-              <div className="mt-1 text-[11px] opacity-80">가운데 빈칸에 맞는 해독 조각을 골라보자.</div>
-              <div className="mt-2 flex-1 min-h-0 grid grid-rows-4 gap-2">
+              <div className="mt-2 flex-1 min-h-0 grid grid-rows-4 gap-1.5">
                 {quizChoices.map((id) => {
                   const used = quizSlots.includes(id);
                   return (
@@ -187,12 +189,12 @@ export default function JungchosaGame({ stageId, onComplete, regionData }: Minig
                       disabled={used || glow || introInfoOpen}
                       onClick={() => handlePickChoice(id)}
                       className={[
-                        'rounded-3xl border border-ink/25 bg-paper2/90 shadow-md px-4 py-3 text-left',
+                        'rounded-2xl border border-ink/25 bg-paper2/90 shadow-md px-3 py-2 text-left flex items-center',
                         used || glow || introInfoOpen ? 'opacity-45 cursor-not-allowed' : 'hover:bg-paper2 active:translate-y-[1px]',
                         nextQuiz === id ? 'ring-2 ring-amber-300/70 animate-pulse' : '',
                       ].join(' ')}
                     >
-                      <div className="text-sm font-black">
+                      <div className="text-[13px] leading-tight font-black">
                         {id}: {quizTexts[id]}
                       </div>
                     </button>
