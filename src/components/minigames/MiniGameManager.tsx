@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import FitScaleWrapper from '../common/FitScaleWrapper';
 import { useGameStore } from '../../store/useGameStore';
 import type { MinigameProps } from '../../types/game';
@@ -47,12 +47,24 @@ const DEFAULT_LAYOUT_TUNES: Record<number, LayoutTune> = {
   9: { baseWidth: 800, baseHeight: 450, top: 0, right: 0, bottom: 0, left: 0 },
 };
 
+const OUTER_TUNES_STORAGE_KEY = 'outerLayoutTunes_v1';
+
 export default function MiniGameManager() {
   const currentStageId = useGameStore((s) => s.currentStageId);
   const completeStage = useGameStore((s) => s.completeStage);
   const setAppPhase = useGameStore((s) => s.setAppPhase);
   const regionData = useGameStore((s) => s.regionData);
-  const [layoutTunes, setLayoutTunes] = useState<Record<number, LayoutTune>>(DEFAULT_LAYOUT_TUNES);
+  const [layoutTunes, setLayoutTunes] = useState<Record<number, LayoutTune>>(() => {
+    try {
+      const raw = window.localStorage.getItem(OUTER_TUNES_STORAGE_KEY);
+      if (!raw) return DEFAULT_LAYOUT_TUNES;
+      const parsed = JSON.parse(raw) as Record<number, LayoutTune>;
+      // 기본값 + 저장값 merge (키 누락 대비)
+      return { ...DEFAULT_LAYOUT_TUNES, ...parsed };
+    } catch {
+      return DEFAULT_LAYOUT_TUNES;
+    }
+  });
   const [outerTunerOpen, setOuterTunerOpen] = useState(true);
 
   if (!currentStageId) return null;
@@ -83,6 +95,17 @@ export default function MiniGameManager() {
   const currentTune = layoutTunes[currentStageId] ?? DEFAULT_LAYOUT_TUNES[currentStageId] ?? DEFAULT_LAYOUT_TUNES[1];
   const fit = { baseWidth: currentTune.baseWidth, baseHeight: currentTune.baseHeight };
 
+  // dev에서 HMR/리렌더가 있어도 값이 유지되게 저장
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(OUTER_TUNES_STORAGE_KEY, JSON.stringify(layoutTunes));
+    } catch {
+      // ignore
+    }
+  }, [layoutTunes]);
+
+  const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
+
   const tune = (key: keyof LayoutTune, delta: number, min: number, max: number) => {
     setLayoutTunes((prev) => {
       const base = prev[currentStageId] ?? DEFAULT_LAYOUT_TUNES[currentStageId] ?? DEFAULT_LAYOUT_TUNES[1];
@@ -95,6 +118,23 @@ export default function MiniGameManager() {
       };
     });
   };
+
+  const setTune = (key: keyof LayoutTune, value: number, min: number, max: number) => {
+    setLayoutTunes((prev) => {
+      const base = prev[currentStageId] ?? DEFAULT_LAYOUT_TUNES[currentStageId] ?? DEFAULT_LAYOUT_TUNES[1];
+      return {
+        ...prev,
+        [currentStageId]: {
+          ...base,
+          [key]: clamp(value, min, max),
+        },
+      };
+    });
+  };
+
+  const tuneText = useMemo(() => {
+    return `가로 ${currentTune.baseWidth} / 세로 ${currentTune.baseHeight} / 상단 ${currentTune.top} / 하단 ${currentTune.bottom} / 왼쪽 ${currentTune.left} / 오른쪽 ${currentTune.right}`;
+  }, [currentTune]);
 
   return (
     <Suspense fallback={<div style={{ padding: 20 }}>게임 불러오는 중...</div>}>
@@ -136,151 +176,123 @@ export default function MiniGameManager() {
               </button>
             </div>
 
-            <div className="mt-1 flex flex-col gap-1 text-[10px]">
-              <div className="flex items-center gap-1">
-                <span className="w-10">가로</span>
-                <button
-                  type="button"
-                  className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    tune('baseWidth', -20, 300, 1200);
-                  }}
-                >
-                  -
-                </button>
-                <span className="w-10 text-center">{currentTune.baseWidth}</span>
-                <button
-                  type="button"
-                  className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    tune('baseWidth', 20, 300, 1200);
-                  }}
-                >
-                  +
-                </button>
+            <div className="mt-2 text-[10px] font-bold opacity-80 max-w-[250px] leading-snug">{tuneText}</div>
+
+            <div className="mt-2 flex flex-col gap-2 text-[10px]">
+              <div className="flex items-center gap-2">
+                <span className="w-10 font-black">가로</span>
+                <input
+                  type="range"
+                  min={300}
+                  max={1600}
+                  step={10}
+                  value={currentTune.baseWidth}
+                  onChange={(e) => setTune('baseWidth', Number(e.target.value), 300, 1600)}
+                  className="w-[140px]"
+                />
+                <input
+                  type="number"
+                  className="w-[70px] rounded-lg border border-ink/20 bg-paper px-2 py-1 font-black"
+                  value={currentTune.baseWidth}
+                  onChange={(e) => setTune('baseWidth', Number(e.target.value || 0), 300, 1600)}
+                />
               </div>
-              <div className="flex items-center gap-1">
-                <span className="w-10">세로</span>
-                <button
-                  type="button"
-                  className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    tune('baseHeight', -20, 400, 1600);
-                  }}
-                >
-                  -
-                </button>
-                <span className="w-10 text-center">{currentTune.baseHeight}</span>
-                <button
-                  type="button"
-                  className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    tune('baseHeight', 20, 400, 1600);
-                  }}
-                >
-                  +
-                </button>
+
+              <div className="flex items-center gap-2">
+                <span className="w-10 font-black">세로</span>
+                <input
+                  type="range"
+                  min={300}
+                  max={1600}
+                  step={10}
+                  value={currentTune.baseHeight}
+                  onChange={(e) => setTune('baseHeight', Number(e.target.value), 300, 1600)}
+                  className="w-[140px]"
+                />
+                <input
+                  type="number"
+                  className="w-[70px] rounded-lg border border-ink/20 bg-paper px-2 py-1 font-black"
+                  value={currentTune.baseHeight}
+                  onChange={(e) => setTune('baseHeight', Number(e.target.value || 0), 300, 1600)}
+                />
               </div>
-              <div className="flex items-center gap-1">
-                <span className="w-10">상단</span>
-                <button
-                  type="button"
-                  className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    tune('top', -4, -80, 120);
-                  }}
-                >
-                  -
-                </button>
-                <span className="w-10 text-center">{currentTune.top}</span>
-                <button
-                  type="button"
-                  className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    tune('top', 4, -80, 120);
-                  }}
-                >
-                  +
-                </button>
+
+              <div className="flex items-center gap-2">
+                <span className="w-10 font-black">상단</span>
+                <input
+                  type="range"
+                  min={-200}
+                  max={200}
+                  step={2}
+                  value={currentTune.top}
+                  onChange={(e) => setTune('top', Number(e.target.value), -200, 200)}
+                  className="w-[140px]"
+                />
+                <input
+                  type="number"
+                  className="w-[70px] rounded-lg border border-ink/20 bg-paper px-2 py-1 font-black"
+                  value={currentTune.top}
+                  onChange={(e) => setTune('top', Number(e.target.value || 0), -200, 200)}
+                />
               </div>
-              <div className="flex items-center gap-1">
-                <span className="w-10">하단</span>
-                <button
-                  type="button"
-                  className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    tune('bottom', -4, -80, 120);
-                  }}
-                >
-                  -
-                </button>
-                <span className="w-10 text-center">{currentTune.bottom}</span>
-                <button
-                  type="button"
-                  className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    tune('bottom', 4, -80, 120);
-                  }}
-                >
-                  +
-                </button>
+
+              <div className="flex items-center gap-2">
+                <span className="w-10 font-black">하단</span>
+                <input
+                  type="range"
+                  min={-200}
+                  max={200}
+                  step={2}
+                  value={currentTune.bottom}
+                  onChange={(e) => setTune('bottom', Number(e.target.value), -200, 200)}
+                  className="w-[140px]"
+                />
+                <input
+                  type="number"
+                  className="w-[70px] rounded-lg border border-ink/20 bg-paper px-2 py-1 font-black"
+                  value={currentTune.bottom}
+                  onChange={(e) => setTune('bottom', Number(e.target.value || 0), -200, 200)}
+                />
               </div>
-              <div className="flex items-center gap-1">
-                <span className="w-10">왼쪽</span>
-                <button
-                  type="button"
-                  className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    tune('left', -4, -80, 120);
-                  }}
-                >
-                  -
-                </button>
-                <span className="w-10 text-center">{currentTune.left}</span>
-                <button
-                  type="button"
-                  className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    tune('left', 4, -80, 120);
-                  }}
-                >
-                  +
-                </button>
+
+              <div className="flex items-center gap-2">
+                <span className="w-10 font-black">왼쪽</span>
+                <input
+                  type="range"
+                  min={-200}
+                  max={200}
+                  step={2}
+                  value={currentTune.left}
+                  onChange={(e) => setTune('left', Number(e.target.value), -200, 200)}
+                  className="w-[140px]"
+                />
+                <input
+                  type="number"
+                  className="w-[70px] rounded-lg border border-ink/20 bg-paper px-2 py-1 font-black"
+                  value={currentTune.left}
+                  onChange={(e) => setTune('left', Number(e.target.value || 0), -200, 200)}
+                />
               </div>
-              <div className="flex items-center gap-1">
-                <span className="w-10">오른쪽</span>
-                <button
-                  type="button"
-                  className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    tune('right', -4, -80, 120);
-                  }}
-                >
-                  -
-                </button>
-                <span className="w-10 text-center">{currentTune.right}</span>
-                <button
-                  type="button"
-                  className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    tune('right', 4, -80, 120);
-                  }}
-                >
-                  +
-                </button>
+
+              <div className="flex items-center gap-2">
+                <span className="w-10 font-black">오른쪽</span>
+                <input
+                  type="range"
+                  min={-200}
+                  max={200}
+                  step={2}
+                  value={currentTune.right}
+                  onChange={(e) => setTune('right', Number(e.target.value), -200, 200)}
+                  className="w-[140px]"
+                />
+                <input
+                  type="number"
+                  className="w-[70px] rounded-lg border border-ink/20 bg-paper px-2 py-1 font-black"
+                  value={currentTune.right}
+                  onChange={(e) => setTune('right', Number(e.target.value || 0), -200, 200)}
+                />
               </div>
+
               <button
                 type="button"
                 className="mt-1 px-2 py-1 rounded-lg border border-ink/20 bg-stamp text-white font-black"
