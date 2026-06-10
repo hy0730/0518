@@ -126,18 +126,9 @@ export default function JungchosaGame({ stageId, onComplete, regionData }: Minig
 
       {/* 세로(450x800) 최적화 메인 */}
       <div className="mt-2 flex-1 min-h-0 rounded-3xl border border-ink/30 bg-paper2/90 shadow-paper overflow-hidden relative">
-        <>
-          {/* 배경: 돌기둥 클로즈업(Zoom-in 느낌) */}
-          <div
-            className="absolute inset-0 bg-cover bg-center scale-[1.12]"
-            style={{
-              backgroundImage: `linear-gradient(rgba(244,235,217,0.08), rgba(244,235,217,0.22)), url('${stoneBg}')`,
-            }}
-          />
-
-          <div className="absolute inset-0 p-3 grid grid-cols-[minmax(0,0.95fr)_minmax(0,0.8fr)_minmax(0,1.05fr)] gap-3">
+        <div className="h-full p-3 grid grid-cols-[minmax(0,0.95fr)_minmax(0,0.8fr)_minmax(0,1.05fr)] gap-3">
             {/* 왼쪽: 명문 이미지 */}
-            <div className="min-h-0 min-w-0 rounded-3xl border border-ink/20 bg-paper/60 overflow-hidden relative">
+            <div className="min-h-0 min-w-0 rounded-3xl border border-ink/20 bg-paper/88 overflow-hidden relative">
               <div className="h-full px-3 py-3 flex flex-col gap-3">
                 <div className="text-sm font-black">명문 이미지</div>
                 <div className="text-[11px] opacity-80">당간지주에 새겨진 실제 명문 모습을 살펴보자.</div>
@@ -151,7 +142,7 @@ export default function JungchosaGame({ stageId, onComplete, regionData }: Minig
             {/* 가운데: 명문 빈칸 */}
             <div
               className={[
-                'min-h-0 min-w-0 rounded-3xl border border-ink/20 bg-paper/55 overflow-hidden relative',
+                'min-h-0 min-w-0 rounded-3xl border border-ink/20 bg-paper/88 overflow-hidden relative',
                 quizShake ? 'shakeFx' : '',
               ].join(' ')}
             >
@@ -183,7 +174,7 @@ export default function JungchosaGame({ stageId, onComplete, regionData }: Minig
             </div>
 
             {/* 오른쪽: 해독 */}
-            <div className="min-h-0 min-w-0 rounded-3xl border border-ink/20 bg-paper/70 p-3 flex flex-col overflow-hidden">
+            <div className="min-h-0 min-w-0 rounded-3xl border border-ink/20 bg-paper/88 p-3 flex flex-col overflow-hidden">
               <div className="text-sm font-black">해독</div>
               <div className="mt-1 text-[11px] opacity-80">가운데 빈칸에 맞는 해독 조각을 골라보자.</div>
               <div className="mt-2 flex-1 min-h-0 grid grid-rows-4 gap-2">
@@ -209,8 +200,7 @@ export default function JungchosaGame({ stageId, onComplete, regionData }: Minig
                 })}
               </div>
             </div>
-          </div>
-        </>
+        </div>
       </div>
 
       {/* 토스트 */}
