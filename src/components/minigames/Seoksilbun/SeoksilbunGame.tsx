@@ -574,36 +574,62 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
 
         {/* Phase4 퀴즈 오버레이 */}
         {phase === 'QUIZ' && (
-          <div className="absolute left-1/2 top-3 -translate-x-1/2 w-[520px] max-w-[92%]">
+          <div className="absolute left-1/2 top-3 -translate-x-1/2 w-[560px] max-w-[94%]">
             <div className="rounded-3xl border border-ink/25 bg-paper2/90 p-3 shadow-paper">
               <div className="text-sm font-black">이 무덤의 주인은</div>
               <div className="mt-2 text-sm font-black leading-relaxed">
                 <span
                   data-slot="1"
                   data-interactive="true"
-                  className={`inline-flex items-center justify-center min-w-[110px] px-2 py-1 rounded-xl border-2 border-dashed border-amber-300/60 bg-amber-300/10 ${
+                  className={`inline-flex items-center justify-center min-w-[120px] px-3 py-1.5 rounded-xl border-2 border-dashed border-sky-400/80 bg-sky-100/70 text-sky-900 ${
                     shakeSlot === 1 ? 'slotShake' : ''
                   }`}
                   onClick={() => setBlank1(null)}
                   title="클릭하면 비울 수 있어요"
                 >
-                  {blank1 ?? '빈칸 1'}
+                  {blank1 ?? '빈칸 1 · 나라'}
                 </span>{' '}
                 시대의{' '}
                 <span
                   data-slot="2"
                   data-interactive="true"
-                  className={`inline-flex items-center justify-center min-w-[110px] px-2 py-1 rounded-xl border-2 border-dashed border-amber-300/60 bg-amber-300/10 ${
+                  className={`inline-flex items-center justify-center min-w-[120px] px-3 py-1.5 rounded-xl border-2 border-dashed border-violet-400/80 bg-violet-100/70 text-violet-900 ${
                     shakeSlot === 2 ? 'slotShake' : ''
                   }`}
                   onClick={() => setBlank2(null)}
                   title="클릭하면 비울 수 있어요"
                 >
-                  {blank2 ?? '빈칸 2'}
+                  {blank2 ?? '빈칸 2 · 계급'}
                 </span>
                 (이)었을 것이다.
               </div>
-              <div className="mt-2 text-[11px] opacity-80">카드를 드래그(또는 클릭)해서 빈칸을 채워보자.</div>
+              <div className="mt-2 text-[11px] opacity-80">가운데 카드 더미에서 골라 드래그(또는 클릭)해서 빈칸을 채워보자.</div>
+
+              <div className="mt-3 rounded-2xl border border-ink/15 bg-paper/55 p-3">
+                <div className="flex flex-wrap items-center justify-center gap-2">
+                  {WORD_CARDS.map((w) => {
+                    const isNation = wordType(w) === 'NATION';
+                    return (
+                      <div
+                        key={w}
+                        data-interactive="true"
+                        className={[
+                          'px-3 py-2 rounded-xl border text-[12px] font-black cursor-grab active:cursor-grabbing shadow-md touch-none min-w-[74px] text-center',
+                          isNation
+                            ? 'border-sky-300/80 bg-sky-50/90 text-sky-900 hover:bg-sky-100'
+                            : 'border-violet-300/80 bg-violet-50/90 text-violet-900 hover:bg-violet-100',
+                        ].join(' ')}
+                        onPointerDown={(e) => startDrag(e, { kind: 'word', id: w, label: w })}
+                        onPointerMove={updateDrag}
+                        onPointerUp={endDrag}
+                        title="드래그 또는 클릭"
+                      >
+                        {w}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -657,22 +683,6 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
 
           {phase === 'QUIZ' && (
             <>
-              <div className="flex items-center gap-1">
-                {WORD_CARDS.map((w) => (
-                  <div
-                    key={w}
-                    data-interactive="true"
-                    className="rounded-xl border border-ink/25 bg-paper/70 px-2 py-2 text-[11px] font-black hover:bg-paper/90 cursor-grab active:cursor-grabbing shadow-md touch-none"
-                    onPointerDown={(e) => startDrag(e, { kind: 'word', id: w, label: w })}
-                    onPointerMove={updateDrag}
-                    onPointerUp={endDrag}
-                    title="드래그 또는 클릭"
-                  >
-                    {w}
-                  </div>
-                ))}
-              </div>
-
               <button
                 type="button"
                 disabled={!canSubmit}
