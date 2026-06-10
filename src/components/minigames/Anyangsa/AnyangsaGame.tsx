@@ -332,21 +332,23 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
                   />
 
                   {/* 실시간 타이핑: 오른쪽 위부터 세로쓰기 */}
-                  <div className="absolute right-[22%] top-[12%] h-[68%] w-[40%]">
+                  <div className="absolute right-[20%] top-[10%] h-[72%] w-[36%]">
                     <div
-                      className="h-full w-full text-[18px] md:text-[22px] font-black tracking-tight"
+                      className="h-full w-full text-[18px] md:text-[22px] font-black"
                       style={{
-                        color: 'rgba(74,55,40,0.55)',
+                        color: 'rgba(74,55,40,0.58)',
                         textShadow:
-                          '1px 1px 0 rgba(255,255,255,0.35), -1px -1px 0 rgba(0,0,0,0.08), 0 2px 6px rgba(74,55,40,0.15)',
-                        filter: 'contrast(1.05)',
+                          '0.5px 0.5px 0 rgba(255,255,255,0.22), -0.5px -0.5px 0 rgba(54,40,30,0.16), 0 1px 2px rgba(54,40,30,0.12), 0 3px 8px rgba(74,55,40,0.10)',
+                        filter: 'contrast(1.08) saturate(0.92)',
                         whiteSpace: 'pre-wrap',
                         wordBreak: 'break-all',
-                        lineHeight: 1.5,
+                        lineHeight: 1.72,
+                        letterSpacing: '0.08em',
                         writingMode: 'vertical-rl',
                         textOrientation: 'mixed',
                         direction: 'rtl',
                         textAlign: 'start',
+                        WebkitTextStroke: '0.35px rgba(60,46,36,0.16)',
                       }}
                     >
                       {engraved ?? input}
