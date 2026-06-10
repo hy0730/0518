@@ -26,6 +26,7 @@ const REAL = '/assets/images/relic_turtle_real.png'; // 실제 문화유산 사�
 const GUIBU_EMPTY = '/assets/images/relic_gwibu_base_front.png';
 const GUIBU_FULL = '/assets/images/relic_gwibu_complete.png';
 const STELE_BODY = '/assets/images/relic_gwibu_body.png';
+const MAX_INSCRIBE_CHARS = 32;
 
 const FRAGMENTS: { id: FragmentId; label: string; img: string; x: number; y: number }[] = [
   { id: 'f1', label: '비석 조각', img: '/assets/images/relic_gwibu_head.png', x: 14, y: 18 },
@@ -392,14 +393,17 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
                 <textarea
                   value={input}
                   onChange={(e) => {
-                    const next = e.target.value;
+                    let next = e.target.value;
                     const lines = next.split('\n');
                     // 4줄 초과 입력은 차단(요청)
                     if (lines.length > 4) return;
+                    // 글자수 제한(요청): 'ㅇ' 32개 길이만큼만 입력 가능
+                    if (next.length > MAX_INSCRIBE_CHARS) next = next.slice(0, MAX_INSCRIBE_CHARS);
                     setInput(next);
                   }}
                   placeholder={'예:\n안양의 문화유산을\n오래오래 지켜요\n우리 모두 함께해요'}
                   className="flex-1 min-h-[240px] rounded-2xl border-2 border-ink/25 bg-paper2 px-3 py-3 text-sm font-bold outline-none resize-none"
+                  maxLength={MAX_INSCRIBE_CHARS}
                   disabled={engraving || !!engraved}
                 />
                 <button
