@@ -59,6 +59,19 @@ export default function JungchosaGame({ stageId, onComplete, regionData }: Minig
   const [quizShake, setQuizShake] = useState(false);
   const [glow, setGlow] = useState(false);
   const [resultModal, setResultModal] = useState(false);
+  const [layoutTune, setLayoutTune] = useState({
+    left: 0.9,
+    center: 1.1,
+    right: 0.9,
+    top: 30,
+    gap: 6,
+    pad: 6,
+  });
+
+  const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
+  const tune = (key: keyof typeof layoutTune, delta: number, min: number, max: number) => {
+    setLayoutTune((prev) => ({ ...prev, [key]: clamp(prev[key] + delta, min, max) }));
+  };
 
   const handlePickChoice = (id: QuizId) => {
     startIfNeeded();
@@ -124,7 +137,77 @@ export default function JungchosaGame({ stageId, onComplete, regionData }: Minig
         <div className="text-[10px] font-bold opacity-80">명문 해독</div>
       </div>
 
-      <div className="absolute inset-x-0 top-[30px] bottom-0 px-1.5 pb-1.5 grid grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)_minmax(0,0.9fr)] gap-1.5">
+      {/* 실시간 레이아웃 조정 패널 */}
+      {!opening && !introInfoOpen && (
+        <div className="absolute right-2 top-2 z-20 rounded-2xl border border-ink/20 bg-paper2/92 px-2 py-2 shadow-paper">
+          <div className="text-[11px] font-black">레이아웃 조절</div>
+          <div className="mt-1 flex flex-col gap-1 text-[10px]">
+            <div className="flex items-center gap-1">
+              <span className="w-12">1칸</span>
+              <button type="button" className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper" onClick={() => tune('left', -0.1, 0.5, 1.8)}>-</button>
+              <span className="w-8 text-center">{layoutTune.left.toFixed(1)}</span>
+              <button type="button" className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper" onClick={() => tune('left', 0.1, 0.5, 1.8)}>+</button>
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="w-12">2칸</span>
+              <button type="button" className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper" onClick={() => tune('center', -0.1, 0.6, 2.0)}>-</button>
+              <span className="w-8 text-center">{layoutTune.center.toFixed(1)}</span>
+              <button type="button" className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper" onClick={() => tune('center', 0.1, 0.6, 2.0)}>+</button>
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="w-12">3칸</span>
+              <button type="button" className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper" onClick={() => tune('right', -0.1, 0.5, 1.8)}>-</button>
+              <span className="w-8 text-center">{layoutTune.right.toFixed(1)}</span>
+              <button type="button" className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper" onClick={() => tune('right', 0.1, 0.5, 1.8)}>+</button>
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="w-12">상단</span>
+              <button type="button" className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper" onClick={() => tune('top', -2, 18, 80)}>-</button>
+              <span className="w-8 text-center">{layoutTune.top}</span>
+              <button type="button" className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper" onClick={() => tune('top', 2, 18, 80)}>+</button>
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="w-12">간격</span>
+              <button type="button" className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper" onClick={() => tune('gap', -1, 2, 16)}>-</button>
+              <span className="w-8 text-center">{layoutTune.gap}</span>
+              <button type="button" className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper" onClick={() => tune('gap', 1, 2, 16)}>+</button>
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="w-12">여백</span>
+              <button type="button" className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper" onClick={() => tune('pad', -1, 0, 16)}>-</button>
+              <span className="w-8 text-center">{layoutTune.pad}</span>
+              <button type="button" className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper" onClick={() => tune('pad', 1, 0, 16)}>+</button>
+            </div>
+            <button
+              type="button"
+              className="mt-1 px-2 py-1 rounded-lg border border-ink/20 bg-stamp text-white font-black"
+              onClick={() =>
+                setLayoutTune({
+                  left: 0.9,
+                  center: 1.1,
+                  right: 0.9,
+                  top: 30,
+                  gap: 6,
+                  pad: 6,
+                })
+              }
+            >
+              초기화
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div
+        className="absolute bottom-0 grid"
+        style={{
+          left: `${layoutTune.pad}px`,
+          right: `${layoutTune.pad}px`,
+          top: `${layoutTune.top}px`,
+          gap: `${layoutTune.gap}px`,
+          gridTemplateColumns: `minmax(0, ${layoutTune.left}fr) minmax(0, ${layoutTune.center}fr) minmax(0, ${layoutTune.right}fr)`,
+        }}
+      >
             {/* 왼쪽: 명문 이미지 */}
             <div className="min-h-0 min-w-0 rounded-[22px] border border-ink/20 bg-paper/92 overflow-hidden relative shadow-paper">
               <div className="h-full px-2 py-2 flex flex-col gap-2">
