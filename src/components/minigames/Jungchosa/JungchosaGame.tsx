@@ -135,20 +135,20 @@ export default function JungchosaGame({ stageId, onComplete, regionData }: Minig
             }}
           />
 
-          <div className="absolute inset-0 p-3 grid grid-cols-2 gap-3">
+          <div className="absolute inset-0 p-3 grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-3">
             {/* 왼쪽: 명문 */}
             <div
               className={[
-                'min-h-0 rounded-3xl border border-ink/20 bg-paper/55 overflow-hidden relative',
+                'min-h-0 min-w-0 rounded-3xl border border-ink/20 bg-paper/55 overflow-hidden relative',
                 quizShake ? 'shakeFx' : '',
               ].join(' ')}
             >
               {glow && <div className="absolute inset-0 bg-gradient-to-b from-amber-200/12 to-transparent animate-pulse pointer-events-none" />}
 
-              <div className="absolute inset-0 px-4 py-4 flex flex-col gap-3">
+              <div className="h-full px-4 py-4 flex flex-col gap-3">
                 <div className="text-sm font-black">명문</div>
                 <div className="text-[11px] opacity-80">돌에 새겨진 글자를 순서대로 맞춰보자.</div>
-                <div className="flex-1 grid grid-rows-4 gap-2">
+                <div className="flex-1 min-h-0 grid grid-rows-4 gap-2">
                   {quizSlots.map((q, i) => (
                     <div
                       key={i}
@@ -171,10 +171,10 @@ export default function JungchosaGame({ stageId, onComplete, regionData }: Minig
             </div>
 
             {/* 오른쪽: 해독 */}
-            <div className="min-h-0 rounded-3xl border border-ink/20 bg-paper/70 p-3 flex flex-col">
+            <div className="min-h-0 min-w-0 rounded-3xl border border-ink/20 bg-paper/70 p-3 flex flex-col overflow-hidden">
               <div className="text-sm font-black">해독</div>
               <div className="mt-1 text-[11px] opacity-80">왼쪽 명문 빈칸에 맞는 해독 조각을 골라보자.</div>
-              <div className="mt-2 grid grid-rows-4 gap-2 h-[calc(100%-22px)]">
+              <div className="mt-2 flex-1 min-h-0 grid grid-rows-4 gap-2">
                 {quizChoices.map((id) => {
                   const used = quizSlots.includes(id);
                   return (
