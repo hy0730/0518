@@ -8,6 +8,17 @@ import { useToast } from '../common/useToast';
 type Phase = 'QUIZ';
 type QuizId = 'A' | 'B' | 'C' | 'D';
 
+type FlyAnim = {
+  id: QuizId;
+  text: string;
+  startX: number;
+  startY: number;
+  dx: number;
+  dy: number;
+  mx: number;
+  my: number;
+};
+
 function shuffle<T>(arr: T[]) {
   const a = arr.slice();
   for (let i = a.length - 1; i > 0; i -= 1) {
@@ -59,19 +70,23 @@ export default function JungchosaGame({ stageId, onComplete, regionData }: Minig
   const [quizShake, setQuizShake] = useState(false);
   const [glow, setGlow] = useState(false);
   const [resultModal, setResultModal] = useState(false);
-  const [layoutTune, setLayoutTune] = useState({
-    left: 0.9,
-    center: 1.1,
-    right: 0.9,
-    top: 30,
-    gap: 6,
-    pad: 6,
-  });
+  const [completeOverlay, setCompleteOverlay] = useState(false);
 
-  const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
-  const tune = (key: keyof typeof layoutTune, delta: number, min: number, max: number) => {
-    setLayoutTune((prev) => ({ ...prev, [key]: clamp(prev[key] + delta, min, max) }));
-  };
+  // 플라잉 애니메이션(선택지 -> 빈칸, 또는 빈칸 -> 선택지)
+  const [fly, setFly] = useState<FlyAnim | null>(null);
+  const [animLock, setAnimLock] = useState(false);
+  const choiceRefs = useRef<Record<QuizId, HTMLButtonElement | null>>({ A: null, B: null, C: null, D: null });
+  const slotRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+  const nextIndex = useMemo(() => quizSlots.findIndex((x) => !x), [quizSlots]);
+
+  const storyHint = useMemo(() => {
+    if (!nextQuiz) return '';
+    if (nextQuiz === 'A') return '먼저 언제(연도)인지부터 찾아볼까?';
+    if (nextQuiz === 'B') return '연도를 알았으면, 어느 절의 기록인지 찾아보자!';
+    if (nextQuiz === 'C') return '이제 장소(승악/관악산)를 찾아볼까?';
+    return '마지막으로 어느 해(정미년)인지 확인해보자!';
+  }, [nextQuiz]);
 
   const handlePickChoice = (id: QuizId) => {
     startIfNeeded();
@@ -79,6 +94,8 @@ export default function JungchosaGame({ stageId, onComplete, regionData }: Minig
     if (!nextQuiz) return;
     if (glow) return;
     if (introInfoOpen) return;
+    if (completeOverlay) return;
+    if (animLock) return;
     if (quizSlots.includes(id)) return;
 
     if (id !== nextQuiz) {
@@ -86,10 +103,44 @@ export default function JungchosaGame({ stageId, onComplete, regionData }: Minig
       audio.playSfx('wrong', 0.75);
       setQuizShake(true);
       window.setTimeout(() => setQuizShake(false), 420);
-      showToast('오답! 힌트: A → B → C → D 순서로 맞춰보자.');
+      showToast(`다음 순서는 무엇일까? ${storyHint}`);
       return;
     }
 
+    // 플라잉 애니메이션으로 "끼워 넣는 손맛" 추가
+    const slotIdx = nextIndex;
+    const fromEl = choiceRefs.current[id];
+    const toEl = slotIdx >= 0 ? slotRefs.current[slotIdx] : null;
+    if (fromEl && toEl) {
+      const fr = fromEl.getBoundingClientRect();
+      const tr = toEl.getBoundingClientRect();
+      const sx = fr.left + fr.width / 2;
+      const sy = fr.top + fr.height / 2;
+      const ex = tr.left + tr.width / 2;
+      const ey = tr.top + tr.height / 2;
+      const dx = ex - sx;
+      const dy = ey - sy;
+      const mx = dx * 0.5;
+      const my = dy * 0.35 - 44; // 곡선 느낌(위로 살짝 튀기기)
+      setAnimLock(true);
+      setFly({ id, text: quizTexts[id], startX: sx, startY: sy, dx, dy, mx, my });
+      window.setTimeout(() => {
+        audio.playSfx('correct', 0.75);
+        audio.playUrl('/assets/sounds/sfx_hit.mp3', 0.7);
+        setQuizSlots((prev) => {
+          const i = prev.findIndex((x) => !x);
+          if (i < 0) return prev;
+          const next = prev.slice();
+          next[i] = id;
+          return next;
+        });
+        setFly(null);
+        setAnimLock(false);
+      }, 320);
+      return;
+    }
+
+    // fallback
     audio.playSfx('correct', 0.75);
     setQuizSlots((prev) => {
       const i = prev.findIndex((x) => !x);
@@ -100,14 +151,50 @@ export default function JungchosaGame({ stageId, onComplete, regionData }: Minig
     });
   };
 
+  const handleClickSlot = (idx: number) => {
+    startIfNeeded();
+    if (phase !== 'QUIZ') return;
+    if (introInfoOpen) return;
+    if (completeOverlay) return;
+    if (glow) return;
+    if (animLock) return;
+    const id = quizSlots[idx];
+    if (!id) return;
+
+    const fromEl = slotRefs.current[idx];
+    const toEl = choiceRefs.current[id];
+    if (fromEl && toEl) {
+      const fr = fromEl.getBoundingClientRect();
+      const tr = toEl.getBoundingClientRect();
+      const sx = fr.left + fr.width / 2;
+      const sy = fr.top + fr.height / 2;
+      const ex = tr.left + tr.width / 2;
+      const ey = tr.top + tr.height / 2;
+      const dx = ex - sx;
+      const dy = ey - sy;
+      const mx = dx * 0.5;
+      const my = dy * 0.35 - 36;
+      setAnimLock(true);
+      setFly({ id, text: quizTexts[id], startX: sx, startY: sy, dx, dy, mx, my });
+      window.setTimeout(() => {
+        audio.playUrl('/assets/sounds/sfx_paper_slide.mp3', 0.65);
+        setQuizSlots((prev) => prev.map((v, i) => (i >= idx ? null : v)));
+        setFly(null);
+        setAnimLock(false);
+      }, 320);
+      return;
+    }
+
+    setQuizSlots((prev) => prev.map((v, i) => (i >= idx ? null : v)));
+  };
+
   useEffect(() => {
     if (phase !== 'QUIZ') return;
     const done = quizSlots.every(Boolean);
     if (!done) return;
     setGlow(true);
     audio.playUrl('/assets/sounds/sfx_completed.mp3', 0.9);
-    const t = window.setTimeout(() => setResultModal(true), 550);
-    return () => window.clearTimeout(t);
+    setCompleteOverlay(true);
   }, [phase, quizSlots]);
 
   return (
@@ -129,6 +216,18 @@ export default function JungchosaGame({ stageId, onComplete, regionData }: Minig
           100% { transform: perspective(900px) rotateY(0deg) translateX(0) scale(1); opacity: 1; }
         }
         .noteOpenFx { transform-origin: left center; animation: noteOpen 820ms cubic-bezier(.2,.9,.2,1) both; }
+
+        @keyframes flyCurve {
+          0% { transform: translate(0, 0) scale(1); opacity: 1; }
+          60% { transform: translate(var(--mx), var(--my)) scale(1.06); }
+          100% { transform: translate(var(--dx), var(--dy)) scale(0.92); opacity: 1; }
+        }
+        .flyToken { animation: flyCurve 300ms cubic-bezier(.2,.9,.2,1) both; }
+        @keyframes popIn {
+          0% { transform: scale(0.96); opacity: 0; }
+          100% { transform: scale(1); opacity: 1; }
+        }
+        .popInFx { animation: popIn 180ms ease-out both; }
       `}</style>
 
       {/* 상단 바: 게임 컨테이너를 직접 사용하고, 보드는 그 아래부터 거의 전체 높이를 사용 */}
@@ -137,77 +236,8 @@ export default function JungchosaGame({ stageId, onComplete, regionData }: Minig
         <div className="text-[10px] font-bold opacity-80">명문 해독</div>
       </div>
 
-      {/* 실시간 레이아웃 조정 패널 */}
-      {!opening && !introInfoOpen && (
-        <div className="absolute right-2 top-2 z-20 rounded-2xl border border-ink/20 bg-paper2/92 px-2 py-2 shadow-paper">
-          <div className="text-[11px] font-black">레이아웃 조절</div>
-          <div className="mt-1 flex flex-col gap-1 text-[10px]">
-            <div className="flex items-center gap-1">
-              <span className="w-12">1칸</span>
-              <button type="button" className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper" onClick={() => tune('left', -0.1, 0.5, 1.8)}>-</button>
-              <span className="w-8 text-center">{layoutTune.left.toFixed(1)}</span>
-              <button type="button" className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper" onClick={() => tune('left', 0.1, 0.5, 1.8)}>+</button>
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="w-12">2칸</span>
-              <button type="button" className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper" onClick={() => tune('center', -0.1, 0.6, 2.0)}>-</button>
-              <span className="w-8 text-center">{layoutTune.center.toFixed(1)}</span>
-              <button type="button" className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper" onClick={() => tune('center', 0.1, 0.6, 2.0)}>+</button>
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="w-12">3칸</span>
-              <button type="button" className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper" onClick={() => tune('right', -0.1, 0.5, 1.8)}>-</button>
-              <span className="w-8 text-center">{layoutTune.right.toFixed(1)}</span>
-              <button type="button" className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper" onClick={() => tune('right', 0.1, 0.5, 1.8)}>+</button>
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="w-12">상단</span>
-              <button type="button" className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper" onClick={() => tune('top', -2, 18, 80)}>-</button>
-              <span className="w-8 text-center">{layoutTune.top}</span>
-              <button type="button" className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper" onClick={() => tune('top', 2, 18, 80)}>+</button>
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="w-12">간격</span>
-              <button type="button" className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper" onClick={() => tune('gap', -1, 2, 16)}>-</button>
-              <span className="w-8 text-center">{layoutTune.gap}</span>
-              <button type="button" className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper" onClick={() => tune('gap', 1, 2, 16)}>+</button>
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="w-12">여백</span>
-              <button type="button" className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper" onClick={() => tune('pad', -1, 0, 16)}>-</button>
-              <span className="w-8 text-center">{layoutTune.pad}</span>
-              <button type="button" className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper" onClick={() => tune('pad', 1, 0, 16)}>+</button>
-            </div>
-            <button
-              type="button"
-              className="mt-1 px-2 py-1 rounded-lg border border-ink/20 bg-stamp text-white font-black"
-              onClick={() =>
-                setLayoutTune({
-                  left: 0.9,
-                  center: 1.1,
-                  right: 0.9,
-                  top: 30,
-                  gap: 6,
-                  pad: 6,
-                })
-              }
-            >
-              초기화
-            </button>
-          </div>
-        </div>
-      )}
-
-      <div
-        className="absolute bottom-0 grid"
-        style={{
-          left: `${layoutTune.pad}px`,
-          right: `${layoutTune.pad}px`,
-          top: `${layoutTune.top}px`,
-          gap: `${layoutTune.gap}px`,
-          gridTemplateColumns: `minmax(0, ${layoutTune.left}fr) minmax(0, ${layoutTune.center}fr) minmax(0, ${layoutTune.right}fr)`,
-        }}
-      >
+      {/* 바깥 레이아웃 조절은 MiniGameManager에서 처리 */}
+      <div className="absolute inset-x-0 top-[30px] bottom-0 px-1.5 pb-1.5 grid grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)_minmax(0,0.9fr)] gap-1.5">
             {/* 왼쪽: 명문 이미지 */}
             <div className="min-h-0 min-w-0 rounded-[22px] border border-ink/20 bg-paper/92 overflow-hidden relative shadow-paper">
               <div className="h-full px-2 py-2 flex flex-col gap-2">
@@ -239,9 +269,15 @@ export default function JungchosaGame({ stageId, onComplete, regionData }: Minig
                   {quizSlots.map((q, i) => (
                     <div
                       key={i}
+                      ref={(el) => {
+                        slotRefs.current[i] = el;
+                      }}
+                      data-interactive="true"
+                      onClick={() => handleClickSlot(i)}
                       className={[
                         'rounded-2xl border-2 border-dashed px-2 py-2 text-center font-black flex items-center justify-center',
                         'border-ink/25 bg-paper/70',
+                        i === nextIndex && !q && !glow && !introInfoOpen ? 'ring-2 ring-amber-300/70 animate-pulse' : '',
                         q
                           ? glow
                             ? 'text-amber-700 drop-shadow-[0_0_10px_rgba(245,158,11,0.65)] animate-pulse'
@@ -260,6 +296,9 @@ export default function JungchosaGame({ stageId, onComplete, regionData }: Minig
             {/* 오른쪽: 해독 */}
             <div className="min-h-0 min-w-0 rounded-[22px] border border-ink/20 bg-paper/92 p-2 flex flex-col overflow-hidden shadow-paper">
               <div className="text-sm font-black">해독</div>
+              <div className="mt-1 text-[11px] font-black text-ink/80">
+                {!introInfoOpen && !glow ? `다음 순서는 무엇일까? (빈칸 ${Math.max(1, nextIndex + 1)})` : ' '}
+              </div>
               <div className="mt-2 flex-1 min-h-0 grid grid-rows-4 gap-1.5">
                 {quizChoices.map((id) => {
                   const used = quizSlots.includes(id);
@@ -267,6 +306,9 @@ export default function JungchosaGame({ stageId, onComplete, regionData }: Minig
                     <button
                       key={id}
                       type="button"
+                      ref={(el) => {
+                        choiceRefs.current[id] = el;
+                      }}
                       disabled={used || glow || introInfoOpen}
                       onClick={() => handlePickChoice(id)}
                       className={[
@@ -284,6 +326,49 @@ export default function JungchosaGame({ stageId, onComplete, regionData }: Minig
               </div>
             </div>
       </div>
+
+      {/* 플라잉 애니메이션 토큰 */}
+      {fly && (
+        <div
+          className="fixed z-[99998] pointer-events-none"
+          style={{ left: fly.startX, top: fly.startY, transform: 'translate(-50%, -50%)' }}
+        >
+          <div
+            className="flyToken rounded-2xl border border-ink/25 bg-paper2/95 px-3 py-2 text-[12px] font-black shadow-paper"
+            style={
+              {
+                ['--dx' as any]: `${fly.dx}px`,
+                ['--dy' as any]: `${fly.dy}px`,
+                ['--mx' as any]: `${fly.mx}px`,
+                ['--my' as any]: `${fly.my}px`,
+              } as React.CSSProperties
+            }
+          >
+            {fly.text}
+          </div>
+        </div>
+      )}
+
+      {/* 완료 피드백 */}
+      {completeOverlay && (
+        <button
+          type="button"
+          className="absolute inset-0 z-[99990] grid place-items-center bg-ink/25 p-4"
+          onClick={() => {
+            setCompleteOverlay(false);
+            setResultModal(true);
+          }}
+        >
+          <div className="note-panel px-6 py-5 popInFx">
+            <div className="text-lg font-black text-center">해독 완료!</div>
+            <div className="mt-2 text-sm opacity-90 text-center leading-relaxed">
+              명문을 모두 맞췄어.
+              <br />
+              화면을 탭하면 다음으로 넘어가요.
+            </div>
+          </div>
+        </button>
+      )}
 
       {/* 토스트 */}
       {toast && (
