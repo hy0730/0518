@@ -319,47 +319,57 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
           </div>
         ) : (
           <div className="absolute inset-0 p-3 grid place-items-center">
-            {/* 세로 모드 스테이지 */}
-            <div className="w-[min(460px,92%)] h-full max-h-[820px] flex flex-col gap-3">
+            {/* 좌우 분할 스테이지: 왼쪽 비석 몸통 / 오른쪽 입력 */}
+            <div className="w-full h-full grid grid-cols-[1.08fr_0.92fr] gap-3">
               <div className="note-panel px-4 py-3">
                 <div className="text-sm font-black">비석 글씨 새기기</div>
-                <div className="mt-1 text-sm opacity-90 leading-relaxed">비석 몸통에 남기고 싶은 말을 적어보자! (엔터로 줄바꿈 가능)</div>
+                <div className="mt-1 text-sm opacity-90 leading-relaxed">
+                  비석 몸통에 남기고 싶은 말을 적어보자! 오른쪽 위부터 세로로 새겨져요.
+                </div>
               </div>
 
-              <div className="flex-1 min-h-0 rounded-3xl border border-ink/20 bg-paper/55 overflow-hidden relative">
-                {/* 몸통만 표시 */}
-                <img
-                  src={STELE_BODY}
-                  alt="비석 몸통"
-                  className="absolute inset-0 w-full h-full object-contain drop-shadow-[0_18px_40px_rgba(74,55,40,0.18)]"
-                  draggable={false}
-                />
+              <div className="min-h-0 rounded-3xl border border-ink/20 bg-paper/55 overflow-hidden relative">
+                <div className="absolute inset-0 p-4">
+                  {/* 몸통만 표시 */}
+                  <img
+                    src={STELE_BODY}
+                    alt="비석 몸통"
+                    className="absolute inset-4 w-[calc(100%-2rem)] h-[calc(100%-2rem)] object-contain drop-shadow-[0_18px_40px_rgba(74,55,40,0.18)]"
+                    draggable={false}
+                  />
 
-                {/* 실시간 타이핑(음각 느낌) */}
-                <div className="absolute left-1/2 top-[22%] -translate-x-1/2 w-[72%] text-center">
-                  <div
-                    className="text-[18px] md:text-[22px] font-black tracking-tight"
-                    style={{
-                      color: 'rgba(74,55,40,0.55)',
-                      textShadow:
-                        '1px 1px 0 rgba(255,255,255,0.35), -1px -1px 0 rgba(0,0,0,0.08), 0 2px 6px rgba(74,55,40,0.15)',
-                      filter: 'contrast(1.05)',
-                      whiteSpace: 'pre-wrap',
-                      wordBreak: 'keep-all',
-                      lineHeight: 1.25,
-                    }}
-                  >
-                    {engraved ?? input}
+                  {/* 실시간 타이핑: 오른쪽 위부터 세로쓰기 */}
+                  <div className="absolute right-[24%] top-[14%] h-[62%] w-[42%]">
+                    <div
+                      className="h-full w-full text-[17px] md:text-[20px] font-black tracking-tight"
+                      style={{
+                        color: 'rgba(74,55,40,0.55)',
+                        textShadow:
+                          '1px 1px 0 rgba(255,255,255,0.35), -1px -1px 0 rgba(0,0,0,0.08), 0 2px 6px rgba(74,55,40,0.15)',
+                        filter: 'contrast(1.05)',
+                        whiteSpace: 'pre-wrap',
+                        wordBreak: 'break-all',
+                        lineHeight: 1.45,
+                        writingMode: 'vertical-rl',
+                        textOrientation: 'mixed',
+                        direction: 'rtl',
+                        textAlign: 'start',
+                      }}
+                    >
+                      {engraved ?? input}
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <div className="rounded-3xl border border-ink/20 bg-paper/70 p-3 flex flex-col gap-2">
+              <div className="min-h-0 rounded-3xl border border-ink/20 bg-paper/70 p-3 flex flex-col gap-3">
+                <div className="text-sm font-black">글씨 쓰는 칸</div>
+                <div className="text-xs opacity-80 leading-relaxed">엔터로 줄을 바꿀 수 있어요. 입력한 글은 왼쪽 비석에 실시간으로 세로로 보여요.</div>
                 <textarea
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  placeholder="예:\n문화유산 수호대 파이팅!\n우리 동네 유산을 지켜요!"
-                  className="w-full min-h-[96px] rounded-2xl border-2 border-ink/25 bg-paper2 px-3 py-3 text-sm font-bold outline-none resize-none"
+                  placeholder="예:\n문화유산 수호대\n파이팅!\n우리 동네 유산을\n지켜요!"
+                  className="flex-1 min-h-[220px] rounded-2xl border-2 border-ink/25 bg-paper2 px-3 py-3 text-sm font-bold outline-none resize-none"
                   disabled={engraving || !!engraved}
                 />
                 <button
