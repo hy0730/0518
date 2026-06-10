@@ -98,7 +98,7 @@ export default function JungchosaGame({ stageId, onComplete, regionData }: Minig
   }, [phase, quizSlots]);
 
   return (
-    <div className="w-full h-full p-0 text-ink flex flex-col relative">
+    <div className="w-full h-full relative text-ink">
       <style>{`
         @keyframes shakeX {
           0% { transform: translateX(0); }
@@ -118,16 +118,15 @@ export default function JungchosaGame({ stageId, onComplete, regionData }: Minig
         .noteOpenFx { transform-origin: left center; animation: noteOpen 820ms cubic-bezier(.2,.9,.2,1) both; }
       `}</style>
 
-      {/* 세로(450x800) 최적화 메인 - 상단까지 최대한 사용 */}
-      <div className="flex-1 min-h-0 rounded-[22px] border border-ink/30 bg-paper2/90 shadow-paper overflow-hidden relative">
-        <div className="absolute left-2 top-2 z-10 rounded-xl border border-ink/20 bg-paper2/88 px-2.5 py-1.5 pointer-events-none">
-          <div className="text-[13px] font-black tracking-tight leading-tight">{title}</div>
-          <div className="text-[10px] font-bold opacity-80">명문 해독</div>
-        </div>
+      {/* 상단 바: 게임 컨테이너를 직접 사용하고, 보드는 그 아래부터 거의 전체 높이를 사용 */}
+      <div className="absolute left-0 right-0 top-0 z-10 px-2 py-1.5 flex items-center justify-between">
+        <div className="text-sm font-black tracking-tight">{title}</div>
+        <div className="text-[10px] font-bold opacity-80">명문 해독</div>
+      </div>
 
-        <div className="h-full p-1.5 pt-12 grid grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)_minmax(0,0.9fr)] gap-1.5">
+      <div className="absolute inset-x-0 top-[30px] bottom-0 px-1.5 pb-1.5 grid grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)_minmax(0,0.9fr)] gap-1.5">
             {/* 왼쪽: 명문 이미지 */}
-            <div className="min-h-0 min-w-0 rounded-3xl border border-ink/20 bg-paper/88 overflow-hidden relative">
+            <div className="min-h-0 min-w-0 rounded-[22px] border border-ink/20 bg-paper/92 overflow-hidden relative shadow-paper">
               <div className="h-full px-2 py-2 flex flex-col gap-2">
                 <div className="text-sm font-black">명문 이미지</div>
                 <div className="flex-1 min-h-0 rounded-2xl border border-ink/20 bg-paper2/78 overflow-hidden relative">
@@ -145,7 +144,7 @@ export default function JungchosaGame({ stageId, onComplete, regionData }: Minig
             {/* 가운데: 명문 빈칸 */}
             <div
               className={[
-                'min-h-0 min-w-0 rounded-3xl border border-ink/20 bg-paper/88 overflow-hidden relative',
+                'min-h-0 min-w-0 rounded-[22px] border border-ink/20 bg-paper/92 overflow-hidden relative shadow-paper',
                 quizShake ? 'shakeFx' : '',
               ].join(' ')}
             >
@@ -176,7 +175,7 @@ export default function JungchosaGame({ stageId, onComplete, regionData }: Minig
             </div>
 
             {/* 오른쪽: 해독 */}
-            <div className="min-h-0 min-w-0 rounded-3xl border border-ink/20 bg-paper/88 p-2 flex flex-col overflow-hidden">
+            <div className="min-h-0 min-w-0 rounded-[22px] border border-ink/20 bg-paper/92 p-2 flex flex-col overflow-hidden shadow-paper">
               <div className="text-sm font-black">해독</div>
               <div className="mt-2 flex-1 min-h-0 grid grid-rows-4 gap-1.5">
                 {quizChoices.map((id) => {
@@ -201,7 +200,6 @@ export default function JungchosaGame({ stageId, onComplete, regionData }: Minig
                 })}
               </div>
             </div>
-        </div>
       </div>
 
       {/* 토스트 */}
