@@ -320,28 +320,21 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
         ) : (
           <div className="absolute inset-0 p-3 grid place-items-center">
             {/* 좌우 분할 스테이지: 왼쪽 비석 몸통 / 오른쪽 입력 */}
-            <div className="w-full h-full grid grid-cols-[1.08fr_0.92fr] gap-3">
-              <div className="note-panel px-4 py-3">
-                <div className="text-sm font-black">비석 글씨 새기기</div>
-                <div className="mt-1 text-sm opacity-90 leading-relaxed">
-                  비석 몸통에 남기고 싶은 말을 적어보자! 오른쪽 위부터 세로로 새겨져요.
-                </div>
-              </div>
-
+            <div className="w-full h-full grid grid-cols-2 gap-3">
               <div className="min-h-0 rounded-3xl border border-ink/20 bg-paper/55 overflow-hidden relative">
-                <div className="absolute inset-0 p-4">
-                  {/* 몸통만 표시 */}
+                <div className="absolute inset-0 p-2 md:p-3">
+                  {/* 몸통만 표시: 가능한 한 크게 보여 태블릿에서도 잘 보이게 */}
                   <img
                     src={STELE_BODY}
                     alt="비석 몸통"
-                    className="absolute inset-4 w-[calc(100%-2rem)] h-[calc(100%-2rem)] object-contain drop-shadow-[0_18px_40px_rgba(74,55,40,0.18)]"
+                    className="absolute inset-1 md:inset-2 w-[calc(100%-0.5rem)] h-[calc(100%-0.5rem)] md:w-[calc(100%-1rem)] md:h-[calc(100%-1rem)] object-contain drop-shadow-[0_18px_40px_rgba(74,55,40,0.18)]"
                     draggable={false}
                   />
 
                   {/* 실시간 타이핑: 오른쪽 위부터 세로쓰기 */}
-                  <div className="absolute right-[24%] top-[14%] h-[62%] w-[42%]">
+                  <div className="absolute right-[22%] top-[12%] h-[68%] w-[40%]">
                     <div
-                      className="h-full w-full text-[17px] md:text-[20px] font-black tracking-tight"
+                      className="h-full w-full text-[18px] md:text-[22px] font-black tracking-tight"
                       style={{
                         color: 'rgba(74,55,40,0.55)',
                         textShadow:
@@ -349,7 +342,7 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
                         filter: 'contrast(1.05)',
                         whiteSpace: 'pre-wrap',
                         wordBreak: 'break-all',
-                        lineHeight: 1.45,
+                        lineHeight: 1.5,
                         writingMode: 'vertical-rl',
                         textOrientation: 'mixed',
                         direction: 'rtl',
@@ -363,13 +356,22 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
               </div>
 
               <div className="min-h-0 rounded-3xl border border-ink/20 bg-paper/70 p-3 flex flex-col gap-3">
+                <div className="note-panel px-4 py-3">
+                  <div className="text-sm font-black">비석 글씨 새기기</div>
+                  <div className="mt-1 text-sm opacity-90 leading-relaxed">
+                    남기고 싶은 말을 적어보자. 적은 글은 왼쪽 비석에 오른쪽 위부터 세로로 새겨져요.
+                  </div>
+                </div>
+
                 <div className="text-sm font-black">글씨 쓰는 칸</div>
-                <div className="text-xs opacity-80 leading-relaxed">엔터로 줄을 바꿀 수 있어요. 입력한 글은 왼쪽 비석에 실시간으로 세로로 보여요.</div>
+                <div className="text-xs opacity-80 leading-relaxed">
+                  엔터로 줄을 바꿀 수 있어요. 짧고 또박또박 쓰면 비석에 더 보기 좋게 보여요.
+                </div>
                 <textarea
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  placeholder="예:\n문화유산 수호대\n파이팅!\n우리 동네 유산을\n지켜요!"
-                  className="flex-1 min-h-[220px] rounded-2xl border-2 border-ink/25 bg-paper2 px-3 py-3 text-sm font-bold outline-none resize-none"
+                  placeholder={'예:\n안양의 문화유산을\n오래오래 지켜요\n우리 모두 함께해요'}
+                  className="flex-1 min-h-[240px] rounded-2xl border-2 border-ink/25 bg-paper2 px-3 py-3 text-sm font-bold outline-none resize-none"
                   disabled={engraving || !!engraved}
                 />
                 <button
