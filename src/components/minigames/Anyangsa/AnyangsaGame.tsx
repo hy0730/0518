@@ -390,6 +390,7 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
                 </div>
 
                 <textarea
+                  value={input}
                   onChange={(e) => {
                     const next = e.target.value;
                     const lines = next.split('\n');
@@ -397,10 +398,10 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
                     if (lines.length > 4) return;
                     setInput(next);
                   }}
-                  onChange={(e) => setInput(e.target.value)}
                   placeholder={'예:\n안양의 문화유산을\n오래오래 지켜요\n우리 모두 함께해요'}
                   className="flex-1 min-h-[240px] rounded-2xl border-2 border-ink/25 bg-paper2 px-3 py-3 text-sm font-bold outline-none resize-none"
                   disabled={engraving || !!engraved}
+                />
                 <button
                   type="button"
                   onClick={finishEngrave}
