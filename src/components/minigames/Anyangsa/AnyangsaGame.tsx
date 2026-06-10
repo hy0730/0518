@@ -158,8 +158,17 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
   const [engraved, setEngraved] = useState<string | null>(null);
   const [engraving, setEngraving] = useState(false);
   const [resultModal, setResultModal] = useState(false);
-  // 글씨창은 고정(요청): 폭 30%, 높이 40%
-  const INSCRIBE_BOX = { topPct: 10, rightPct: 20, widthPct: 30, heightPct: 40 };
+  // 글씨창(요청): 폭 30%, 높이 40% 고정 + 위치(top/right)만 조절 가능
+  const INSCRIBE_BOX_SIZE = { widthPct: 30, heightPct: 40 };
+  const [inscribePos, setInscribePos] = useState({ topPct: 10, rightPct: 20 });
+  const [inscribeTunerOpen, setInscribeTunerOpen] = useState(false);
+  const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
+  const moveInscribe = (patch: Partial<typeof inscribePos>) => {
+    setInscribePos((prev) => ({
+      topPct: clamp(patch.topPct ?? prev.topPct, 0, 40),
+      rightPct: clamp(patch.rightPct ?? prev.rightPct, 0, 50),
+    }));
+  };
   // 세로쓰기에서 "줄"은 개행 기준으로 계산(5줄 초과 시 자동 축소)
   const lineCount = useMemo(() => (engraved ?? input).split('\n').length, [engraved, input]);
   const fontScale = useMemo(() => (lineCount > 5 ? 5 / lineCount : 1), [lineCount]);
@@ -328,6 +337,110 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
             {/* 좌우 분할 스테이지: 왼쪽 비석 몸통 / 오른쪽 입력 */}
             <div className="w-full h-full grid grid-cols-2 gap-3">
               <div className="min-h-0 rounded-3xl border border-ink/20 bg-paper/55 overflow-hidden relative">
+                {/* 글씨창 위치 조절(레이아웃 조절창처럼 오버레이로 표시) */}
+                {inscribeTunerOpen ? (
+                  <div
+                    className="absolute right-2 top-2 z-20 rounded-2xl border border-ink/20 bg-paper2/92 px-2 py-2 shadow-paper"
+                    onPointerDownCapture={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                    onClickCapture={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="text-[11px] font-black">글씨창 위치 조절</div>
+                      <button
+                        type="button"
+                        className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper text-[10px] font-black"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setInscribeTunerOpen(false);
+                        }}
+                      >
+                        접기
+                      </button>
+                    </div>
+
+                    <div className="mt-2 grid grid-cols-3 gap-1 text-[11px] font-black">
+                      <div />
+                      <button
+                        type="button"
+                        className="rounded-xl border border-ink/20 bg-paper py-2"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          moveInscribe({ topPct: inscribePos.topPct - 1 });
+                        }}
+                      >
+                        위
+                      </button>
+                      <div />
+                      <button
+                        type="button"
+                        className="rounded-xl border border-ink/20 bg-paper py-2"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          moveInscribe({ rightPct: inscribePos.rightPct + 1 });
+                        }}
+                      >
+                        왼
+                      </button>
+                      <button
+                        type="button"
+                        className="rounded-xl border border-ink/20 bg-paper py-2"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setInscribePos({ topPct: 10, rightPct: 20 });
+                        }}
+                      >
+                        초기화
+                      </button>
+                      <button
+                        type="button"
+                        className="rounded-xl border border-ink/20 bg-paper py-2"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          moveInscribe({ rightPct: inscribePos.rightPct - 1 });
+                        }}
+                      >
+                        오
+                      </button>
+                      <div />
+                      <button
+                        type="button"
+                        className="rounded-xl border border-ink/20 bg-paper py-2"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          moveInscribe({ topPct: inscribePos.topPct + 1 });
+                        }}
+                      >
+                        아래
+                      </button>
+                      <div />
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    className="absolute right-2 top-2 z-20 px-3 py-2 rounded-2xl border border-ink/20 bg-paper2/92 text-ink font-black shadow-md"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setInscribeTunerOpen(true);
+                    }}
+                  >
+                    글씨창
+                  </button>
+                )}
+
                 <div className="absolute inset-0 p-2 md:p-3">
                   {/* 몸통만 표시: 가능한 한 크게 보여 태블릿에서도 잘 보이게 */}
                   <img
@@ -341,10 +454,10 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
                   <div
                     className="absolute"
                     style={{
-                      right: `${INSCRIBE_BOX.rightPct}%`,
-                      top: `${INSCRIBE_BOX.topPct}%`,
-                      width: `${INSCRIBE_BOX.widthPct}%`,
-                      height: `${INSCRIBE_BOX.heightPct}%`,
+                      right: `${inscribePos.rightPct}%`,
+                      top: `${inscribePos.topPct}%`,
+                      width: `${INSCRIBE_BOX_SIZE.widthPct}%`,
+                      height: `${INSCRIBE_BOX_SIZE.heightPct}%`,
                     }}
                   >
                     <div
