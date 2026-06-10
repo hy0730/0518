@@ -5,8 +5,7 @@ import { audio } from '../../../utils/audio';
 import { getRelicMainImage, getRelicRealImage } from '../../../utils/relicImages';
 import { useToast } from '../common/useToast';
 
-type Phase = 'ASSEMBLE' | 'QUIZ';
-type PartId = 'base' | 'pillar' | 'pole' | 'flag';
+type Phase = 'QUIZ';
 type QuizId = 'A' | 'B' | 'C' | 'D';
 
 function shuffle<T>(arr: T[]) {
@@ -29,7 +28,7 @@ export default function JungchosaGame({ stageId, onComplete, regionData }: Minig
   const stoneBg = '/assets/images/relic_jungcho_stone.png';
   const realImg = useMemo(() => getRelicRealImage(stageId), [stageId]);
 
-  const [phase, setPhase] = useState<Phase>('ASSEMBLE');
+  const [phase] = useState<Phase>('QUIZ');
   const [attempts, setAttempts] = useState(0);
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const startIfNeeded = () => {
@@ -42,74 +41,9 @@ export default function JungchosaGame({ stageId, onComplete, regionData }: Minig
     const t = window.setTimeout(() => setOpening(false), 820);
     return () => window.clearTimeout(t);
   }, []);
-
-  // Phase 1: 조립(기단 -> 지주 -> 당간 -> 당)
-  const partOrder: PartId[] = ['base', 'pillar', 'pole', 'flag'];
-  const [assembled, setAssembled] = useState<Record<PartId, boolean>>({
-    base: false,
-    pillar: false,
-    pole: false,
-    flag: false,
-  });
-  const nextPart = useMemo(() => partOrder.find((p) => !assembled[p]) ?? null, [assembled]);
+  const [introInfoOpen, setIntroInfoOpen] = useState(true);
 
   const { toast, showToast } = useToast(1200);
-
-  const [shake, setShake] = useState(false);
-  const [infoOpen, setInfoOpen] = useState(false);
-
-  const parts = useMemo(
-    () =>
-      shuffle([
-        { id: 'base' as const, name: '기단(받침돌)', kind: 'shape' as const },
-        { id: 'pillar' as const, name: '지주(돌기둥)', img: '/assets/images/items/jungcho_both.png' },
-        { id: 'pole' as const, name: '당간(장대)', img: '/assets/images/items/jungcho_pole.png' },
-        { id: 'flag' as const, name: '당(깃발)', img: '/assets/images/items/jungcho_flag_line.png' },
-      ]),
-    []
-  );
-
-  const onClickPart = (id: PartId) => {
-    startIfNeeded();
-    if (phase !== 'ASSEMBLE') return;
-    if (infoOpen) return;
-    if (assembled[id]) return;
-
-    const next = nextPart;
-    if (next !== id) {
-      setAttempts((a) => a + 1);
-      audio.playSfx('wrong', 0.75);
-      setShake(true);
-      window.setTimeout(() => setShake(false), 420);
-      const hint =
-        next === 'base'
-          ? '먼저 기단(받침돌)부터 조립해볼까?'
-          : next === 'pillar'
-            ? '다음은 지주(돌기둥)를 세워보자!'
-            : next === 'pole'
-              ? '이제 당간(장대)을 끼워보자!'
-              : '마지막으로 당(깃발)을 달아보자!';
-      showToast(`순서가 아니에요. ${hint}`);
-      return;
-    }
-
-    audio.playSfx('correct', 0.7);
-    setAssembled((prev) => ({ ...prev, [id]: true }));
-  };
-
-  // 4개 모두 조립되면 안내 후 Phase2
-  useEffect(() => {
-    if (phase !== 'ASSEMBLE') return;
-    const done = partOrder.every((p) => assembled[p]);
-    if (!done) return;
-    audio.playUrl('/assets/sounds/sfx_unlock.mp3', 0.85);
-    setInfoOpen(true);
-    const t = window.setTimeout(() => {
-      setInfoOpen(false);
-      setPhase('QUIZ');
-    }, 3000);
-    return () => window.clearTimeout(t);
-  }, [phase, assembled]);
 
   // Phase 2: 명문 해독(클릭 퀴즈)
   const quizOrder: QuizId[] = ['A', 'B', 'C', 'D'];
@@ -131,6 +65,7 @@ export default function JungchosaGame({ stageId, onComplete, regionData }: Minig
     if (phase !== 'QUIZ') return;
     if (!nextQuiz) return;
     if (glow) return;
+    if (introInfoOpen) return;
     if (quizSlots.includes(id)) return;
 
     if (id !== nextQuiz) {
@@ -186,203 +121,82 @@ export default function JungchosaGame({ stageId, onComplete, regionData }: Minig
       {/* 상단 바 */}
       <div className="flex items-center justify-between gap-2">
         <div className="text-sm font-black tracking-tight">스테이지 {stageId} · {title}</div>
-        <div className="text-xs font-bold opacity-80">{phase === 'ASSEMBLE' ? 'Phase 1' : 'Phase 2'}</div>
+        <div className="text-xs font-bold opacity-80">Phase 1 · 명문 해독</div>
       </div>
 
       {/* 세로(450x800) 최적화 메인 */}
       <div className="mt-2 flex-1 min-h-0 rounded-3xl border border-ink/30 bg-paper2/90 shadow-paper overflow-hidden relative">
-        {phase === 'ASSEMBLE' ? (
-          <>
-            {/* 배경: 야외 절터 느낌(임시 톤) */}
+        <>
+          {/* 배경: 돌기둥 클로즈업(Zoom-in 느낌) */}
+          <div
+            className="absolute inset-0 bg-cover bg-center scale-[1.12]"
+            style={{
+              backgroundImage: `linear-gradient(rgba(244,235,217,0.08), rgba(244,235,217,0.22)), url('${stoneBg}')`,
+            }}
+          />
+
+          <div className="absolute inset-0 p-3 flex flex-col gap-3">
+            {/* 상단~중단: 돌기둥 + 슬롯(세로) */}
             <div
-              className="absolute inset-0 bg-cover bg-center"
-              style={{
-                backgroundImage: `linear-gradient(rgba(15,23,42,0.45), rgba(15,23,42,0.55)), url('${mainBg}')`,
-              }}
-            />
+              className={[
+                'flex-[3] min-h-0 rounded-3xl border border-ink/20 bg-paper/55 overflow-hidden relative',
+                quizShake ? 'shakeFx' : '',
+              ].join(' ')}
+            >
+              {glow && <div className="absolute inset-0 bg-gradient-to-b from-amber-200/12 to-transparent animate-pulse pointer-events-none" />}
 
-            <div className="absolute inset-0 p-3 flex flex-col gap-3">
-              {/* 상단(약 60%): 조립 실루엣 */}
-              <div
-                className={[
-                  'flex-[3] min-h-0 rounded-3xl border border-ink/20 bg-paper/55 overflow-hidden relative',
-                  shake ? 'shakeFx' : '',
-                ].join(' ')}
-              >
-                <div className="absolute inset-0 grid place-items-center pointer-events-none opacity-45">
-                  <img
-                    src="/assets/images/items/jungcho_line.png"
-                    alt=""
-                    className="w-[92%] max-w-[360px] object-contain"
-                    draggable={false}
-                  />
-                </div>
-
-                {/* 세로 슬롯 4개 (시각적 형태: 위=깃발, 아래=기단) */}
-                <div className="absolute inset-0 px-5 py-4 flex flex-col justify-between gap-3">
-                  <div className="flex-1 rounded-3xl border-2 border-dashed border-paper/70 bg-paper/45 grid place-items-center">
-                    {assembled.flag ? (
-                      <img
-                        src="/assets/images/items/jungcho_flag_line.png"
-                        alt=""
-                        className="h-[90%] object-contain"
-                        draggable={false}
-                      />
-                    ) : (
-                      <div className="text-sm font-black text-white/90">④ 당(깃발)</div>
-                    )}
-                  </div>
-
-                  <div className="flex-[2] rounded-3xl border-2 border-dashed border-paper/70 bg-paper/40 grid place-items-center">
-                    {assembled.pole ? (
-                      <img src="/assets/images/items/jungcho_pole.png" alt="" className="h-[92%] object-contain" draggable={false} />
-                    ) : (
-                      <div className="text-sm font-black text-white/90">③ 당간(장대)</div>
-                    )}
-                  </div>
-
-                  <div className="flex-[2] rounded-3xl border-2 border-dashed border-paper/70 bg-paper/45 grid place-items-center">
-                    {assembled.pillar ? (
-                      <img
-                        src="/assets/images/items/jungcho_both.png"
-                        alt=""
-                        className="h-[88%] object-contain drop-shadow-[0_12px_24px_rgba(0,0,0,0.25)]"
-                        draggable={false}
-                      />
-                    ) : (
-                      <div className="text-sm font-black text-white/90">② 지주(돌기둥)</div>
-                    )}
-                  </div>
-
-                  <div className="flex-1 rounded-3xl border-2 border-dashed border-paper/70 bg-paper/55 grid place-items-center">
-                    {assembled.base ? (
-                      <div className="w-[78%] h-[34px] rounded-2xl bg-ink/20 border border-ink/25" />
-                    ) : (
-                      <div className="text-sm font-black text-white/90">① 기단(받침돌)</div>
-                    )}
-                  </div>
-                </div>
-
-                {infoOpen && (
-                  <div className="absolute inset-0 grid place-items-center bg-ink/35">
-                    <div className="note-panel px-5 py-4 max-w-[360px]">
-                      <div className="text-sm font-black">띠링! 당간지주 완성</div>
-                      <div className="mt-2 text-sm leading-relaxed opacity-95">
-                        당간지주는 절에 행사가 있을 때 ‘당(깃발)’을 다는 ‘당간(장대)’을 지탱해 주는 돌기둥이에요!
-                      </div>
+              <div className="absolute inset-0 px-4 py-4 flex flex-col gap-3">
+                <div className="text-sm font-black">명문을 순서대로 해독해보자</div>
+                <div className="flex-1 grid grid-rows-4 gap-2">
+                  {quizSlots.map((q, i) => (
+                    <div
+                      key={i}
+                      className={[
+                        'rounded-3xl border-2 border-dashed px-3 py-3 text-center font-black',
+                        'border-ink/25 bg-paper/70',
+                        q
+                          ? glow
+                            ? 'text-amber-700 drop-shadow-[0_0_10px_rgba(245,158,11,0.65)] animate-pulse'
+                            : 'text-ink'
+                          : 'text-ink/50',
+                      ].join(' ')}
+                    >
+                      {q ? quizTexts[q] : `빈칸 ${i + 1}`}
                     </div>
-                  </div>
-                )}
-              </div>
-
-              {/* 하단(약 40%): 인벤토리(2x2) */}
-              <div className="flex-[2] min-h-0 rounded-3xl border border-ink/20 bg-paper/70 px-3 py-3">
-                <div className="text-[12px] font-bold leading-relaxed min-h-[18px] text-ink">
-                  {nextPart
-                    ? `순서대로 조립해보자! 다음: ${nextPart === 'base' ? '기단' : nextPart === 'pillar' ? '지주' : nextPart === 'pole' ? '당간' : '당(깃발)'}`
-                    : '완성!'}
+                  ))}
                 </div>
-                <div className="mt-2 grid grid-cols-2 grid-rows-2 gap-2 h-[calc(100%-24px)]">
-                  {parts.map((p) => {
-                    const disabled = assembled[p.id as PartId] || infoOpen;
-                    return (
-                      <button
-                        key={p.id}
-                        type="button"
-                        disabled={disabled}
-                        onClick={() => onClickPart(p.id)}
-                        className={[
-                          'rounded-3xl border border-ink/25 bg-paper2/90 shadow-md flex flex-col items-center justify-center gap-2',
-                          disabled ? 'opacity-45 cursor-not-allowed' : 'hover:bg-paper2 active:translate-y-[1px]',
-                          nextPart === p.id ? 'ring-2 ring-amber-300/70 animate-pulse' : '',
-                        ].join(' ')}
-                      >
-                        {'kind' in p ? (
-                          <div className="w-10 h-6 rounded-2xl bg-ink/15 border border-ink/25" />
-                        ) : (
-                          <img src={p.img} alt="" className="h-14 object-contain" draggable={false} />
-                        )}
-                        <div className="text-xs font-black">{p.name}</div>
-                      </button>
-                    );
-                  })}
-                </div>
+                <div className="text-[11px] opacity-80">A → B → C → D 순서로 눌러 넣어보자.</div>
               </div>
             </div>
-          </>
-        ) : (
-          <>
-            {/* 배경: 돌기둥 클로즈업(Zoom-in 느낌) */}
-            <div
-              className="absolute inset-0 bg-cover bg-center scale-[1.12]"
-              style={{
-                backgroundImage: `linear-gradient(rgba(244,235,217,0.08), rgba(244,235,217,0.22)), url('${stoneBg}')`,
-              }}
-            />
 
-            <div className="absolute inset-0 p-3 flex flex-col gap-3">
-              {/* 상단~중단: 돌기둥 + 슬롯(세로) */}
-              <div
-                className={[
-                  'flex-[3] min-h-0 rounded-3xl border border-ink/20 bg-paper/55 overflow-hidden relative',
-                  quizShake ? 'shakeFx' : '',
-                ].join(' ')}
-              >
-                {glow && <div className="absolute inset-0 bg-gradient-to-b from-amber-200/12 to-transparent animate-pulse pointer-events-none" />}
-
-                <div className="absolute inset-0 px-4 py-4 flex flex-col gap-3">
-                  <div className="text-sm font-black">명문을 순서대로 해독해보자</div>
-                  <div className="flex-1 grid grid-rows-4 gap-2">
-                    {quizSlots.map((q, i) => (
-                      <div
-                        key={i}
-                        className={[
-                          'rounded-3xl border-2 border-dashed px-3 py-3 text-center font-black',
-                          'border-ink/25 bg-paper/70',
-                          q
-                            ? glow
-                              ? 'text-amber-700 drop-shadow-[0_0_10px_rgba(245,158,11,0.65)] animate-pulse'
-                              : 'text-ink'
-                            : 'text-ink/50',
-                        ].join(' ')}
-                      >
-                        {q ? quizTexts[q] : `빈칸 ${i + 1}`}
+            {/* 하단: 선택지(세로 리스트) */}
+            <div className="flex-[2] min-h-0 rounded-3xl border border-ink/20 bg-paper/70 p-3">
+              <div className="text-sm font-black">문장 블록</div>
+              <div className="mt-2 grid grid-rows-4 gap-2 h-[calc(100%-22px)]">
+                {quizChoices.map((id) => {
+                  const used = quizSlots.includes(id);
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      disabled={used || glow || introInfoOpen}
+                      onClick={() => handlePickChoice(id)}
+                      className={[
+                        'rounded-3xl border border-ink/25 bg-paper2/90 shadow-md px-4 py-3 text-left',
+                        used || glow || introInfoOpen ? 'opacity-45 cursor-not-allowed' : 'hover:bg-paper2 active:translate-y-[1px]',
+                        nextQuiz === id ? 'ring-2 ring-amber-300/70 animate-pulse' : '',
+                      ].join(' ')}
+                    >
+                      <div className="text-sm font-black">
+                        {id}: {quizTexts[id]}
                       </div>
-                    ))}
-                  </div>
-                  <div className="text-[11px] opacity-80">A → B → C → D 순서로 눌러 넣어보자.</div>
-                </div>
-              </div>
-
-              {/* 하단: 선택지(세로 리스트) */}
-              <div className="flex-[2] min-h-0 rounded-3xl border border-ink/20 bg-paper/70 p-3">
-                <div className="text-sm font-black">문장 블록</div>
-                <div className="mt-2 grid grid-rows-4 gap-2 h-[calc(100%-22px)]">
-                  {quizChoices.map((id) => {
-                    const used = quizSlots.includes(id);
-                    return (
-                      <button
-                        key={id}
-                        type="button"
-                        disabled={used || glow}
-                        onClick={() => handlePickChoice(id)}
-                        className={[
-                          'rounded-3xl border border-ink/25 bg-paper2/90 shadow-md px-4 py-3 text-left',
-                          used || glow ? 'opacity-45 cursor-not-allowed' : 'hover:bg-paper2 active:translate-y-[1px]',
-                          nextQuiz === id ? 'ring-2 ring-amber-300/70 animate-pulse' : '',
-                        ].join(' ')}
-                      >
-                        <div className="text-sm font-black">
-                          {id}: {quizTexts[id]}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
+                    </button>
+                  );
+                })}
               </div>
             </div>
-          </>
-        )}
+          </div>
+        </>
       </div>
 
       {/* 토스트 */}
@@ -400,6 +214,28 @@ export default function JungchosaGame({ stageId, onComplete, regionData }: Minig
             <div className="mt-2 text-center text-sm opacity-80">중초사지 당간지주 기록을 열어보자!</div>
           </div>
         </div>
+      )}
+
+      {/* 도입 설명: 조합 단계 제거 후 바로 퀴즈 시작 */}
+      {!opening && introInfoOpen && (
+        <button
+          type="button"
+          className="absolute inset-0 z-[11000] grid place-items-center bg-ink/35 p-4 text-left"
+          onClick={() => {
+            startIfNeeded();
+            setIntroInfoOpen(false);
+          }}
+        >
+          <div className="note-panel w-[92%] max-w-[420px] px-5 py-4">
+            <div className="text-sm font-black">당간지주 알아보기</div>
+            <div className="mt-2 text-sm leading-relaxed opacity-95">
+              당간지주는 절에 행사가 있을 때 깃발을 다는 긴 장대를 받쳐 주는 돌기둥이에요.
+              <br />
+              돌에 새겨진 명문을 순서대로 맞추면 언제 만들어졌는지 알 수 있어요!
+            </div>
+            <div className="mt-3 text-sm font-black text-stamp">화면을 탭하면 시작해요.</div>
+          </div>
+        </button>
       )}
 
       {/* 결과 모달 */}
