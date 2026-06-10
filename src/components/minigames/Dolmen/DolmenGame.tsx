@@ -20,6 +20,14 @@ const WEDGE_POS = [
   { left: '62%', top: '64%' },
 ] as const;
 
+// 지석묘 아래 굴림대(통나무) 슬롯
+// 각 슬롯마다 위치/기울기/원근(scale)을 달리 줘서 배경 사진에 더 자연스럽게 맞춘다.
+const LOG_SLOT_LAYOUT = [
+  { left: '18%', top: '102%', rotate: -10, scale: 0.92 },
+  { left: '41%', top: '104%', rotate: -4, scale: 1.0 },
+  { left: '66%', top: '106%', rotate: 6, scale: 1.08 },
+] as const;
+
 export default function DolmenGame({ stageId, onComplete, regionData }: MinigameProps) {
   const stageTitle = useMemo(
     () => storyDataByStageId[stageId]?.title ?? regionData?.map?.nodes?.[stageId - 1]?.title ?? `스테이지 ${stageId}`,
@@ -187,9 +195,9 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
 
   const placeLogToFirstEmpty = () => {
     if (logsCount <= 0) return;
+    const i = logSlots.findIndex((x) => !x);
+    if (i < 0) return;
     setLogSlots((prev) => {
-      const i = prev.findIndex((x) => !x);
-      if (i < 0) return prev;
       const next = prev.slice();
       next[i] = 'log';
       return next;
@@ -470,17 +478,24 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
 
                   {/* 통나무(돌 아래) */}
                   {(phase === 'PREPARE' || phase === 'MOVE') && ropeBound && (
-                    <div className="mt-2 grid grid-cols-3 gap-2 w-[min(300px,46vw)] md:w-[300px]">
-                      {logSlots.map((s, i) => (
+                    <div className="relative mt-1 w-[min(320px,48vw)] md:w-[320px] h-[86px]">
+                      {logSlots.map((s, i) => {
+                        const layout = LOG_SLOT_LAYOUT[i];
+                        return (
                         <div
                           key={i}
                           className={[
-                            'rounded-xl border-2 border-dashed border-ink/25 bg-paper/55 h-12 md:h-14 grid place-items-center',
+                            'absolute w-[86px] h-[54px] md:w-[92px] md:h-[58px] grid place-items-center',
                             // 튜토리얼(LOG)에서는 "비어있는 슬롯"만 더 강하게 하이라이트
                             tutorialMode === 'LOG' && !s
-                              ? 'ring-4 ring-amber-300/80 bg-amber-300/10 shadow-[0_0_22px_rgba(251,191,36,0.35)] animate-pulse'
+                              ? 'animate-pulse'
                               : '',
                           ].join(' ')}
+                          style={{
+                            left: layout.left,
+                            top: layout.top,
+                            transform: `translate(-50%, -50%) rotate(${layout.rotate}deg) scale(${layout.scale})`,
+                          }}
                           onDragOver={(e) => e.preventDefault()}
                           onDrop={(e) => {
                             e.preventDefault();
@@ -513,20 +528,36 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
                             audio.playUrl('/assets/sounds/sfw_log_roll.mp3', 0.75);
                           }}
                         >
+                          {/* 슬롯 그림자/레일 */}
+                          <div
+                            className={[
+                              'absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full',
+                              tutorialMode === 'LOG' && !s
+                                ? 'w-[84px] h-[22px] bg-amber-300/18 ring-4 ring-amber-300/75 shadow-[0_0_24px_rgba(251,191,36,0.38)]'
+                                : 'w-[84px] h-[18px] bg-ink/12 ring-2 ring-ink/10',
+                            ].join(' ')}
+                          />
                           {s ? (
-                            <img src="/assets/images/log.png" alt="통나무" className="w-12 h-12 object-contain" />
+                            <>
+                              <div className="absolute left-1/2 top-[58%] -translate-x-1/2 w-[72px] h-[16px] rounded-full bg-ink/20 blur-[2px]" />
+                              <img
+                                src="/assets/images/log.png"
+                                alt="통나무"
+                                className="relative z-10 w-[74px] h-[42px] object-contain drop-shadow-[0_8px_16px_rgba(0,0,0,0.28)]"
+                              />
+                            </>
                           ) : (
                             <span
                               className={[
-                                'text-xs opacity-70',
-                                tutorialMode === 'LOG' ? 'text-amber-200 font-black animate-pulse' : '',
+                                'relative z-10 text-[11px] font-black opacity-70',
+                                tutorialMode === 'LOG' ? 'text-amber-200' : 'text-ink/55',
                               ].join(' ')}
                             >
-                              빈 칸
+                              받침
                             </span>
                           )}
                         </div>
-                      ))}
+                      )})}
                     </div>
                   )}
                 </div>
