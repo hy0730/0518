@@ -60,6 +60,7 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
   const [collected, setCollected] = useState<Record<FragmentId, boolean>>({ f1: false, f2: false, f3: false });
   const allCollected = collected.f1 && collected.f2 && collected.f3;
   const dropRef = useRef<HTMLDivElement | null>(null);
+  const completedFxPlayedRef = useRef(false);
 
   // Drag
   const [drag, setDrag] = useState<DragState | null>(null);
@@ -143,14 +144,13 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
     }
   };
 
-  // Phase1 완료 → Phase2
+  // Phase1 완료 연출(자동 전환 X, 탭해서 다음 단계)
   useEffect(() => {
     if (phase !== 'FRAGMENTS') return;
     if (!allCollected) return;
+    if (completedFxPlayedRef.current) return;
+    completedFxPlayedRef.current = true;
     audio.playUrl('/assets/sounds/sfx_unlock.mp3', 0.85);
-    // Phase1에서 "완성 모습"을 잠깐 보여준 뒤 Phase2로 전환
-    const t = window.setTimeout(() => setPhase('ENGRAVE'), 1200);
-    return () => window.clearTimeout(t);
   }, [phase, allCollected]);
 
   // Phase2 (세로 모드 UI + 실시간 타이핑, 엔터 줄 허용)
@@ -278,14 +278,20 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
               )}
             </div>
 
-            {/* 완성 축하 안내 (Phase1에서만) */}
+            {/* 완성 축하 안내 + 탭해서 다음 단계 */}
             {allCollected && (
-              <div className="absolute inset-0 grid place-items-center pointer-events-none">
+              <button
+                type="button"
+                className="absolute inset-0 grid place-items-center bg-ink/18 z-10"
+                onClick={() => setPhase('ENGRAVE')}
+                onTouchStart={() => setPhase('ENGRAVE')}
+              >
                 <div className="note-panel px-5 py-4 max-w-[420px]">
                   <div className="text-sm font-black">완성!</div>
                   <div className="mt-1 text-sm opacity-90">비희의 등에 비석을 다시 올려줬어.</div>
+                  <div className="mt-3 text-sm font-black text-stamp">화면을 탭하면 다음 단계로 넘어가요.</div>
                 </div>
-              </div>
+              </button>
             )}
 
             {/* 흩어진 조각들 */}
