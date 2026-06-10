@@ -180,6 +180,9 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
 
   const canGoQuiz = placed.length >= 3;
   const canSubmit = !!blank1 && !!blank2;
+  const inventorySplitIndex = Math.ceil(ARTIFACTS.length / 2);
+  const leftArtifacts = ARTIFACTS.slice(0, inventorySplitIndex);
+  const rightArtifacts = ARTIFACTS.slice(inventorySplitIndex);
 
   const openArtifact = (a: ArtifactDef) => {
     setArtifactModal({ artifact: a, mode: 'ADD' });
@@ -522,12 +525,12 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
         {phase === 'MAIN' && (
           <>
             <div className="absolute left-3 top-3 bottom-3 w-[132px] flex flex-col gap-2" data-inventory="true">
-              {ARTIFACTS.slice(0, 3).map((a) => (
+              {leftArtifacts.map((a) => (
                 <div
                   key={a.id}
                   data-interactive="true"
                   className={[
-                    'rounded-xl border border-ink/25 bg-paper/70 p-2 flex items-center gap-2 shadow-md touch-none',
+                    'rounded-xl border border-ink/25 bg-paper/78 p-2 flex items-center gap-2 shadow-md touch-none min-h-[58px]',
                     placedIds[a.id] ? 'opacity-35' : 'hover:bg-paper/90',
                   ].join(' ')}
                   onPointerDown={(e) => {
@@ -544,13 +547,13 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
               ))}
             </div>
 
-            <div className="absolute right-3 top-3 bottom-3 w-[132px] flex flex-col gap-2" data-inventory="true">
-              {ARTIFACTS.slice(3, 6).map((a) => (
+            <div className="absolute right-3 top-3 bottom-3 w-[132px] flex flex-col gap-2 justify-start" data-inventory="true">
+              {rightArtifacts.map((a) => (
                 <div
                   key={a.id}
                   data-interactive="true"
                   className={[
-                    'rounded-xl border border-ink/25 bg-paper/70 p-2 flex items-center gap-2 shadow-md touch-none',
+                    'rounded-xl border border-ink/25 bg-paper/78 p-2 flex items-center gap-2 shadow-md touch-none min-h-[58px]',
                     placedIds[a.id] ? 'opacity-35' : 'hover:bg-paper/90',
                   ].join(' ')}
                   onPointerDown={(e) => {
@@ -611,7 +614,7 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
         <div className="text-[12px] font-bold opacity-95 leading-relaxed">
           {phase === 'INTRO' && introText}
           {phase === 'TUTORIAL' && (dragHint ?? '토우를 무덤 안으로 드래그(또는 클릭)해서 배치해 보세요!')}
-          {phase === 'MAIN' && `부장품을 자유롭게 배치해보세요. (배치: ${placed.length}/3+)`}
+          {phase === 'MAIN' && `부장품 5개 중 마음에 드는 것들을 골라 무덤 안에 배치해보세요. (현재 ${placed.length}개 배치, 3개 이상이면 다음 단계)`}
           {phase === 'QUIZ' && '정답은 없어요! 선택한 이유를 친구들(또는 선생님)에게 말해보아요.'}
         </div>
 
