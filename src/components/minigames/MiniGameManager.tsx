@@ -113,18 +113,13 @@ export default function MiniGameManager() {
         </button>
 
         {/* 바깥 레이아웃 조절 패널(접기/펼치기)
-            - 버튼 조작 시 아래 게임으로 클릭이 전달되지 않도록 이벤트 버블링을 차단 */}
+            - 버튼 조작 시 아래 게임으로 클릭이 전달되지 않도록 이벤트 버블링만 차단
+            - NOTE: preventDefault를 걸면 click 이벤트 자체가 막혀 버튼이 먹통이 될 수 있음 */}
         {outerTunerOpen ? (
           <div
             className="absolute right-4 top-16 z-50 rounded-2xl border border-ink/30 bg-paper2/92 px-2 py-2 shadow-md"
-            onPointerDownCapture={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-            }}
-            onClickCapture={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-            }}
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between gap-2">
               <div className="text-[11px] font-black">바깥 레이아웃 조절</div>
@@ -132,7 +127,6 @@ export default function MiniGameManager() {
                 type="button"
                 className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper text-[10px] font-black"
                 onClick={(e) => {
-                  e.preventDefault();
                   e.stopPropagation();
                   setOuterTunerOpen(false);
                 }}
@@ -149,7 +143,6 @@ export default function MiniGameManager() {
                   type="button"
                   className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper"
                   onClick={(e) => {
-                    e.preventDefault();
                     e.stopPropagation();
                     tune('baseWidth', -20, 300, 1200);
                   }}
@@ -161,7 +154,6 @@ export default function MiniGameManager() {
                   type="button"
                   className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper"
                   onClick={(e) => {
-                    e.preventDefault();
                     e.stopPropagation();
                     tune('baseWidth', 20, 300, 1200);
                   }}
@@ -175,7 +167,6 @@ export default function MiniGameManager() {
                   type="button"
                   className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper"
                   onClick={(e) => {
-                    e.preventDefault();
                     e.stopPropagation();
                     tune('baseHeight', -20, 400, 1600);
                   }}
@@ -187,7 +178,6 @@ export default function MiniGameManager() {
                   type="button"
                   className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper"
                   onClick={(e) => {
-                    e.preventDefault();
                     e.stopPropagation();
                     tune('baseHeight', 20, 400, 1600);
                   }}
@@ -201,7 +191,6 @@ export default function MiniGameManager() {
                   type="button"
                   className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper"
                   onClick={(e) => {
-                    e.preventDefault();
                     e.stopPropagation();
                     tune('top', -4, -80, 120);
                   }}
@@ -213,7 +202,6 @@ export default function MiniGameManager() {
                   type="button"
                   className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper"
                   onClick={(e) => {
-                    e.preventDefault();
                     e.stopPropagation();
                     tune('top', 4, -80, 120);
                   }}
@@ -227,7 +215,6 @@ export default function MiniGameManager() {
                   type="button"
                   className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper"
                   onClick={(e) => {
-                    e.preventDefault();
                     e.stopPropagation();
                     tune('bottom', -4, -80, 120);
                   }}
@@ -239,7 +226,6 @@ export default function MiniGameManager() {
                   type="button"
                   className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper"
                   onClick={(e) => {
-                    e.preventDefault();
                     e.stopPropagation();
                     tune('bottom', 4, -80, 120);
                   }}
@@ -253,7 +239,6 @@ export default function MiniGameManager() {
                   type="button"
                   className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper"
                   onClick={(e) => {
-                    e.preventDefault();
                     e.stopPropagation();
                     tune('left', -4, -80, 120);
                   }}
@@ -265,7 +250,6 @@ export default function MiniGameManager() {
                   type="button"
                   className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper"
                   onClick={(e) => {
-                    e.preventDefault();
                     e.stopPropagation();
                     tune('left', 4, -80, 120);
                   }}
@@ -279,7 +263,6 @@ export default function MiniGameManager() {
                   type="button"
                   className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper"
                   onClick={(e) => {
-                    e.preventDefault();
                     e.stopPropagation();
                     tune('right', -4, -80, 120);
                   }}
@@ -291,7 +274,6 @@ export default function MiniGameManager() {
                   type="button"
                   className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper"
                   onClick={(e) => {
-                    e.preventDefault();
                     e.stopPropagation();
                     tune('right', 4, -80, 120);
                   }}
@@ -303,7 +285,6 @@ export default function MiniGameManager() {
                 type="button"
                 className="mt-1 px-2 py-1 rounded-lg border border-ink/20 bg-stamp text-white font-black"
                 onClick={(e) => {
-                  e.preventDefault();
                   e.stopPropagation();
                   setLayoutTunes((prev) => ({
                     ...prev,
@@ -320,7 +301,6 @@ export default function MiniGameManager() {
             type="button"
             className="absolute right-4 top-16 z-50 px-3 py-2 rounded-2xl border border-ink/30 bg-paper2/92 text-ink font-black shadow-md"
             onClick={(e) => {
-              e.preventDefault();
               e.stopPropagation();
               setOuterTunerOpen(true);
             }}
