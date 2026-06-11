@@ -54,6 +54,7 @@ function PuzzlePiece({
   piece,
   home,
   slot,
+  size,
   placed,
   disabled,
   scale,
@@ -64,6 +65,7 @@ function PuzzlePiece({
   piece: PuzzlePieceDef;
   home: Point;
   slot: Point;
+  size: { w: number; h: number };
   placed: boolean;
   disabled: boolean;
   scale: number;
@@ -98,8 +100,8 @@ function PuzzlePiece({
       style={{
         left: home.x,
         top: home.y,
-        width: SLOT_W,
-        height: SLOT_H,
+        width: size.w,
+        height: size.h,
         x,
         y,
         touchAction: 'none',
@@ -119,10 +121,10 @@ function PuzzlePiece({
         // 현재 조각의 중심점과 정답 슬롯 중심점 거리로 스냅 판정
         const px = home.x + x.get();
         const py = home.y + y.get();
-        const cx = px + SLOT_W / 2;
-        const cy = py + SLOT_H / 2;
-        const tx = slot.x + SLOT_W / 2;
-        const ty = slot.y + SLOT_H / 2;
+        const cx = px + size.w / 2;
+        const cy = py + size.h / 2;
+        const tx = slot.x + size.w / 2;
+        const ty = slot.y + size.h / 2;
         const dist = Math.hypot(cx - tx, cy - ty);
         if (dist <= threshold) {
           onPlaced(piece.id, piece.slotIndex);
@@ -172,6 +174,26 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
   const [puzzleCompleted, setPuzzleCompleted] = useState(false);
   const [puzzleCompleteOverlay, setPuzzleCompleteOverlay] = useState(false);
   const [slotGlow, setSlotGlow] = useState<Record<number, boolean>>({});
+
+  // 퍼즐 레이아웃 조절(임시 디버그/디자인용)
+  const DEFAULT_PUZZLE_LAYOUT = useMemo(() => {
+    const slotGap = SLOT_GAP;
+    const boardW = SLOT_W * 3 + slotGap * 2;
+    const boardH = SLOT_H * 2 + slotGap;
+    const boardX = 26;
+    const boardY = Math.round((PUZZLE_BASE_H - boardH) / 2);
+    const invW = SLOT_W * 3 + 12 * 2;
+    const invX = PUZZLE_BASE_W - invW - 18;
+    const invY = 84;
+    return { boardX, boardY, invX, invY, slotW: SLOT_W, slotH: SLOT_H };
+  }, []);
+
+  const [puzzleLayout, setPuzzleLayout] = useState(() => ({ ...DEFAULT_PUZZLE_LAYOUT }));
+  const [puzzleLayoutOpen, setPuzzleLayoutOpen] = useState(false);
+  const clampNum = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
+  const bump = (key: keyof typeof puzzleLayout, delta: number, min: number, max: number) => {
+    setPuzzleLayout((prev) => ({ ...prev, [key]: clampNum(prev[key] + delta, min, max) }));
+  };
 
   // 내부 캔버스 스케일링(기준 해상도 -> transform: scale로 contain)
   const puzzleViewportRef = useRef<HTMLDivElement | null>(null);
@@ -326,21 +348,17 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
             >
               {(() => {
                 const slotGap = puzzleCompleted ? SLOT_GAP_MERGED : SLOT_GAP;
-                const boardW = SLOT_W * 3 + slotGap * 2;
-                const boardH = SLOT_H * 2 + slotGap;
-                const boardX = 26;
-                const boardY = Math.round((PUZZLE_BASE_H - boardH) / 2);
-                const invW = SLOT_W * 3 + 12 * 2;
-                const invX = PUZZLE_BASE_W - invW - 18;
-                const invY = 84;
+                const boardW = puzzleLayout.slotW * 3 + slotGap * 2;
+                const boardH = puzzleLayout.slotH * 2 + slotGap;
+                const invW = puzzleLayout.slotW * 3 + 12 * 2;
                 const invGap = 12;
 
                 const slotPos = (slotIndex: number) => {
                   const r = Math.floor(slotIndex / 3);
                   const c = slotIndex % 3;
                   return {
-                    x: boardX + c * (SLOT_W + slotGap),
-                    y: boardY + r * (SLOT_H + slotGap),
+                    x: puzzleLayout.boardX + c * (puzzleLayout.slotW + slotGap),
+                    y: puzzleLayout.boardY + r * (puzzleLayout.slotH + slotGap),
                   };
                 };
 
@@ -353,8 +371,98 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
                       </div>
                     </div>
 
+                    {/* 퍼즐/인벤토리 위치·크기 조절(임시) */}
+                    {puzzleLayoutOpen ? (
+                      <div
+                        className="absolute right-4 top-3 z-20 rounded-2xl border border-ink/20 bg-paper2/92 px-2 py-2 shadow-paper"
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={(e) => e.stopPropagation()}
+                        style={{ touchAction: 'none' }}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="text-[11px] font-black">퍼즐 레이아웃</div>
+                          <button
+                            type="button"
+                            className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper text-[10px] font-black"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPuzzleLayoutOpen(false);
+                            }}
+                          >
+                            접기
+                          </button>
+                        </div>
+                        <div className="mt-1 text-[10px] font-bold opacity-75">
+                          보드({puzzleLayout.boardX},{puzzleLayout.boardY}) · 인벤({puzzleLayout.invX},{puzzleLayout.invY}) · 조각({puzzleLayout.slotW}×{puzzleLayout.slotH})
+                        </div>
+                        <div className="mt-2 flex flex-col gap-1 text-[10px] font-black">
+                          <div className="flex items-center gap-1">
+                            <span className="w-11">보드X</span>
+                            <button type="button" className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper" onClick={(e) => { e.stopPropagation(); bump('boardX', -6, 0, 220); }}>-</button>
+                            <span className="w-10 text-center">{puzzleLayout.boardX}</span>
+                            <button type="button" className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper" onClick={(e) => { e.stopPropagation(); bump('boardX', 6, 0, 220); }}>+</button>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <span className="w-11">보드Y</span>
+                            <button type="button" className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper" onClick={(e) => { e.stopPropagation(); bump('boardY', -6, 0, 260); }}>-</button>
+                            <span className="w-10 text-center">{puzzleLayout.boardY}</span>
+                            <button type="button" className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper" onClick={(e) => { e.stopPropagation(); bump('boardY', 6, 0, 260); }}>+</button>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <span className="w-11">인벤X</span>
+                            <button type="button" className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper" onClick={(e) => { e.stopPropagation(); bump('invX', -6, 240, 680); }}>-</button>
+                            <span className="w-10 text-center">{puzzleLayout.invX}</span>
+                            <button type="button" className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper" onClick={(e) => { e.stopPropagation(); bump('invX', 6, 240, 680); }}>+</button>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <span className="w-11">인벤Y</span>
+                            <button type="button" className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper" onClick={(e) => { e.stopPropagation(); bump('invY', -6, 0, 300); }}>-</button>
+                            <span className="w-10 text-center">{puzzleLayout.invY}</span>
+                            <button type="button" className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper" onClick={(e) => { e.stopPropagation(); bump('invY', 6, 0, 300); }}>+</button>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <span className="w-11">폭</span>
+                            <button type="button" className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper" onClick={(e) => { e.stopPropagation(); bump('slotW', -6, 86, 170); }}>-</button>
+                            <span className="w-10 text-center">{puzzleLayout.slotW}</span>
+                            <button type="button" className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper" onClick={(e) => { e.stopPropagation(); bump('slotW', 6, 86, 170); }}>+</button>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <span className="w-11">높이</span>
+                            <button type="button" className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper" onClick={(e) => { e.stopPropagation(); bump('slotH', -6, 70, 140); }}>-</button>
+                            <span className="w-10 text-center">{puzzleLayout.slotH}</span>
+                            <button type="button" className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper" onClick={(e) => { e.stopPropagation(); bump('slotH', 6, 70, 140); }}>+</button>
+                          </div>
+                          <button
+                            type="button"
+                            className="mt-1 px-2 py-1 rounded-lg border border-ink/20 bg-stamp text-white font-black"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPuzzleLayout({ ...DEFAULT_PUZZLE_LAYOUT });
+                            }}
+                          >
+                            초기화
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        className="absolute right-4 top-3 z-20 px-3 py-2 rounded-2xl border border-ink/20 bg-paper2/92 text-ink font-black shadow-md"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPuzzleLayoutOpen(true);
+                        }}
+                        style={{ touchAction: 'none' }}
+                      >
+                        퍼즐 레이아웃
+                      </button>
+                    )}
+
                     {/* 정답 슬롯(도안) */}
-                    <div className="absolute" style={{ left: boardX, top: boardY, width: boardW, height: boardH }}>
+                    <div
+                      className="absolute"
+                      style={{ left: puzzleLayout.boardX, top: puzzleLayout.boardY, width: boardW, height: boardH }}
+                    >
                       {Array.from({ length: 6 }).map((_, i) => {
                         const { x, y } = slotPos(i);
                         return (
@@ -364,7 +472,12 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
                               'absolute rounded-2xl border-2 border-dashed bg-paper/30',
                               slotGlow[i] ? 'border-amber-400/80 bg-amber-200/15' : 'border-ink/25',
                             ].join(' ')}
-                            style={{ left: x - boardX, top: y - boardY, width: SLOT_W, height: SLOT_H }}
+                            style={{
+                              left: x - puzzleLayout.boardX,
+                              top: y - puzzleLayout.boardY,
+                              width: puzzleLayout.slotW,
+                              height: puzzleLayout.slotH,
+                            }}
                           />
                         );
                       })}
@@ -392,7 +505,12 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
                     {/* 인벤토리 */}
                     <div
                       className="absolute rounded-3xl border border-ink/20 bg-paper2/80 shadow-paper px-3 py-3"
-                      style={{ left: invX, top: invY, width: invW + 12, height: SLOT_H * 2 + invGap + 60 }}
+                      style={{
+                        left: puzzleLayout.invX,
+                        top: puzzleLayout.invY,
+                        width: invW + 12,
+                        height: puzzleLayout.slotH * 2 + invGap + 60,
+                      }}
                     >
                       <div className="text-sm font-black">조각 대기열</div>
                       <div className="mt-1 text-[11px] font-bold opacity-75">무작위로 섞여 있어요. 맞는 칸에 놓아보자!</div>
@@ -403,8 +521,8 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
                       const row = Math.floor(idx / 3);
                       const col = idx % 3;
                       const home: Point = {
-                        x: invX + col * (SLOT_W + invGap),
-                        y: invY + 46 + row * (SLOT_H + invGap),
+                        x: puzzleLayout.invX + col * (puzzleLayout.slotW + invGap),
+                        y: puzzleLayout.invY + 46 + row * (puzzleLayout.slotH + invGap),
                       };
                       const slot = slotPos(p.slotIndex);
                       const placed = placedPieces.includes(p.id);
@@ -414,10 +532,11 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
                           piece={p}
                           home={home}
                           slot={slot}
+                          size={{ w: puzzleLayout.slotW, h: puzzleLayout.slotH }}
                           placed={placed}
                           disabled={introStatus !== 'DONE' || puzzleCompleteOverlay}
                           scale={puzzleScale}
-                          threshold={SNAP_THRESHOLD}
+                          threshold={Math.max(52, Math.round((SNAP_THRESHOLD * puzzleLayout.slotW) / SLOT_W))}
                           showGlow={!!slotGlow[p.slotIndex]}
                           onPlaced={onPlacePiece}
                         />
