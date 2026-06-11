@@ -1,5 +1,6 @@
 import React, { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import FitScaleWrapper from '../common/FitScaleWrapper';
+import { GameTuningProvider } from '../common/GameTuningContext';
 import { useGameStore } from '../../store/useGameStore';
 import type { MinigameProps } from '../../types/game';
 
@@ -35,6 +36,20 @@ type LayoutTune = {
   left: number;
 };
 
+type TuneSchemaItem = {
+  key: string;
+  label: string;
+  min: number;
+  max: number;
+  step: number;
+};
+
+type StageTuneSchema = {
+  title: string;
+  defaults: Record<string, number>;
+  items: TuneSchemaItem[];
+};
+
 const DEFAULT_LAYOUT_TUNES: Record<number, LayoutTune> = {
   1: { baseWidth: 800, baseHeight: 450, top: 0, right: 0, bottom: 0, left: 0 },
   2: { baseWidth: 800, baseHeight: 450, top: 0, right: 0, bottom: 0, left: 0 },
@@ -49,6 +64,35 @@ const DEFAULT_LAYOUT_TUNES: Record<number, LayoutTune> = {
 
 const OUTER_TUNES_STORAGE_KEY = 'outerLayoutTunes_v1';
 const OUTER_TUNES_LOCKED_KEY = 'outerLayoutTunes_locked_v1';
+
+const GAME_TUNES_STORAGE_KEY = 'gameTunes_v1';
+const GAME_TUNES_LOCKED_KEY = 'gameTunes_locked_v1';
+
+const STAGE_TUNING_SCHEMAS: Record<number, StageTuneSchema> = {
+  6: {
+    title: '안양사 퍼즐 레이아웃',
+    defaults: {
+      headerX: 16,
+      headerY: 12,
+      boardX: 26,
+      boardY: 122, // 800x450 기준에서 3x2 보드 세로 중앙값(기본 SLOT_H=100, GAP=6 기준)
+      invX: 402,
+      invY: 84,
+      slotW: 120,
+      slotH: 100,
+    },
+    items: [
+      { key: 'headerX', label: '상단 X', min: -400, max: 900, step: 2 },
+      { key: 'headerY', label: '상단 Y', min: -200, max: 400, step: 2 },
+      { key: 'boardX', label: '보드 X', min: -400, max: 900, step: 2 },
+      { key: 'boardY', label: '보드 Y', min: -200, max: 600, step: 2 },
+      { key: 'invX', label: '인벤 X', min: -400, max: 1100, step: 2 },
+      { key: 'invY', label: '인벤 Y', min: -200, max: 700, step: 2 },
+      { key: 'slotW', label: '조각 폭', min: 40, max: 320, step: 2 },
+      { key: 'slotH', label: '조각 높이', min: 40, max: 260, step: 2 },
+    ],
+  },
+};
 
 export default function MiniGameManager() {
   const currentStageId = useGameStore((s) => s.currentStageId);
@@ -76,6 +120,26 @@ export default function MiniGameManager() {
     }
   });
   const [outerTunerOpen, setOuterTunerOpen] = useState(true);
+
+  // 게임별 튜닝(미니게임 내부 레이아웃) - 공통 HUD에서 제어
+  const [gameTunes, setGameTunes] = useState<Record<number, Record<string, number>>>(() => {
+    try {
+      const raw = window.localStorage.getItem(GAME_TUNES_STORAGE_KEY);
+      if (!raw) return {};
+      return JSON.parse(raw) as Record<number, Record<string, number>>;
+    } catch {
+      return {};
+    }
+  });
+  const [gameLocked, setGameLocked] = useState<Record<number, boolean>>(() => {
+    try {
+      const raw = window.localStorage.getItem(GAME_TUNES_LOCKED_KEY);
+      if (!raw) return {};
+      return JSON.parse(raw) as Record<number, boolean>;
+    } catch {
+      return {};
+    }
+  });
 
   if (!currentStageId) return null;
 
@@ -127,6 +191,22 @@ export default function MiniGameManager() {
     }
   }, [lockedTunes]);
 
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(GAME_TUNES_STORAGE_KEY, JSON.stringify(gameTunes));
+    } catch {
+      // ignore
+    }
+  }, [gameTunes]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(GAME_TUNES_LOCKED_KEY, JSON.stringify(gameLocked));
+    } catch {
+      // ignore
+    }
+  }, [gameLocked]);
+
   const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
 
   const tune = (key: keyof LayoutTune, delta: number, min: number, max: number) => {
@@ -160,6 +240,38 @@ export default function MiniGameManager() {
     return `가로 ${currentTune.baseWidth} / 세로 ${currentTune.baseHeight} / 상단 ${currentTune.top} / 하단 ${currentTune.bottom} / 왼쪽 ${currentTune.left} / 오른쪽 ${currentTune.right}`;
   }, [currentTune]);
 
+  const stageSchema = STAGE_TUNING_SCHEMAS[currentStageId];
+  const isGameLocked = !!gameLocked[currentStageId];
+  const getGameNumber = (key: string, fallback: number) => {
+    const base = stageSchema?.defaults?.[key] ?? fallback;
+    return gameTunes[currentStageId]?.[key] ?? base;
+  };
+  const setGameNumber = (key: string, value: number) => {
+    if (!stageSchema) return;
+    if (isGameLocked) return;
+    const item = stageSchema.items.find((x) => x.key === key);
+    const min = item?.min ?? -99999;
+    const max = item?.max ?? 99999;
+    setGameTunes((prev) => {
+      const cur = prev[currentStageId] ?? {};
+      return {
+        ...prev,
+        [currentStageId]: {
+          ...cur,
+          [key]: clamp(value, min, max),
+        },
+      };
+    });
+  };
+  const resetGameTunes = () => {
+    setGameLocked((prev) => ({ ...prev, [currentStageId]: false }));
+    setGameTunes((prev) => {
+      const next = { ...prev };
+      delete next[currentStageId];
+      return next;
+    });
+  };
+
   return (
     <Suspense fallback={<div style={{ padding: 20 }}>게임 불러오는 중...</div>}>
       <div className="w-full h-full relative">
@@ -176,9 +288,7 @@ export default function MiniGameManager() {
           ← 뒤로
         </button>
 
-        {/* 바깥 레이아웃 조절 패널(접기/펼치기)
-            - 버튼 조작 시 아래 게임으로 클릭이 전달되지 않도록 이벤트 버블링만 차단
-            - NOTE: preventDefault를 걸면 click 이벤트 자체가 막혀 버튼이 먹통이 될 수 있음 */}
+        {/* 공통 튜닝 HUD(바깥 레이아웃 + 게임별 튜닝) */}
         {outerTunerOpen ? (
           <div
             className="absolute right-4 top-16 z-50 rounded-2xl border border-ink/30 bg-paper2/92 px-2 py-2 shadow-md"
@@ -186,7 +296,7 @@ export default function MiniGameManager() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between gap-2">
-              <div className="text-[11px] font-black">바깥 레이아웃 조절</div>
+              <div className="text-[11px] font-black">튜닝</div>
               <button
                 type="button"
                 className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper text-[10px] font-black"
@@ -200,7 +310,7 @@ export default function MiniGameManager() {
               </button>
             </div>
 
-            <div className="mt-2 text-[10px] font-bold opacity-80 max-w-[250px] leading-snug">{tuneText}</div>
+            <div className="mt-2 text-[10px] font-bold opacity-80 max-w-[270px] leading-snug">{tuneText}</div>
             <div className="mt-1 flex items-center justify-between gap-2">
               <div className={['text-[10px] font-black', isLocked ? 'text-stamp' : 'text-ink/70'].join(' ')}>
                 {isLocked ? '확정됨(잠금)' : '조절 중'}
@@ -384,6 +494,80 @@ export default function MiniGameManager() {
                 초기화
               </button>
             </div>
+
+            {stageSchema && (
+              <div className="mt-3 pt-3 border-t border-ink/15">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="text-[11px] font-black">{stageSchema.title}</div>
+                  <div className={['text-[10px] font-black', isGameLocked ? 'text-stamp' : 'text-ink/70'].join(' ')}>
+                    {isGameLocked ? '확정됨(잠금)' : '조절 중'}
+                  </div>
+                </div>
+                <div className="mt-1 flex items-center justify-between gap-2">
+                  {isGameLocked ? (
+                    <button
+                      type="button"
+                      className="px-2 py-1 rounded-lg border border-ink/20 bg-paper text-[10px] font-black"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setGameLocked((prev) => ({ ...prev, [currentStageId]: false }));
+                      }}
+                    >
+                      확정 해제
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="px-2 py-1 rounded-lg border border-ink/20 bg-stamp text-white text-[10px] font-black"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setGameLocked((prev) => ({ ...prev, [currentStageId]: true }));
+                      }}
+                    >
+                      이 값 확정
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className="px-2 py-1 rounded-lg border border-ink/20 bg-paper text-[10px] font-black"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      resetGameTunes();
+                    }}
+                  >
+                    초기화
+                  </button>
+                </div>
+
+                <div className="mt-2 flex flex-col gap-2 text-[10px]">
+                  {stageSchema.items.map((it) => {
+                    const v = getGameNumber(it.key, 0);
+                    return (
+                      <div key={it.key} className="flex items-center gap-2">
+                        <span className="w-12 font-black">{it.label}</span>
+                        <input
+                          type="range"
+                          min={it.min}
+                          max={it.max}
+                          step={it.step}
+                          value={v}
+                          onChange={(e) => setGameNumber(it.key, Number(e.target.value))}
+                          className="w-[140px]"
+                          disabled={isGameLocked}
+                        />
+                        <input
+                          type="number"
+                          className="w-[70px] rounded-lg border border-ink/20 bg-paper px-2 py-1 font-black"
+                          value={v}
+                          onChange={(e) => setGameNumber(it.key, Number(e.target.value || 0))}
+                          disabled={isGameLocked}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           <button
@@ -395,7 +579,7 @@ export default function MiniGameManager() {
             }}
             title="바깥 레이아웃 조절 열기"
           >
-            레이아웃
+            튜닝
           </button>
         )}
 
@@ -409,12 +593,23 @@ export default function MiniGameManager() {
           }}
         >
           <FitScaleWrapper baseWidth={fit.baseWidth} baseHeight={fit.baseHeight}>
-            <CurrentMiniGame
-              stageId={currentStageId}
-              regionData={regionData}
-              onComplete={() => completeStage(currentStageId)}
-              onFail={() => setAppPhase('MAP')}
-            />
+            <GameTuningProvider
+              value={{
+                stageId: currentStageId,
+                getNumber: getGameNumber,
+                setNumber: setGameNumber,
+                reset: resetGameTunes,
+                locked: isGameLocked,
+                setLocked: (locked) => setGameLocked((prev) => ({ ...prev, [currentStageId]: locked })),
+              }}
+            >
+              <CurrentMiniGame
+                stageId={currentStageId}
+                regionData={regionData}
+                onComplete={() => completeStage(currentStageId)}
+                onFail={() => setAppPhase('MAP')}
+              />
+            </GameTuningProvider>
           </FitScaleWrapper>
         </div>
       </div>
