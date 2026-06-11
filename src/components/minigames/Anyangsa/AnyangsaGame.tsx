@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { MinigameProps } from '../../../types/game';
 import { storyDataByStageId } from '../../../data/storyData';
 import { audio } from '../../../utils/audio';
+import { useToast } from '../common/useToast';
 
 type Phase = 'FRAGMENTS' | 'ENGRAVE';
 
@@ -34,7 +35,7 @@ const FRAGMENTS: { id: FragmentId; label: string; img: string; x: number; y: num
   { id: 'f3', label: '비석 조각', img: '/assets/images/relic_gwibu_base_top.png', x: 22, y: 56 },
 ];
 
-export default function AnyangsaGame({ stageId, onComplete, regionData }: MinigameProps) {
+function AnyangsaLegacyGame({ stageId, onComplete, regionData }: MinigameProps) {
   const stageTitle = useMemo(
     () => storyDataByStageId[stageId]?.title ?? regionData?.map?.nodes?.[stageId - 1]?.title ?? `스테이지 ${stageId}`,
     [regionData, stageId]
@@ -466,6 +467,319 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
               </button>
             </div>
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ==========================
+// NEW: 6조각 드래그 앤 드롭 퍼즐
+// ==========================
+
+type PuzzlePieceId = 1 | 2 | 3 | 4 | 5 | 6;
+type PuzzlePos = { x: number; y: number };
+type PuzzleDrag = { id: PuzzlePieceId; pointerId: number; offsetX: number; offsetY: number };
+
+const PUZZLE_BASE_W = 800;
+const PUZZLE_BASE_H = 450;
+
+const PUZZLE_PIECES: { id: PuzzlePieceId; src: string; correctIndex: number }[] = [
+  { id: 1, src: '/assets/images/relic_gwibu_body_puzzle_1.png', correctIndex: 0 },
+  { id: 2, src: '/assets/images/relic_gwibu_body_puzzle_2.png', correctIndex: 1 },
+  { id: 3, src: '/assets/images/relic_gwibu_body_puzzle_3.png', correctIndex: 2 },
+  { id: 4, src: '/assets/images/relic_gwibu_body_puzzle_4.png', correctIndex: 3 },
+  { id: 5, src: '/assets/images/relic_gwibu_body_puzzle_5.png', correctIndex: 4 },
+  { id: 6, src: '/assets/images/relic_gwibu_body_puzzle_6.png', correctIndex: 5 },
+];
+
+function shufflePuzzle<T>(arr: T[]) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+export default function AnyangsaGame({ stageId, onComplete, regionData }: MinigameProps) {
+  const stageTitle = useMemo(
+    () => storyDataByStageId[stageId]?.title ?? regionData?.map?.nodes?.[stageId - 1]?.title ?? `스테이지 ${stageId}`,
+    [regionData, stageId]
+  );
+  const title = `${stageTitle} · 6조각 퍼즐`;
+
+  const { toast, showToast } = useToast(1400);
+  const [attempts, setAttempts] = useState(0);
+  const [startedAt, setStartedAt] = useState<number | null>(null);
+  const startIfNeeded = () => {
+    if (!startedAt) setStartedAt(Date.now());
+  };
+
+  // 기준 캔버스(800x450)를 transform: scale(contain)로 반응형 렌더링
+  const hostRef = useRef<HTMLDivElement | null>(null);
+  const [scale, setScale] = useState(1);
+  useEffect(() => {
+    const el = hostRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => {
+      const r = el.getBoundingClientRect();
+      const s = Math.min(r.width / PUZZLE_BASE_W, r.height / PUZZLE_BASE_H);
+      setScale(Number.isFinite(s) && s > 0 ? s : 1);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  // 정답 슬롯(3x2)
+  const grid = useMemo(() => {
+    const slot = 140;
+    const gap = 0;
+    const x0 = 60;
+    const y0 = 95;
+    const slots: { x: number; y: number; w: number; h: number; cx: number; cy: number }[] = [];
+    for (let r = 0; r < 2; r += 1) {
+      for (let c = 0; c < 3; c += 1) {
+        const x = x0 + c * (slot + gap);
+        const y = y0 + r * (slot + gap);
+        slots.push({ x, y, w: slot, h: slot, cx: x + slot / 2, cy: y + slot / 2 });
+      }
+    }
+    return { slots, slot, gap, x0, y0 };
+  }, []);
+
+  // 인벤토리(우측 2x3) - 무작위 순서로 배치
+  const inventory = useMemo(() => {
+    const slot = 110;
+    const gap = 12;
+    const x0 = 520;
+    const y0 = 95;
+    const positions: PuzzlePos[] = [];
+    for (let r = 0; r < 3; r += 1) {
+      for (let c = 0; c < 2; c += 1) {
+        positions.push({ x: x0 + c * (slot + gap), y: y0 + r * (slot + gap) });
+      }
+    }
+    return { slot, gap, x0, y0, positions };
+  }, []);
+
+  const [pieceOrder] = useState<PuzzlePieceId[]>(() => shufflePuzzle(PUZZLE_PIECES.map((p) => p.id)));
+  const originPos = useMemo(() => {
+    const map = new Map<PuzzlePieceId, PuzzlePos>();
+    pieceOrder.forEach((id, idx) => {
+      map.set(id, inventory.positions[idx]);
+    });
+    return map;
+  }, [inventory.positions, pieceOrder]);
+
+  const [pos, setPos] = useState<Record<PuzzlePieceId, PuzzlePos>>(() => {
+    const initial = {} as Record<PuzzlePieceId, PuzzlePos>;
+    PUZZLE_PIECES.forEach((p) => {
+      initial[p.id] = originPos.get(p.id) ?? { x: 0, y: 0 };
+    });
+    return initial;
+  });
+  const [placedPieces, setPlacedPieces] = useState<PuzzlePieceId[]>([]);
+  const placedSet = useMemo(() => new Set(placedPieces), [placedPieces]);
+  const [drag, setDrag] = useState<PuzzleDrag | null>(null);
+  const [justPlaced, setJustPlaced] = useState<PuzzlePieceId | null>(null);
+  const [completed, setCompleted] = useState(false);
+
+  const boardRect = () => hostRef.current?.getBoundingClientRect() ?? new DOMRect();
+  const toBase = (clientX: number, clientY: number) => {
+    const r = boardRect();
+    return { x: (clientX - r.left) / scale, y: (clientY - r.top) / scale };
+  };
+
+  // Snap 판정 반경(Threshold)
+  const snapThreshold = 44;
+
+  const startDragPiece = (e: React.PointerEvent, id: PuzzlePieceId) => {
+    if (completed) return;
+    if (placedSet.has(id)) return;
+    startIfNeeded();
+    e.preventDefault();
+    e.stopPropagation();
+    (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+    const base = toBase(e.clientX, e.clientY);
+    const p = pos[id];
+    setDrag({ id, pointerId: e.pointerId, offsetX: base.x - p.x, offsetY: base.y - p.y });
+  };
+
+  const onMove = (e: React.PointerEvent) => {
+    if (!drag) return;
+    if (e.pointerId !== drag.pointerId) return;
+    e.preventDefault();
+    const base = toBase(e.clientX, e.clientY);
+    setPos((prev) => ({ ...prev, [drag.id]: { x: base.x - drag.offsetX, y: base.y - drag.offsetY } }));
+  };
+
+  const onEnd = (e: React.PointerEvent) => {
+    if (!drag) return;
+    if (e.pointerId !== drag.pointerId) return;
+    e.preventDefault();
+    const id = drag.id;
+    setDrag(null);
+
+    const piece = PUZZLE_PIECES.find((p) => p.id === id)!;
+    const target = grid.slots[piece.correctIndex];
+    const cur = pos[id];
+    const cx = cur.x + grid.slot / 2;
+    const cy = cur.y + grid.slot / 2;
+    const dist = Math.hypot(cx - target.cx, cy - target.cy);
+
+    if (dist <= snapThreshold) {
+      // 정답 슬롯에 스냅 + 잠금 처리
+      setPos((prev) => ({ ...prev, [id]: { x: target.x, y: target.y } }));
+      setPlacedPieces((prev) => (prev.includes(id) ? prev : [...prev, id]));
+      setJustPlaced(id);
+      audio.playSfx('correct', 0.75);
+      window.setTimeout(() => setJustPlaced(null), 240);
+      return;
+    }
+
+    // 오답: 인벤토리로 부드럽게 복귀
+    setAttempts((a) => a + 1);
+    audio.playSfx('wrong', 0.7);
+    const origin = originPos.get(id);
+    if (origin) setPos((prev) => ({ ...prev, [id]: origin }));
+  };
+
+  useEffect(() => {
+    if (placedPieces.length !== 6) return;
+    setCompleted(true);
+    audio.playUrl('/assets/sounds/sfx_completed.mp3', 0.9);
+    showToast('비석 복원 완료!');
+  }, [placedPieces.length, showToast]);
+
+  const finish = () => {
+    const now = Date.now();
+    const started = startedAt ?? now;
+    const clearTime = Math.max(0, Math.round(((now - started) / 1000) * 10) / 10);
+    onComplete({ attempts, clearTime });
+  };
+
+  return (
+    <div className="w-full h-full p-0 text-ink relative">
+      <style>{`
+        .puzzleHost { touch-action: none; }
+        .puzzleCanvas { touch-action: none; }
+        .piece { touch-action: none; user-select: none; -webkit-user-select: none; }
+        .pieceReturn { transition: left 220ms ease, top 220ms ease; }
+        .pieceDrag { transition: none; z-index: 30; }
+        @keyframes pop { 0% { transform: scale(1); } 60% { transform: scale(1.06); } 100% { transform: scale(1); } }
+        .popFx { animation: pop 220ms ease-out both; }
+        @keyframes glow {
+          0%, 100% { filter: drop-shadow(0 0 0 rgba(255, 204, 0, 0)); }
+          50% { filter: drop-shadow(0 0 16px rgba(255, 204, 0, 0.95)); }
+        }
+        .glowFx { animation: glow 1.2s ease-in-out infinite; }
+      `}</style>
+
+      <div className="absolute left-4 top-3 z-20 text-sm font-black">{title}</div>
+
+      <div ref={hostRef} className="puzzleHost absolute inset-0">
+        <div
+          className="puzzleCanvas absolute left-1/2 top-1/2"
+          style={{
+            width: `${PUZZLE_BASE_W}px`,
+            height: `${PUZZLE_BASE_H}px`,
+            transform: `translate(-50%, -50%) scale(${scale})`,
+            transformOrigin: 'center',
+          }}
+          onPointerMove={onMove}
+          onPointerUp={onEnd}
+          onPointerCancel={onEnd}
+        >
+          {/* 배경 보드 */}
+          <div className="absolute inset-0 rounded-[28px] border border-ink/25 bg-paper2/92 shadow-paper" />
+
+          {/* 정답 슬롯(도안) */}
+          <div className="absolute left-[40px] top-[70px]">
+            <div className="text-sm font-black mb-2">비석 도안</div>
+            <div className={['relative', completed ? 'glowFx' : ''].join(' ')}>
+              {grid.slots.map((s, idx) => (
+                <div
+                  key={idx}
+                  className={[
+                    'absolute rounded-xl border-2 border-dashed',
+                    completed ? 'border-amber-300/35 bg-amber-100/10' : 'border-ink/25 bg-paper/45',
+                  ].join(' ')}
+                  style={{ left: s.x - grid.x0, top: s.y - grid.y0, width: s.w, height: s.h }}
+                />
+              ))}
+              <div style={{ width: 3 * grid.slot + 2 * grid.gap, height: 2 * grid.slot + grid.gap }} />
+            </div>
+          </div>
+
+          {/* 인벤토리 슬롯 */}
+          <div className="absolute left-[520px] top-[70px]">
+            <div className="text-sm font-black mb-2">조각</div>
+            <div
+              className="relative"
+              style={{
+                width: 2 * inventory.slot + inventory.gap,
+                height: 3 * inventory.slot + 2 * inventory.gap,
+              }}
+            >
+              {inventory.positions.map((p, i) => (
+                <div
+                  key={i}
+                  className="absolute rounded-2xl border border-ink/15 bg-paper/55"
+                  style={{
+                    left: p.x - inventory.x0,
+                    top: p.y - inventory.y0,
+                    width: inventory.slot,
+                    height: inventory.slot,
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* 퍼즐 조각 */}
+          {PUZZLE_PIECES.map((p) => {
+            const isPlaced = placedSet.has(p.id);
+            const isDragging = drag?.id === p.id;
+            const at = pos[p.id];
+            return (
+              <div
+                key={p.id}
+                className={[
+                  'piece absolute',
+                  isDragging ? 'pieceDrag' : 'pieceReturn',
+                  justPlaced === p.id ? 'popFx' : '',
+                  isPlaced ? 'z-10' : 'z-20',
+                ].join(' ')}
+                style={{
+                  left: `${at.x}px`,
+                  top: `${at.y}px`,
+                  width: `${grid.slot}px`,
+                  height: `${grid.slot}px`,
+                }}
+                onPointerDown={(e) => startDragPiece(e, p.id)}
+              >
+                <img src={p.src} alt="" className="w-full h-full object-contain pointer-events-none" draggable={false} />
+              </div>
+            );
+          })}
+
+          {/* 완료 팝업 */}
+          {completed && (
+            <button type="button" className="absolute inset-0 z-40 grid place-items-center bg-ink/18" onClick={finish}>
+              <div className="note-panel px-6 py-5">
+                <div className="text-lg font-black text-center">비석 복원 완료!</div>
+                <div className="mt-2 text-sm opacity-90 text-center">화면을 탭하면 다음으로 넘어가요.</div>
+              </div>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* 토스트 */}
+      {toast && (
+        <div className="absolute left-1/2 bottom-4 -translate-x-1/2 z-50">
+          <div className="rounded-2xl border border-ink/20 bg-paper2/92 px-4 py-2 text-sm font-black shadow-paper">{toast}</div>
         </div>
       )}
     </div>
