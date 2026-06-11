@@ -47,6 +47,8 @@ const SLOT_H = 100;
 const SLOT_GAP = 6;
 const SLOT_GAP_MERGED = 0;
 const SNAP_THRESHOLD = 78;
+const PUZZLE_LAYOUT_STORAGE_KEY = 'anyangsaPuzzleLayout_v1';
+const PUZZLE_LAYOUT_LOCK_KEY = 'anyangsaPuzzleLayout_locked_v1';
 
 type Point = { x: number; y: number };
 
@@ -185,15 +187,51 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
     const invW = SLOT_W * 3 + 12 * 2;
     const invX = PUZZLE_BASE_W - invW - 18;
     const invY = 84;
-    return { boardX, boardY, invX, invY, slotW: SLOT_W, slotH: SLOT_H };
+    const headerX = 16;
+    const headerY = 12;
+    return { boardX, boardY, invX, invY, slotW: SLOT_W, slotH: SLOT_H, headerX, headerY };
   }, []);
 
-  const [puzzleLayout, setPuzzleLayout] = useState(() => ({ ...DEFAULT_PUZZLE_LAYOUT }));
+  const [puzzleLayout, setPuzzleLayout] = useState(() => {
+    try {
+      const raw = window.localStorage.getItem(PUZZLE_LAYOUT_STORAGE_KEY);
+      if (!raw) return { ...DEFAULT_PUZZLE_LAYOUT };
+      const parsed = JSON.parse(raw) as Partial<typeof DEFAULT_PUZZLE_LAYOUT>;
+      return { ...DEFAULT_PUZZLE_LAYOUT, ...parsed };
+    } catch {
+      return { ...DEFAULT_PUZZLE_LAYOUT };
+    }
+  });
   const [puzzleLayoutOpen, setPuzzleLayoutOpen] = useState(false);
+  const [puzzleLayoutLocked, setPuzzleLayoutLocked] = useState(() => {
+    try {
+      return window.localStorage.getItem(PUZZLE_LAYOUT_LOCK_KEY) === '1';
+    } catch {
+      return false;
+    }
+  });
   const clampNum = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
   const bump = (key: keyof typeof puzzleLayout, delta: number, min: number, max: number) => {
+    if (puzzleLayoutLocked) return;
     setPuzzleLayout((prev) => ({ ...prev, [key]: clampNum(prev[key] + delta, min, max) }));
   };
+
+  // dev에서 "보면서 맞추기"를 위해 자동 저장(원하면 잠금 가능)
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(PUZZLE_LAYOUT_STORAGE_KEY, JSON.stringify(puzzleLayout));
+    } catch {
+      // ignore
+    }
+  }, [puzzleLayout]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(PUZZLE_LAYOUT_LOCK_KEY, puzzleLayoutLocked ? '1' : '0');
+    } catch {
+      // ignore
+    }
+  }, [puzzleLayoutLocked]);
 
   // 내부 캔버스 스케일링(기준 해상도 -> transform: scale로 contain)
   const puzzleViewportRef = useRef<HTMLDivElement | null>(null);
@@ -364,7 +402,10 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
 
                 return (
                   <>
-                    <div className="absolute left-4 top-3 rounded-2xl border border-ink/20 bg-paper2/80 px-4 py-3 shadow-paper">
+                    <div
+                      className="absolute rounded-2xl border border-ink/20 bg-paper2/80 px-4 py-3 shadow-paper"
+                      style={{ left: puzzleLayout.headerX, top: puzzleLayout.headerY }}
+                    >
                       <div className="text-sm font-black">6조각 퍼즐</div>
                       <div className="mt-1 text-[12px] font-bold opacity-80">
                         조각을 드래그해서 점선 도안 위에 놓아보자! (가까이 가면 ‘착!’ 하고 붙어요)
@@ -395,48 +436,89 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
                         <div className="mt-1 text-[10px] font-bold opacity-75">
                           보드({puzzleLayout.boardX},{puzzleLayout.boardY}) · 인벤({puzzleLayout.invX},{puzzleLayout.invY}) · 조각({puzzleLayout.slotW}×{puzzleLayout.slotH})
                         </div>
+                        <div className="mt-1 flex items-center justify-between gap-2">
+                          <div className={['text-[10px] font-black', puzzleLayoutLocked ? 'text-stamp' : 'text-ink/70'].join(' ')}>
+                            {puzzleLayoutLocked ? '확정됨(잠금)' : '조절 중'}
+                          </div>
+                          {puzzleLayoutLocked ? (
+                            <button
+                              type="button"
+                              className="px-2 py-1 rounded-lg border border-ink/20 bg-paper text-[10px] font-black"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setPuzzleLayoutLocked(false);
+                              }}
+                            >
+                              확정 해제
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              className="px-2 py-1 rounded-lg border border-ink/20 bg-stamp text-white text-[10px] font-black"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setPuzzleLayoutLocked(true);
+                              }}
+                            >
+                              이 값 확정
+                            </button>
+                          )}
+                        </div>
                         <div className="mt-2 flex flex-col gap-1 text-[10px] font-black">
                           <div className="flex items-center gap-1">
+                            <span className="w-11">상단X</span>
+                            <button type="button" className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper disabled:opacity-40" disabled={puzzleLayoutLocked} onClick={(e) => { e.stopPropagation(); bump('headerX', -6, 0, 360); }}>-</button>
+                            <span className="w-10 text-center">{puzzleLayout.headerX}</span>
+                            <button type="button" className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper disabled:opacity-40" disabled={puzzleLayoutLocked} onClick={(e) => { e.stopPropagation(); bump('headerX', 6, 0, 360); }}>+</button>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <span className="w-11">상단Y</span>
+                            <button type="button" className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper disabled:opacity-40" disabled={puzzleLayoutLocked} onClick={(e) => { e.stopPropagation(); bump('headerY', -6, 0, 120); }}>-</button>
+                            <span className="w-10 text-center">{puzzleLayout.headerY}</span>
+                            <button type="button" className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper disabled:opacity-40" disabled={puzzleLayoutLocked} onClick={(e) => { e.stopPropagation(); bump('headerY', 6, 0, 120); }}>+</button>
+                          </div>
+                          <div className="flex items-center gap-1">
                             <span className="w-11">보드X</span>
-                            <button type="button" className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper" onClick={(e) => { e.stopPropagation(); bump('boardX', -6, 0, 220); }}>-</button>
+                            <button type="button" className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper disabled:opacity-40" disabled={puzzleLayoutLocked} onClick={(e) => { e.stopPropagation(); bump('boardX', -6, 0, 220); }}>-</button>
                             <span className="w-10 text-center">{puzzleLayout.boardX}</span>
-                            <button type="button" className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper" onClick={(e) => { e.stopPropagation(); bump('boardX', 6, 0, 220); }}>+</button>
+                            <button type="button" className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper disabled:opacity-40" disabled={puzzleLayoutLocked} onClick={(e) => { e.stopPropagation(); bump('boardX', 6, 0, 220); }}>+</button>
                           </div>
                           <div className="flex items-center gap-1">
                             <span className="w-11">보드Y</span>
-                            <button type="button" className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper" onClick={(e) => { e.stopPropagation(); bump('boardY', -6, 0, 260); }}>-</button>
+                            <button type="button" className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper disabled:opacity-40" disabled={puzzleLayoutLocked} onClick={(e) => { e.stopPropagation(); bump('boardY', -6, 0, 260); }}>-</button>
                             <span className="w-10 text-center">{puzzleLayout.boardY}</span>
-                            <button type="button" className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper" onClick={(e) => { e.stopPropagation(); bump('boardY', 6, 0, 260); }}>+</button>
+                            <button type="button" className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper disabled:opacity-40" disabled={puzzleLayoutLocked} onClick={(e) => { e.stopPropagation(); bump('boardY', 6, 0, 260); }}>+</button>
                           </div>
                           <div className="flex items-center gap-1">
                             <span className="w-11">인벤X</span>
-                            <button type="button" className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper" onClick={(e) => { e.stopPropagation(); bump('invX', -6, 240, 680); }}>-</button>
+                            <button type="button" className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper disabled:opacity-40" disabled={puzzleLayoutLocked} onClick={(e) => { e.stopPropagation(); bump('invX', -6, 240, 680); }}>-</button>
                             <span className="w-10 text-center">{puzzleLayout.invX}</span>
-                            <button type="button" className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper" onClick={(e) => { e.stopPropagation(); bump('invX', 6, 240, 680); }}>+</button>
+                            <button type="button" className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper disabled:opacity-40" disabled={puzzleLayoutLocked} onClick={(e) => { e.stopPropagation(); bump('invX', 6, 240, 680); }}>+</button>
                           </div>
                           <div className="flex items-center gap-1">
                             <span className="w-11">인벤Y</span>
-                            <button type="button" className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper" onClick={(e) => { e.stopPropagation(); bump('invY', -6, 0, 300); }}>-</button>
+                            <button type="button" className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper disabled:opacity-40" disabled={puzzleLayoutLocked} onClick={(e) => { e.stopPropagation(); bump('invY', -6, 0, 300); }}>-</button>
                             <span className="w-10 text-center">{puzzleLayout.invY}</span>
-                            <button type="button" className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper" onClick={(e) => { e.stopPropagation(); bump('invY', 6, 0, 300); }}>+</button>
+                            <button type="button" className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper disabled:opacity-40" disabled={puzzleLayoutLocked} onClick={(e) => { e.stopPropagation(); bump('invY', 6, 0, 300); }}>+</button>
                           </div>
                           <div className="flex items-center gap-1">
                             <span className="w-11">폭</span>
-                            <button type="button" className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper" onClick={(e) => { e.stopPropagation(); bump('slotW', -6, 86, 170); }}>-</button>
+                            <button type="button" className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper disabled:opacity-40" disabled={puzzleLayoutLocked} onClick={(e) => { e.stopPropagation(); bump('slotW', -6, 86, 170); }}>-</button>
                             <span className="w-10 text-center">{puzzleLayout.slotW}</span>
-                            <button type="button" className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper" onClick={(e) => { e.stopPropagation(); bump('slotW', 6, 86, 170); }}>+</button>
+                            <button type="button" className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper disabled:opacity-40" disabled={puzzleLayoutLocked} onClick={(e) => { e.stopPropagation(); bump('slotW', 6, 86, 170); }}>+</button>
                           </div>
                           <div className="flex items-center gap-1">
                             <span className="w-11">높이</span>
-                            <button type="button" className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper" onClick={(e) => { e.stopPropagation(); bump('slotH', -6, 70, 140); }}>-</button>
+                            <button type="button" className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper disabled:opacity-40" disabled={puzzleLayoutLocked} onClick={(e) => { e.stopPropagation(); bump('slotH', -6, 70, 140); }}>-</button>
                             <span className="w-10 text-center">{puzzleLayout.slotH}</span>
-                            <button type="button" className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper" onClick={(e) => { e.stopPropagation(); bump('slotH', 6, 70, 140); }}>+</button>
+                            <button type="button" className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper disabled:opacity-40" disabled={puzzleLayoutLocked} onClick={(e) => { e.stopPropagation(); bump('slotH', 6, 70, 140); }}>+</button>
                           </div>
                           <button
                             type="button"
                             className="mt-1 px-2 py-1 rounded-lg border border-ink/20 bg-stamp text-white font-black"
                             onClick={(e) => {
                               e.stopPropagation();
+                              setPuzzleLayoutLocked(false);
                               setPuzzleLayout({ ...DEFAULT_PUZZLE_LAYOUT });
                             }}
                           >
