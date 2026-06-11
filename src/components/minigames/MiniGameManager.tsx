@@ -243,11 +243,11 @@ export default function MiniGameManager() {
                 <span className="w-10 font-black">가로</span>
                 <input
                   type="range"
-                  min={300}
-                  max={1600}
+                  min={200}
+                  max={2400}
                   step={10}
                   value={currentTune.baseWidth}
-                  onChange={(e) => setTune('baseWidth', Number(e.target.value), 300, 1600)}
+                  onChange={(e) => setTune('baseWidth', Number(e.target.value), 200, 2400)}
                   className="w-[140px]"
                   disabled={isLocked}
                 />
@@ -255,7 +255,7 @@ export default function MiniGameManager() {
                   type="number"
                   className="w-[70px] rounded-lg border border-ink/20 bg-paper px-2 py-1 font-black"
                   value={currentTune.baseWidth}
-                  onChange={(e) => setTune('baseWidth', Number(e.target.value || 0), 300, 1600)}
+                  onChange={(e) => setTune('baseWidth', Number(e.target.value || 0), 200, 2400)}
                   disabled={isLocked}
                 />
               </div>
@@ -264,11 +264,11 @@ export default function MiniGameManager() {
                 <span className="w-10 font-black">세로</span>
                 <input
                   type="range"
-                  min={300}
-                  max={1600}
+                  min={200}
+                  max={2400}
                   step={10}
                   value={currentTune.baseHeight}
-                  onChange={(e) => setTune('baseHeight', Number(e.target.value), 300, 1600)}
+                  onChange={(e) => setTune('baseHeight', Number(e.target.value), 200, 2400)}
                   className="w-[140px]"
                   disabled={isLocked}
                 />
@@ -276,7 +276,7 @@ export default function MiniGameManager() {
                   type="number"
                   className="w-[70px] rounded-lg border border-ink/20 bg-paper px-2 py-1 font-black"
                   value={currentTune.baseHeight}
-                  onChange={(e) => setTune('baseHeight', Number(e.target.value || 0), 300, 1600)}
+                  onChange={(e) => setTune('baseHeight', Number(e.target.value || 0), 200, 2400)}
                   disabled={isLocked}
                 />
               </div>
@@ -285,11 +285,11 @@ export default function MiniGameManager() {
                 <span className="w-10 font-black">상단</span>
                 <input
                   type="range"
-                  min={-200}
-                  max={200}
+                  min={-500}
+                  max={500}
                   step={2}
                   value={currentTune.top}
-                  onChange={(e) => setTune('top', Number(e.target.value), -200, 200)}
+                  onChange={(e) => setTune('top', Number(e.target.value), -500, 500)}
                   className="w-[140px]"
                   disabled={isLocked}
                 />
@@ -297,7 +297,7 @@ export default function MiniGameManager() {
                   type="number"
                   className="w-[70px] rounded-lg border border-ink/20 bg-paper px-2 py-1 font-black"
                   value={currentTune.top}
-                  onChange={(e) => setTune('top', Number(e.target.value || 0), -200, 200)}
+                  onChange={(e) => setTune('top', Number(e.target.value || 0), -500, 500)}
                   disabled={isLocked}
                 />
               </div>
@@ -306,11 +306,11 @@ export default function MiniGameManager() {
                 <span className="w-10 font-black">하단</span>
                 <input
                   type="range"
-                  min={-200}
-                  max={200}
+                  min={-500}
+                  max={500}
                   step={2}
                   value={currentTune.bottom}
-                  onChange={(e) => setTune('bottom', Number(e.target.value), -200, 200)}
+                  onChange={(e) => setTune('bottom', Number(e.target.value), -500, 500)}
                   className="w-[140px]"
                   disabled={isLocked}
                 />
@@ -318,7 +318,7 @@ export default function MiniGameManager() {
                   type="number"
                   className="w-[70px] rounded-lg border border-ink/20 bg-paper px-2 py-1 font-black"
                   value={currentTune.bottom}
-                  onChange={(e) => setTune('bottom', Number(e.target.value || 0), -200, 200)}
+                  onChange={(e) => setTune('bottom', Number(e.target.value || 0), -500, 500)}
                   disabled={isLocked}
                 />
               </div>
@@ -327,11 +327,11 @@ export default function MiniGameManager() {
                 <span className="w-10 font-black">왼쪽</span>
                 <input
                   type="range"
-                  min={-200}
-                  max={200}
+                  min={-500}
+                  max={500}
                   step={2}
                   value={currentTune.left}
-                  onChange={(e) => setTune('left', Number(e.target.value), -200, 200)}
+                  onChange={(e) => setTune('left', Number(e.target.value), -500, 500)}
                   className="w-[140px]"
                   disabled={isLocked}
                 />
@@ -339,7 +339,7 @@ export default function MiniGameManager() {
                   type="number"
                   className="w-[70px] rounded-lg border border-ink/20 bg-paper px-2 py-1 font-black"
                   value={currentTune.left}
-                  onChange={(e) => setTune('left', Number(e.target.value || 0), -200, 200)}
+                  onChange={(e) => setTune('left', Number(e.target.value || 0), -500, 500)}
                   disabled={isLocked}
                 />
               </div>
@@ -348,11 +348,11 @@ export default function MiniGameManager() {
                 <span className="w-10 font-black">오른쪽</span>
                 <input
                   type="range"
-                  min={-200}
-                  max={200}
+                  min={-500}
+                  max={500}
                   step={2}
                   value={currentTune.right}
-                  onChange={(e) => setTune('right', Number(e.target.value), -200, 200)}
+                  onChange={(e) => setTune('right', Number(e.target.value), -500, 500)}
                   className="w-[140px]"
                   disabled={isLocked}
                 />
@@ -360,7 +360,7 @@ export default function MiniGameManager() {
                   type="number"
                   className="w-[70px] rounded-lg border border-ink/20 bg-paper px-2 py-1 font-black"
                   value={currentTune.right}
-                  onChange={(e) => setTune('right', Number(e.target.value || 0), -200, 200)}
+                  onChange={(e) => setTune('right', Number(e.target.value || 0), -500, 500)}
                   disabled={isLocked}
                 />
               </div>
