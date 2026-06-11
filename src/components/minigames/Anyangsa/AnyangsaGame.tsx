@@ -57,6 +57,7 @@ function PuzzlePiece({
   home,
   slot,
   size,
+  dimmed,
   placed,
   disabled,
   scale,
@@ -68,6 +69,7 @@ function PuzzlePiece({
   home: Point;
   slot: Point;
   size: { w: number; h: number };
+  dimmed: boolean;
   placed: boolean;
   disabled: boolean;
   scale: number;
@@ -107,6 +109,8 @@ function PuzzlePiece({
         x,
         y,
         touchAction: 'none',
+        opacity: dimmed ? 0 : 1,
+        transition: 'opacity 220ms ease',
       }}
       drag={!placed && !disabled}
       dragMomentum={false}
@@ -563,25 +567,6 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
                           />
                         );
                       })}
-
-                      {/* 퍼즐 완성 시: 틈새를 가리는 완성 이미지 오버레이 */}
-                      <motion.img
-                        src={STELE_BODY}
-                        alt="완성된 비석"
-                        draggable={false}
-                        className="absolute pointer-events-none"
-                        style={{
-                          left: 0,
-                          top: 0,
-                          width: boardW,
-                          height: boardH,
-                          objectFit: 'contain',
-                          filter: puzzleCompleted ? 'drop-shadow(0 0 18px rgba(245, 158, 11, 0.45))' : 'none',
-                        }}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: puzzleCompleted ? 1 : 0 }}
-                        transition={{ duration: 0.35 }}
-                      />
                     </div>
 
                     {/* 인벤토리 */}
@@ -615,6 +600,7 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
                           home={home}
                           slot={slot}
                           size={{ w: puzzleLayout.slotW, h: puzzleLayout.slotH }}
+                          dimmed={puzzleCompleted}
                           placed={placed}
                           disabled={introStatus !== 'DONE' || puzzleCompleteOverlay}
                           scale={puzzleScale}
@@ -624,6 +610,26 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
                         />
                       );
                     })}
+
+                    {/* 퍼즐 완성 시: 틈새를 가리는 완성 이미지 오버레이(조각 위에 덮기) */}
+                    <motion.img
+                      src={STELE_BODY}
+                      alt="완성된 비석"
+                      draggable={false}
+                      className="absolute pointer-events-none"
+                      style={{
+                        left: puzzleLayout.boardX,
+                        top: puzzleLayout.boardY,
+                        width: boardW,
+                        height: boardH,
+                        objectFit: 'contain',
+                        zIndex: 30,
+                        filter: puzzleCompleted ? 'drop-shadow(0 0 18px rgba(245, 158, 11, 0.55))' : 'none',
+                      }}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: puzzleCompleted ? 1 : 0 }}
+                      transition={{ duration: 0.35 }}
+                    />
 
                     {/* 퍼즐 완료 오버레이(탭해서 다음 단계) */}
                     {puzzleCompleteOverlay && (
