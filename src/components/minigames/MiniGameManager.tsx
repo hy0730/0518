@@ -2,7 +2,7 @@ import React, { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'rea
 import FitScaleWrapper from '../common/FitScaleWrapper';
 import { GameTuningProvider } from '../common/GameTuningContext';
 import { useGameStore } from '../../store/useGameStore';
-import type { MinigameProps } from '../../types/game';
+import type { MinigameMetrics, MinigameProps } from '../../types/game';
 
 const BronzeAgeGame = lazy(() => import('./BronzeAge/BronzeAgeGame'));
 const DolmenGame = lazy(() => import('./Dolmen/DolmenGame'));
@@ -233,6 +233,7 @@ export default function MiniGameManager() {
   });
   const [outerTunerOpen, setOuterTunerOpen] = useState(true);
   const [innerTunerOpen, setInnerTunerOpen] = useState(true);
+  const [completeModal, setCompleteModal] = useState<null | { stageId: number; metrics?: Partial<MinigameMetrics> }>(null);
 
   // 게임별 튜닝(미니게임 내부 레이아웃) - 공통 HUD에서 제어
   const [gameTunes, setGameTunes] = useState<Record<number, Record<string, number>>>(() => {
@@ -430,6 +431,10 @@ export default function MiniGameManager() {
     );
   }
 
+  const handleComplete = (metrics?: Partial<MinigameMetrics>) => {
+    setCompleteModal({ stageId: currentStageId, metrics });
+  };
+
   return (
     <Suspense fallback={<div style={{ padding: 20 }}>게임 불러오는 중...</div>}>
       <div className="w-full h-full relative">
@@ -446,8 +451,57 @@ export default function MiniGameManager() {
           ← 뒤로
         </button>
 
+        {/* 공통 결과창: 완료 후 클릭해야 다음으로 이동 */}
+        {completeModal && (
+          <div className="absolute inset-0 z-[20000] bg-ink/35 grid place-items-center p-4">
+            <button
+              type="button"
+              className="absolute inset-0"
+              aria-label="다음"
+              onClick={() => {
+                const sid = completeModal.stageId;
+                setCompleteModal(null);
+                completeStage(sid);
+              }}
+            />
+            <div className="w-full max-w-[520px] rounded-3xl border-2 border-ink/25 bg-paper2 text-ink shadow-paper relative z-10">
+              <div className="p-5">
+                <div className="text-lg font-black">완료!</div>
+                {completeModal.metrics && (
+                  <div className="mt-2 text-sm font-bold opacity-85">
+                    {typeof completeModal.metrics.attempts === 'number' ? `시도 ${completeModal.metrics.attempts}회` : ''}
+                    {typeof completeModal.metrics.clearTime === 'number' ? ` · 시간 ${completeModal.metrics.clearTime}s` : ''}
+                  </div>
+                )}
+                <div className="mt-2 text-sm opacity-85">탭하면 다음으로 넘어가요.</div>
+              </div>
+              <div className="p-5 pt-0 flex gap-2 justify-end">
+                <button
+                  type="button"
+                  className="rounded-xl px-4 py-2 text-sm font-black border border-ink/20 bg-paper hover:opacity-95"
+                  onClick={() => setCompleteModal(null)}
+                >
+                  닫기
+                </button>
+                <button
+                  type="button"
+                  className="rounded-xl px-4 py-2 text-sm font-black border border-ink/25 bg-stamp text-white hover:opacity-95"
+                  onClick={() => {
+                    const sid = completeModal.stageId;
+                    setCompleteModal(null);
+                    completeStage(sid);
+                  }}
+                >
+                  다음
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* 전체 레이아웃 조절 */}
-        {outerTunerOpen ? (
+        {!completeModal ? (
+        outerTunerOpen ? (
           <div
             data-tuning-panel="true"
             className="absolute right-4 top-16 z-50 w-[320px] max-w-[calc(100vw-2rem)] max-h-[calc(50vh-5rem)] rounded-2xl border border-ink/30 bg-paper2/92 px-2 py-2 shadow-md overflow-y-auto"
@@ -667,11 +721,12 @@ export default function MiniGameManager() {
           >
             튜닝
           </button>
-        )}
+        )) : null}
 
         {/* 게임 내부 레이아웃 조절(스테이지별 스키마) */}
         {stageSchema &&
-          (innerTunerOpen ? (
+          (!completeModal ? (
+          innerTunerOpen ? (
             <div
               data-tuning-panel="true"
               className="absolute right-4 bottom-4 z-50 w-[320px] max-w-[calc(100vw-2rem)] max-h-[calc(50vh-2rem)] rounded-2xl border border-ink/30 bg-paper2/92 px-2 py-2 shadow-md overflow-y-auto"
@@ -773,7 +828,7 @@ export default function MiniGameManager() {
             >
               퍼즐 레이아웃
             </button>
-          ))}
+          )) : null)}
 
         <div
           className="absolute"
@@ -785,7 +840,7 @@ export default function MiniGameManager() {
           }}
         >
           <div className="relative w-full h-full">
-            {outerTunerOpen && !isLocked && (
+            {!completeModal && outerTunerOpen && !isLocked && (
               <div
                 className="absolute inset-0 z-40 rounded-3xl border-2 border-dashed border-sky-400/70 bg-sky-100/10 cursor-move"
                 style={{ touchAction: 'none' }}
@@ -825,7 +880,7 @@ export default function MiniGameManager() {
                 <CurrentMiniGame
                   stageId={currentStageId}
                   regionData={regionData}
-                  onComplete={() => completeStage(currentStageId)}
+                  onComplete={handleComplete}
                   onFail={() => setAppPhase('MAP')}
                 />
               </GameTuningProvider>
