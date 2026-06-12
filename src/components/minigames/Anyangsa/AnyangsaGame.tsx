@@ -592,8 +592,8 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
                         onClick={() => setPhase('ENGRAVE')}
                         onTouchStart={() => setPhase('ENGRAVE')}
                       >
-                        {/* NOTE: 뒤 배경을 또 깔면 "겹쳐 보임"이 생겨서, 기존 배경 위에 블러+딤만 적용 */}
-                        <div className="absolute inset-0 bg-ink/18 backdrop-blur-sm" />
+                        {/* NOTE: 회색 화면처럼 보이지 않도록 딤을 아주 약하게만 적용(블러 제거) */}
+                        <div className="absolute inset-0 bg-ink/8" />
                         <div className="note-panel px-6 py-5 max-w-[520px] popInFx relative z-10">
                           <div className="text-lg font-black">비석 복원 완료!</div>
                           <div className="mt-2 text-sm opacity-90 leading-relaxed">잘했어! 이제 비석에 글씨를 새겨보자.</div>
