@@ -208,6 +208,21 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
     };
   }, [tuning]);
 
+  // 내부 캔버스 스케일링(기준 해상도 -> transform: scale로 contain)
+  const puzzleViewportRef = useRef<HTMLDivElement | null>(null);
+  const [puzzleScale, setPuzzleScale] = useState(1);
+  useLayoutEffect(() => {
+    const el = puzzleViewportRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => {
+      const r = el.getBoundingClientRect();
+      const s = Math.min(r.width / PUZZLE_BASE_W, r.height / PUZZLE_BASE_H);
+      setPuzzleScale(Number.isFinite(s) && s > 0 ? s : 1);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   // 퍼즐 완료 연출(완성 이미지/팝업) 위치/크기 조절
   const completeImgDx = tuning?.getNumber('completeImgDx', 0) ?? 0;
   const completeImgDy = tuning?.getNumber('completeImgDy', 0) ?? 0;
@@ -253,21 +268,6 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
       window.removeEventListener('pointercancel', up);
     };
   }, [tuning, puzzleScale, completeAdjustOpen]);
-
-  // 내부 캔버스 스케일링(기준 해상도 -> transform: scale로 contain)
-  const puzzleViewportRef = useRef<HTMLDivElement | null>(null);
-  const [puzzleScale, setPuzzleScale] = useState(1);
-  useLayoutEffect(() => {
-    const el = puzzleViewportRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver(() => {
-      const r = el.getBoundingClientRect();
-      const s = Math.min(r.width / PUZZLE_BASE_W, r.height / PUZZLE_BASE_H);
-      setPuzzleScale(Number.isFinite(s) && s > 0 ? s : 1);
-    });
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
 
   // 튜닝 창이 열려 있을 때 상단/보드/인벤을 직접 드래그해서 위치 조절
   const layoutDragRef = useRef<null | {
