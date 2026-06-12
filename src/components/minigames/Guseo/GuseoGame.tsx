@@ -31,6 +31,7 @@ type Guard = {
   patrolIdx: number;
   dirFacing: Dir;
   visionLen: number;
+  mode?: 'ROAM' | 'CHASE';
 };
 
 function cloneMap(m: Tile[][]) {
@@ -100,6 +101,38 @@ function bfsNextStep(map: Tile[][], start: Pos, goal: Pos, blocked: Set<string>)
   if (!curKey) return null;
   const [rStr, cStr] = curKey.split(',');
   return { r: Number(rStr), c: Number(cStr) };
+}
+
+function isPlayerInFront(map: Tile[][], g: Guard, playerPos: Pos, range: number) {
+  const deltaByDir: Record<Dir, { dr: number; dc: number }> = {
+    U: { dr: -1, dc: 0 },
+    D: { dr: 1, dc: 0 },
+    L: { dr: 0, dc: -1 },
+    R: { dr: 0, dc: 1 },
+  };
+  const d = deltaByDir[g.dirFacing];
+  for (let i = 1; i <= range; i += 1) {
+    const rr = g.r + d.dr * i;
+    const cc = g.c + d.dc * i;
+    if (rr < 0 || rr >= map.length || cc < 0 || cc >= (map[0]?.length ?? 0)) return false;
+    if (map[rr][cc] === 0) return false; // 벽이면 시야 차단
+    if (rr === playerPos.r && cc === playerPos.c) return true;
+  }
+  return false;
+}
+
+function pickRandomWalkablePos(map: Tile[][], avoid: Set<string>) {
+  const candidates: Pos[] = [];
+  for (let r = 0; r < map.length; r += 1) {
+    for (let c = 0; c < (map[0]?.length ?? 0); c += 1) {
+      if (!isWalkable(map[r][c])) continue;
+      const k = keyOf(r, c);
+      if (avoid.has(k)) continue;
+      candidates.push({ r, c });
+    }
+  }
+  if (!candidates.length) return { r: 17, c: 10 };
+  return candidates[Math.floor(Math.random() * candidates.length)];
 }
 
 function computeVisibleDangerSet(map: Tile[][], guards: Guard[]) {
@@ -246,23 +279,31 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
     },
     {
       id: 2,
-      // 플레이어 추격(거리 6칸 이내면 BFS로 1칸 추격, 멀면 순찰)
-      r: 17,
-      c: 10,
-      patrol: [
-        { r: 17, c: 10 },
-        { r: 17, c: 12 },
-        { r: 17, c: 14 },
-        { r: 17, c: 12 },
-      ],
+      // "추적 순사" : 시작 위치 고정 X, 평소엔 자유롭게 배회(ROAM)
+      // 플레이어가 "순사 정면 2칸" 안으로 들어오면 CHASE로 전환
+      ...(() => {
+        const avoid = new Set<string>([
+          keyOf(START_POS.r, START_POS.c),
+          keyOf(8, 8),
+          keyOf(8, 9),
+          keyOf(8, 10),
+          keyOf(8, 11),
+          keyOf(8, 12),
+        ]);
+        // 시작 위치는 너무 가까우면 억울할 수 있어(초기 난이도 완화)
+        const p = pickRandomWalkablePos(ANYANG_GRID_MAP, avoid);
+        return { r: p.r, c: p.c };
+      })(),
+      patrol: [],
       patrolIdx: 0,
       dirFacing: 'R',
       visionLen: 1,
+      mode: 'ROAM',
     },
   ]);
   const [visibleDangerSet, setVisibleDangerSet] = useState<Set<string>>(() => computeVisibleDangerSet(ANYANG_GRID_MAP, [
     { id: 1, r: 8, c: 8, patrol: [], patrolIdx: 0, dirFacing: 'R', visionLen: 1 },
-    { id: 2, r: 17, c: 10, patrol: [], patrolIdx: 0, dirFacing: 'R', visionLen: 1 },
+    { id: 2, r: 17, c: 10, patrol: [], patrolIdx: 0, dirFacing: 'R', visionLen: 1, mode: 'ROAM' },
   ]));
   const [lockInput, setLockInput] = useState(false);
   const [redFlash, setRedFlash] = useState(false);
@@ -394,28 +435,46 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
     // 2) 추격 가드(거리 6 이내면 BFS로 한 칸 추격)
     {
       const g = guardsNow[1];
-      const dist = manhattan({ r: g.r, c: g.c }, playerPos);
       const blocked = new Set<string>([keyOf(next[0].r, next[0].c)]);
+
+      const detectedFront2 = isPlayerInFront(map, g, playerPos, 2);
+      const dist = manhattan({ r: g.r, c: g.c }, playerPos);
+      const mode: Guard['mode'] = g.mode ?? 'ROAM';
+      const nextMode: Guard['mode'] = mode === 'CHASE' ? (dist > 8 ? 'ROAM' : 'CHASE') : detectedFront2 ? 'CHASE' : 'ROAM';
+
       let nextP: Pos | null = null;
-      if (dist <= 6) {
+      if (nextMode === 'CHASE') {
         nextP = bfsNextStep(map, { r: g.r, c: g.c }, playerPos, blocked);
-      }
-      if (!nextP) {
-        // 플레이어가 멀어지면 "순찰 경로로 복귀"하되, 다음 순찰 좌표로 순간이동하지 않고 1칸씩 이동
-        const nextIdx = (g.patrolIdx + 1) % g.patrol.length;
-        const patrolTarget = g.patrol[nextIdx];
-        const step = bfsNextStep(map, { r: g.r, c: g.c }, patrolTarget, blocked) ?? { r: g.r, c: g.c };
-        const dr = step.r - g.r;
-        const dc = step.c - g.c;
-        const facing = dr === 0 && dc === 0 ? g.dirFacing : dirFromDelta(dr, dc);
-        const reached = step.r === patrolTarget.r && step.c === patrolTarget.c;
-        next.push({ ...g, r: step.r, c: step.c, patrolIdx: reached ? nextIdx : g.patrolIdx, dirFacing: facing });
       } else {
-        const dr = nextP.r - g.r;
-        const dc = nextP.c - g.c;
-        const facing = dr === 0 && dc === 0 ? g.dirFacing : dirFromDelta(dr, dc);
-        next.push({ ...g, r: nextP.r, c: nextP.c, dirFacing: facing });
+        // ROAM: 주변을 자유롭게 배회 (랜덤 1칸 이동)
+        const dirs: Array<{ dr: number; dc: number; dir: Dir }> = [
+          { dr: -1, dc: 0, dir: 'U' },
+          { dr: 1, dc: 0, dir: 'D' },
+          { dr: 0, dc: -1, dir: 'L' },
+          { dr: 0, dc: 1, dir: 'R' },
+        ];
+        // 간단 랜덤 셔플
+        for (let i = dirs.length - 1; i > 0; i -= 1) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [dirs[i], dirs[j]] = [dirs[j], dirs[i]];
+        }
+        for (const d of dirs) {
+          const rr = g.r + d.dr;
+          const cc = g.c + d.dc;
+          if (rr < 0 || rr >= map.length || cc < 0 || cc >= (map[0]?.length ?? 0)) continue;
+          if (!isWalkable(map[rr][cc])) continue;
+          const k = keyOf(rr, cc);
+          if (blocked.has(k)) continue;
+          nextP = { r: rr, c: cc };
+          break;
+        }
       }
+
+      if (!nextP) nextP = { r: g.r, c: g.c };
+      const dr = nextP.r - g.r;
+      const dc = nextP.c - g.c;
+      const facing = dr === 0 && dc === 0 ? g.dirFacing : dirFromDelta(dr, dc);
+      next.push({ ...g, r: nextP.r, c: nextP.c, dirFacing: facing, mode: nextMode });
     }
     return next;
   };
