@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import GameWrapper from './components/common/GameWrapper';
 import InstallBanner from './components/common/InstallBanner';
 import OrientationOverlay from './components/common/OrientationOverlay';
+import EndingScreen from './components/ending/EndingScreen';
 import IntroScreen from './components/intro/IntroScreen';
 import MapScreen from './components/map/MapScreen';
 import MiniGameManager from './components/minigames/MiniGameManager';
@@ -150,6 +151,7 @@ export default function App() {
 
       {appPhase === 'INTRO' && <IntroScreen />}
       {appPhase === 'MAP' && <MapScreen />}
+      {appPhase === 'ENDING' && <EndingScreen />}
       {appPhase === 'STORY' && (
         <FitScaleWrapper baseWidth={800} baseHeight={450}>
           <StoryScreen />

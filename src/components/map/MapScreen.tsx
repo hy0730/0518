@@ -34,6 +34,7 @@ export default function MapScreen() {
   const regionData = useGameStore((s) => s.regionData);
   const unlockedStageId = useGameStore((s) => s.unlockedStageId);
   const resetGameData = useGameStore((s) => s.resetGameData);
+  const setAppPhase = useGameStore((s) => s.setAppPhase);
 
   if (!regionData) return null;
 
@@ -209,6 +210,34 @@ export default function MapScreen() {
           <div className={styles.progressFill} style={{ width: `${progress.pct}%` }} />
         </div>
       </div>
+
+      <button
+        type="button"
+        className={styles.resetBtn}
+        data-interactive="true"
+        style={{ bottom: 144 }}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setAppPhase('INTRO');
+        }}
+      >
+        인트로 재생
+      </button>
+
+      <button
+        type="button"
+        className={styles.resetBtn}
+        data-interactive="true"
+        style={{ bottom: 111 }}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setAppPhase('ENDING');
+        }}
+      >
+        아웃트로 재생
+      </button>
 
       <button
         type="button"
