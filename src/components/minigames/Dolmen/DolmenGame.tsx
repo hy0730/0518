@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { MinigameProps } from '../../../types/game';
 import { audio } from '../../../utils/audio';
 import { storyDataByStageId } from '../../../data/storyData';
@@ -9,7 +9,8 @@ import { useGameTuning } from '../../common/GameTuningContext';
 type Phase = 'QUARRY' | 'BIND' | 'PREPARE' | 'MOVE';
 type TutorialMode = 'DIALOGUE' | 'WEDGE' | 'LOG' | 'PULL' | 'DONE';
 
-const TARGET_PROGRESS = 85;
+const TARGET_PROGRESS = 85; // 기준(기본) 목표 진행도
+const MAX_MOVE_PERCENT = 55; // 기준(기본) 이동 연출 최대치(%)
 const QUARRY_SWELL_MS = 1500;
 const QUARRY_SHAKE_MS = 650;
 // 덮개돌(밧줄 돌) 위치 미세 조정: 값이 작을수록(음수) mountain 쪽으로 이동
@@ -60,6 +61,8 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
   const { toast, showToast } = useToast(1200);
   const tuning = useGameTuning();
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const workAreaRef = useRef<HTMLDivElement | null>(null);
+  const [workWidth, setWorkWidth] = useState(0);
   const ui = useMemo(() => {
     const get = (k: string, fallback: number) => tuning?.getNumber(k, fallback) ?? fallback;
     return {
@@ -81,6 +84,33 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
       actionBarY: get('actionBarY', 0),
     };
   }, [tuning]);
+
+  // 목표(굴) X 위치와 "완료 판정" 연동: 작업공간 너비(스케일까지 포함)를 기준으로 px→progress 변환
+  useLayoutEffect(() => {
+    const el = workAreaRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => {
+      const r = el.getBoundingClientRect();
+      setWorkWidth(r.width);
+    });
+    ro.observe(el);
+    const r = el.getBoundingClientRect();
+    setWorkWidth(r.width);
+    return () => ro.disconnect();
+  }, []);
+
+  const targetProgress = useMemo(() => {
+    if (!workWidth) return TARGET_PROGRESS;
+    const pxPerProgress = (workWidth * (MAX_MOVE_PERCENT / 100)) / TARGET_PROGRESS;
+    if (!pxPerProgress || !Number.isFinite(pxPerProgress)) return TARGET_PROGRESS;
+    const shifted = TARGET_PROGRESS + ui.goalX / pxPerProgress;
+    return Math.max(10, Math.min(100, Math.round(shifted)));
+  }, [workWidth, ui.goalX]);
+
+  const targetProgressRef = useRef(targetProgress);
+  useEffect(() => {
+    targetProgressRef.current = targetProgress;
+  }, [targetProgress]);
 
   const dragRef = useRef<null | {
     target: 'mountain' | 'work' | 'capstone' | 'logs' | 'goal' | 'action';
@@ -153,10 +183,10 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
     if (phase === 'MOVE') {
       return tutorialMode === 'PULL'
         ? '튜토리얼: 협동(손) 버튼을 한 번 눌러 “밧줄을 당기는 느낌”을 체험해보자!'
-        : `협동(손) 버튼을 연타해서 돌을 옮기자! 목표: ${TARGET_PROGRESS}%`;
+        : `협동(손) 버튼을 연타해서 돌을 옮기자! 목표: ${targetProgress}%`;
     }
     return '';
-  }, [feedback, phase, tutorialMode]);
+  }, [feedback, phase, tutorialMode, targetProgress]);
 
   const tutorialLines = useMemo(
     () => [
@@ -369,7 +399,7 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
     setProgress((p) => {
       const delta = 5 + Math.floor(Math.random() * 4); // 5~8
       const next = Math.min(100, p + delta);
-      if (next >= TARGET_PROGRESS) {
+      if (next >= targetProgressRef.current) {
         window.setTimeout(() => {
           setResultModal(true);
           audio.playUrl('/assets/sounds/sfx_completed.mp3', 0.9);
@@ -415,7 +445,7 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
       <div className="flex items-center justify-between gap-2">
         <div className="text-sm font-black tracking-tight">스테이지 {stageId} · {title}</div>
         <div className="text-xs font-bold opacity-90">
-          {phase} · 진행 {Math.min(progress, TARGET_PROGRESS)}% · 시도 {attempts}
+          {phase} · 진행 {Math.min(progress, targetProgress)}% · 시도 {attempts}
         </div>
       </div>
 
@@ -531,6 +561,7 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
 
             {/* 우측 작업 공간 */}
             <div
+              ref={workAreaRef}
               className="absolute left-[36%] right-2 top-2 bottom-2"
               style={{
                 transform: `translate(${ui.workX}px, ${ui.workY}px) scale(${ui.workScale})`,
@@ -573,7 +604,12 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
               <div className="absolute left-[6%] right-[6%] top-[12%]">
                 <div
                   className="relative transition-transform duration-500 ease-out"
-                  style={{ transform: phase === 'MOVE' ? `translateX(${(progress / TARGET_PROGRESS) * 55}%)` : 'translateX(0%)' }}
+                  style={{
+                    transform:
+                      phase === 'MOVE'
+                        ? `translateX(${(progress / Math.max(1, targetProgress)) * MAX_MOVE_PERCENT}%)`
+                        : 'translateX(0%)',
+                  }}
                 >
                   {/* 돌 이미지(밧줄 묶인 이후: 이동 그룹에 포함) */}
                   {ropeBound && (
@@ -692,7 +728,7 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
                   }}
                 >
                   <div className="w-20 h-12 rounded-xl border border-olive/35 bg-olive/10 grid place-items-center text-[11px] font-black">
-                    굴(85%)
+                    굴({targetProgress}%)
                   </div>
                 </div>
               </div>
