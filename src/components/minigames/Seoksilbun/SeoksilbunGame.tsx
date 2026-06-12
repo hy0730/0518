@@ -5,6 +5,7 @@ import { getRelicMainImage, getRelicRealImage } from '../../../utils/relicImages
 import { useToast } from '../common/useToast';
 import { useGameTuning } from '../../common/GameTuningContext';
 import HanYangCoach from '../common/HanYangCoach';
+import HanYangSpeech from '../common/HanYangSpeech';
 
 type Phase = 'INTRO' | 'TUTORIAL' | 'MAIN' | 'QUIZ';
 
@@ -235,14 +236,23 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
     };
   }, [bg, bgA]);
 
-  const introText = useMemo(() => {
+  const introLine = useMemo(() => {
     if (introStep === 1) {
-      return '석수동 관악산 기슭에 오래된 무덤이 하나 있습니다. 덮개돌을 열어볼까요?';
+      return {
+        speaker: 'han' as const,
+        text: '여긴 석수동 석실분이야.\n덮개돌을 열어 안쪽을 살펴보자!',
+      };
     }
     if (introStep === 2) {
-      return '우와! 돌방무덤이네요. 이 근처에서는 신라 시대의 마을 터(취락)도 발견되었답니다.';
+      return {
+        speaker: 'yang' as const,
+        text: '우와! 돌방무덤이네!\n이 근처에서는 신라 시대 마을 터(취락)도 발견됐대!',
+      };
     }
-    return '본격적인 내부 탐사를 시작해봅시다. (아무 곳이나 눌러 진행)';
+    return {
+      speaker: 'han' as const,
+      text: '좋아, 이제 본격적으로 내부 탐사를 시작하자.\n(아무 곳이나 눌러 진행)',
+    };
   }, [introStep]);
 
   const showIntroOverlay = phase === 'INTRO';
@@ -774,7 +784,7 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
         }}
       >
         <div className="text-[12px] font-bold opacity-95 leading-relaxed">
-          {phase === 'INTRO' && introText}
+          {phase === 'INTRO' && <HanYangSpeech speaker={introLine.speaker} text={introLine.text} />}
           {phase === 'TUTORIAL' && (dragHint ?? '토우를 무덤 안으로 드래그(또는 클릭)해서 배치해 보세요!')}
           {phase === 'MAIN' && `부장품 5개 중 마음에 드는 것들을 골라 무덤 안에 배치해보세요. (현재 ${placed.length}개 배치, 3개 이상이면 다음 단계)`}
           {phase === 'QUIZ' && '정답은 없어요! 선택한 이유를 친구들(또는 선생님)에게 말해보아요.'}
