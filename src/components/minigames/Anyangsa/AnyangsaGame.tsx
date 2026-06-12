@@ -208,6 +208,52 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
     };
   }, [tuning]);
 
+  // 퍼즐 완료 연출(완성 이미지/팝업) 위치/크기 조절
+  const completeImgDx = tuning?.getNumber('completeImgDx', 0) ?? 0;
+  const completeImgDy = tuning?.getNumber('completeImgDy', 0) ?? 0;
+  const completeImgScale = tuning?.getNumber('completeImgScale', 1) ?? 1;
+  const completePopupDx = tuning?.getNumber('completePopupDx', 0) ?? 0;
+  const completePopupDy = tuning?.getNumber('completePopupDy', 0) ?? 0;
+  const completePopupScale = tuning?.getNumber('completePopupScale', 1) ?? 1;
+  const [completeAdjustOpen, setCompleteAdjustOpen] = useState(false);
+  const completeDragRef = useRef<
+    | null
+    | {
+        target: 'popup' | 'img';
+        startX: number;
+        startY: number;
+        baseDx: number;
+        baseDy: number;
+      }
+  >(null);
+
+  useEffect(() => {
+    const move = (e: PointerEvent) => {
+      const drag = completeDragRef.current;
+      if (!drag || !tuning || tuning.locked || !completeAdjustOpen) return;
+      const dx = (e.clientX - drag.startX) / Math.max(puzzleScale, 0.0001);
+      const dy = (e.clientY - drag.startY) / Math.max(puzzleScale, 0.0001);
+      if (drag.target === 'img') {
+        tuning.setNumber('completeImgDx', drag.baseDx + dx);
+        tuning.setNumber('completeImgDy', drag.baseDy + dy);
+      } else {
+        tuning.setNumber('completePopupDx', drag.baseDx + dx);
+        tuning.setNumber('completePopupDy', drag.baseDy + dy);
+      }
+    };
+    const up = () => {
+      completeDragRef.current = null;
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
+    return () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
+    };
+  }, [tuning, puzzleScale, completeAdjustOpen]);
+
   // 내부 캔버스 스케일링(기준 해상도 -> transform: scale로 contain)
   const puzzleViewportRef = useRef<HTMLDivElement | null>(null);
   const [puzzleScale, setPuzzleScale] = useState(1);
@@ -569,7 +615,10 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
                       src={STELE_BODY}
                       alt="완성된 비석"
                       draggable={false}
-                      className="absolute pointer-events-none"
+                      className={[
+                        'absolute',
+                        completeAdjustOpen ? 'cursor-move' : 'pointer-events-none',
+                      ].join(' ')}
                       style={{
                         left: puzzleLayout.boardX,
                         top: puzzleLayout.boardY,
@@ -578,6 +627,21 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
                         objectFit: 'contain',
                         zIndex: 30,
                         filter: puzzleCompleted ? 'drop-shadow(0 0 18px rgba(245, 158, 11, 0.55))' : 'none',
+                        transformOrigin: 'top left',
+                        transform: `translate(${completeImgDx}px, ${completeImgDy}px) scale(${completeImgScale})`,
+                      }}
+                      onPointerDown={(e) => {
+                        if (!completeAdjustOpen || !tuning || tuning.locked) return;
+                        e.preventDefault();
+                        e.stopPropagation();
+                        (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+                        completeDragRef.current = {
+                          target: 'img',
+                          startX: e.clientX,
+                          startY: e.clientY,
+                          baseDx: completeImgDx,
+                          baseDy: completeImgDy,
+                        };
                       }}
                       initial={{ opacity: 0 }}
                       animate={{ opacity: puzzleCompleted ? 1 : 0 }}
@@ -586,20 +650,143 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
 
                     {/* 퍼즐 완료 오버레이(탭해서 다음 단계) */}
                     {puzzleCompleteOverlay && (
-                      <button
-                        type="button"
-                        className="absolute inset-0 grid place-items-center"
-                        onClick={() => setPhase('ENGRAVE')}
-                        onTouchStart={() => setPhase('ENGRAVE')}
+                      <div
+                        className="absolute inset-0"
+                        onClick={() => {
+                          if (completeAdjustOpen) return;
+                          setPhase('ENGRAVE');
+                        }}
+                        onTouchStart={() => {
+                          if (completeAdjustOpen) return;
+                          setPhase('ENGRAVE');
+                        }}
                       >
-                        {/* NOTE: 회색 화면처럼 보이지 않도록 딤을 아주 약하게만 적용(블러 제거) */}
+                        {/* NOTE: 회색 화면처럼 보이지 않도록 딤을 아주 약하게만 적용 */}
                         <div className="absolute inset-0 bg-ink/8" />
-                        <div className="note-panel px-6 py-5 max-w-[520px] popInFx relative z-10">
-                          <div className="text-lg font-black">비석 복원 완료!</div>
-                          <div className="mt-2 text-sm opacity-90 leading-relaxed">잘했어! 이제 비석에 글씨를 새겨보자.</div>
-                          <div className="mt-3 text-sm font-black text-stamp">화면을 탭하면 다음 단계로 넘어가요.</div>
+
+                        {/* 조절 버튼 */}
+                        <div className="absolute right-3 top-3 z-[14000] flex flex-col gap-2">
+                          <button
+                            type="button"
+                            className="rounded-xl px-3 py-2 text-xs font-black bg-paper2/90 border border-ink/25 shadow-paper"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setCompleteAdjustOpen((v) => !v);
+                            }}
+                          >
+                            {completeAdjustOpen ? '조절 끝' : '완성 조절'}
+                          </button>
+
+                          {completeAdjustOpen && (
+                            <div className="note-panel px-3 py-2 max-w-[220px]">
+                              <div className="text-[11px] font-black opacity-85">위치/크기 조절</div>
+                              <div className="mt-2 grid grid-cols-2 gap-2">
+                                <button
+                                  type="button"
+                                  className="rounded-lg px-2 py-1 text-[11px] font-black bg-paper/70 border border-ink/20"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    if (!tuning || tuning.locked) return;
+                                    tuning.setNumber('completeImgScale', Math.max(0.6, Number((completeImgScale - 0.05).toFixed(2))));
+                                  }}
+                                >
+                                  이미지 -
+                                </button>
+                                <button
+                                  type="button"
+                                  className="rounded-lg px-2 py-1 text-[11px] font-black bg-paper/70 border border-ink/20"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    if (!tuning || tuning.locked) return;
+                                    tuning.setNumber('completeImgScale', Math.min(1.6, Number((completeImgScale + 0.05).toFixed(2))));
+                                  }}
+                                >
+                                  이미지 +
+                                </button>
+                                <button
+                                  type="button"
+                                  className="rounded-lg px-2 py-1 text-[11px] font-black bg-paper/70 border border-ink/20"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    if (!tuning || tuning.locked) return;
+                                    tuning.setNumber('completePopupScale', Math.max(0.6, Number((completePopupScale - 0.05).toFixed(2))));
+                                  }}
+                                >
+                                  팝업 -
+                                </button>
+                                <button
+                                  type="button"
+                                  className="rounded-lg px-2 py-1 text-[11px] font-black bg-paper/70 border border-ink/20"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    if (!tuning || tuning.locked) return;
+                                    tuning.setNumber('completePopupScale', Math.min(1.6, Number((completePopupScale + 0.05).toFixed(2))));
+                                  }}
+                                >
+                                  팝업 +
+                                </button>
+                              </div>
+                              <button
+                                type="button"
+                                className="mt-2 w-full rounded-lg px-2 py-1 text-[11px] font-black bg-paper/70 border border-ink/20"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  if (!tuning || tuning.locked) return;
+                                  tuning.setNumber('completeImgDx', 0);
+                                  tuning.setNumber('completeImgDy', 0);
+                                  tuning.setNumber('completeImgScale', 1);
+                                  tuning.setNumber('completePopupDx', 0);
+                                  tuning.setNumber('completePopupDy', 0);
+                                  tuning.setNumber('completePopupScale', 1);
+                                }}
+                              >
+                                초기화
+                              </button>
+                              <div className="mt-2 text-[10px] font-bold opacity-70">
+                                이미지/팝업을 드래그해서 위치를 옮길 수 있어.
+                              </div>
+                            </div>
+                          )}
                         </div>
-                      </button>
+
+                        {/* 완료 팝업(드래그 가능) */}
+                        <div
+                          className={[
+                            'absolute left-1/2 top-1/2',
+                            completeAdjustOpen ? 'cursor-move' : '',
+                          ].join(' ')}
+                          style={{
+                            transform: `translate(-50%, -50%) translate(${completePopupDx}px, ${completePopupDy}px) scale(${completePopupScale})`,
+                            transformOrigin: 'center',
+                            zIndex: 13000,
+                          }}
+                          onPointerDown={(e) => {
+                            if (!completeAdjustOpen || !tuning || tuning.locked) return;
+                            e.preventDefault();
+                            e.stopPropagation();
+                            (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+                            completeDragRef.current = {
+                              target: 'popup',
+                              startX: e.clientX,
+                              startY: e.clientY,
+                              baseDx: completePopupDx,
+                              baseDy: completePopupDy,
+                            };
+                          }}
+                        >
+                          <div className="note-panel px-6 py-5 max-w-[520px] popInFx">
+                            <div className="text-lg font-black">비석 복원 완료!</div>
+                            <div className="mt-2 text-sm opacity-90 leading-relaxed">잘했어! 이제 비석에 글씨를 새겨보자.</div>
+                            <div className="mt-3 text-sm font-black text-stamp">화면을 탭하면 다음 단계로 넘어가요.</div>
+                          </div>
+                        </div>
+                      </div>
                     )}
                   </>
                 );
