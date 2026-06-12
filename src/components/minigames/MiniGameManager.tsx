@@ -316,8 +316,9 @@ export default function MiniGameManager() {
       return {};
     }
   });
-  const [outerTunerOpen, setOuterTunerOpen] = useState(true);
-  const [innerTunerOpen, setInnerTunerOpen] = useState(true);
+  // 기본은 모두 "접힘" 상태(개발용 조절 패널은 필요할 때만 열기)
+  const [outerTunerOpen, setOuterTunerOpen] = useState(false);
+  const [innerTunerOpen, setInnerTunerOpen] = useState(false);
   const [objectTunerOpen, setObjectTunerOpen] = useState(false);
 
   // 게임별 튜닝(미니게임 내부 레이아웃) - 공통 HUD에서 제어
