@@ -131,6 +131,14 @@ export default function BisanGame({ stageId, onComplete, regionData }: MinigameP
       inventoryScale: get('inventoryScale', 1),
       controlsY: get('controlsY', 0),
       controlsScale: get('controlsScale', 1),
+      introPopupY: get('introPopupY', 0),
+      introPopupScale: get('introPopupScale', 1),
+      tutorialPopupY: get('tutorialPopupY', 0),
+      tutorialPopupScale: get('tutorialPopupScale', 1),
+      rewardPopupY: get('rewardPopupY', 0),
+      rewardPopupScale: get('rewardPopupScale', 1),
+      resultPopupY: get('resultPopupY', 0),
+      resultPopupScale: get('resultPopupScale', 1),
     };
   }, [tuning]);
 
@@ -724,7 +732,10 @@ export default function BisanGame({ stageId, onComplete, regionData }: MinigameP
       </div>
 
       {introStep === 'GUIDE' && (
-      <div className="absolute left-1/2 bottom-4 -translate-x-1/2 z-[9500] w-[min(700px,94%)]">
+      <div
+          className="absolute left-1/2 bottom-4 -translate-x-1/2 z-[9500] w-[min(700px,94%)]"
+          style={{ transform: `translate(-50%, ${ui.tutorialPopupY}px) scale(${ui.tutorialPopupScale})`, transformOrigin: 'bottom center' }}
+        >
           <div className="rounded-3xl border-2 border-ink/30 bg-paper2 px-5 py-4 shadow-[0_16px_36px_rgba(0,0,0,0.28)]">
             <div className="text-base font-black">가마 운영 방법</div>
             <div className="mt-2 text-[15px] leading-relaxed text-ink">{tutorialMessage}</div>
@@ -769,7 +780,10 @@ export default function BisanGame({ stageId, onComplete, regionData }: MinigameP
 
       {(introStep === 'STRUCTURE' || introStep === 'CUTAWAY') && (
         <div className="fixed inset-0 z-[99998] bg-ink/55 p-4" onClick={advanceIntro}>
-          <div className="w-full h-full rounded-3xl overflow-hidden bg-paper2 border border-ink/25 shadow-paper flex flex-col">
+          <div
+            className="w-full h-full rounded-3xl overflow-hidden bg-paper2 border border-ink/25 shadow-paper flex flex-col"
+            style={{ transform: `translateY(${ui.introPopupY}px) scale(${ui.introPopupScale})`, transformOrigin: 'center' }}
+          >
             <div className="px-4 py-3 border-b border-ink/15 bg-paper/75">
               <div className="text-lg font-black">
                 {introStep === 'STRUCTURE' ? '비산동 가마 구조 먼저 보기' : '빈 가마 단면도 살펴보기'}
@@ -797,7 +811,10 @@ export default function BisanGame({ stageId, onComplete, regionData }: MinigameP
 
       {rewardPopupOpen && (
         <div className="fixed inset-0 z-[99998] bg-ink/55 p-4">
-          <div className="w-full h-full rounded-3xl overflow-hidden bg-paper2 border border-ink/25 shadow-paper flex flex-col">
+          <div
+            className="w-full h-full rounded-3xl overflow-hidden bg-paper2 border border-ink/25 shadow-paper flex flex-col"
+            style={{ transform: `translateY(${ui.rewardPopupY}px) scale(${ui.rewardPopupScale})`, transformOrigin: 'center' }}
+          >
             <div className="px-4 py-3 border-b border-ink/15 bg-paper/75">
               <div className="text-lg font-black">가마에서 구워진 도자기 감상</div>
               <div className="mt-1 text-sm opacity-85">흙빛 도자기가 고려 시대의 아름다운 백자와 청자로 완성됐어요.</div>
@@ -828,7 +845,10 @@ export default function BisanGame({ stageId, onComplete, regionData }: MinigameP
 
       {successModal && (
         <div className="fixed inset-0 z-[99999] bg-ink/40 p-0">
-          <div className="w-full h-full bg-paper2 text-ink shadow-paper flex flex-col">
+          <div
+            className="w-full h-full bg-paper2 text-ink shadow-paper flex flex-col"
+            style={{ transform: `translateY(${ui.resultPopupY}px) scale(${ui.resultPopupScale})`, transformOrigin: 'center' }}
+          >
             <div className="flex-1 min-h-0 overflow-hidden">
               <img src={realImg} alt="" className="w-full h-full object-cover" draggable={false} />
             </div>
