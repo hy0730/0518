@@ -107,6 +107,7 @@ export default function MiniGameManager() {
   const completeStage = useGameStore((s) => s.completeStage);
   const setAppPhase = useGameStore((s) => s.setAppPhase);
   const regionData = useGameStore((s) => s.regionData);
+  const stageIdSafe = currentStageId ?? 1;
   const [layoutTunes, setLayoutTunes] = useState<Record<number, LayoutTune>>(() => {
     try {
       const raw = window.localStorage.getItem(OUTER_TUNES_STORAGE_KEY);
@@ -150,38 +151,15 @@ export default function MiniGameManager() {
     }
   });
 
-  if (!currentStageId) return null;
-
-  const CurrentMiniGame = MINIGAME_REGISTRY[currentStageId];
-  if (!CurrentMiniGame) {
-    return (
-      <div style={{ padding: 20 }}>
-        <div style={{ marginBottom: 8 }}>해당 스테이지의 미니게임이 아직 연결되지 않았습니다.</div>
-        <button type="button" onClick={() => setAppPhase('MAP')}>
-          지도로 돌아가기
-        </button>
-      </div>
-    );
-  }
-
-  if (!regionData) {
-    return (
-      <div style={{ padding: 20 }}>
-        <div style={{ marginBottom: 8 }}>지역 데이터를 불러오지 못했습니다.</div>
-        <button type="button" onClick={() => setAppPhase('MAP')}>
-          지도로 돌아가기
-        </button>
-      </div>
-    );
-  }
+  const CurrentMiniGame = MINIGAME_REGISTRY[stageIdSafe];
 
   const currentTune =
-    lockedTunes[currentStageId] ??
-    layoutTunes[currentStageId] ??
-    DEFAULT_LAYOUT_TUNES[currentStageId] ??
+    lockedTunes[stageIdSafe] ??
+    layoutTunes[stageIdSafe] ??
+    DEFAULT_LAYOUT_TUNES[stageIdSafe] ??
     DEFAULT_LAYOUT_TUNES[1];
   const fit = { baseWidth: currentTune.baseWidth, baseHeight: currentTune.baseHeight };
-  const isLocked = !!lockedTunes[currentStageId];
+  const isLocked = !!lockedTunes[stageIdSafe];
 
   // dev에서 HMR/리렌더가 있어도 값이 유지되게 저장
   useEffect(() => {
@@ -220,10 +198,10 @@ export default function MiniGameManager() {
 
   const tune = (key: keyof LayoutTune, delta: number, min: number, max: number) => {
     setLayoutTunes((prev) => {
-      const base = prev[currentStageId] ?? DEFAULT_LAYOUT_TUNES[currentStageId] ?? DEFAULT_LAYOUT_TUNES[1];
+      const base = prev[stageIdSafe] ?? DEFAULT_LAYOUT_TUNES[stageIdSafe] ?? DEFAULT_LAYOUT_TUNES[1];
       return {
         ...prev,
-        [currentStageId]: {
+        [stageIdSafe]: {
           ...base,
           [key]: Math.max(min, Math.min(max, base[key] + delta)),
         },
@@ -234,10 +212,10 @@ export default function MiniGameManager() {
   const setTune = (key: keyof LayoutTune, value: number, min: number, max: number) => {
     if (isLocked) return;
     setLayoutTunes((prev) => {
-      const base = prev[currentStageId] ?? DEFAULT_LAYOUT_TUNES[currentStageId] ?? DEFAULT_LAYOUT_TUNES[1];
+      const base = prev[stageIdSafe] ?? DEFAULT_LAYOUT_TUNES[stageIdSafe] ?? DEFAULT_LAYOUT_TUNES[1];
       return {
         ...prev,
-        [currentStageId]: {
+        [stageIdSafe]: {
           ...base,
           [key]: clamp(value, min, max),
         },
@@ -249,11 +227,11 @@ export default function MiniGameManager() {
     return `가로 ${currentTune.baseWidth} / 세로 ${currentTune.baseHeight} / 상단 ${currentTune.top} / 하단 ${currentTune.bottom} / 왼쪽 ${currentTune.left} / 오른쪽 ${currentTune.right}`;
   }, [currentTune]);
 
-  const stageSchema = STAGE_TUNING_SCHEMAS[currentStageId];
-  const isGameLocked = !!gameLocked[currentStageId];
+  const stageSchema = STAGE_TUNING_SCHEMAS[stageIdSafe];
+  const isGameLocked = !!gameLocked[stageIdSafe];
   const getGameNumber = (key: string, fallback: number) => {
     const base = stageSchema?.defaults?.[key] ?? fallback;
-    return gameTunes[currentStageId]?.[key] ?? base;
+    return gameTunes[stageIdSafe]?.[key] ?? base;
   };
   const setGameNumber = (key: string, value: number) => {
     if (!stageSchema) return;
@@ -262,10 +240,10 @@ export default function MiniGameManager() {
     const min = item?.min ?? -99999;
     const max = item?.max ?? 99999;
     setGameTunes((prev) => {
-      const cur = prev[currentStageId] ?? {};
+      const cur = prev[stageIdSafe] ?? {};
       return {
         ...prev,
-        [currentStageId]: {
+        [stageIdSafe]: {
           ...cur,
           [key]: clamp(value, min, max),
         },
@@ -273,10 +251,10 @@ export default function MiniGameManager() {
     });
   };
   const resetGameTunes = () => {
-    setGameLocked((prev) => ({ ...prev, [currentStageId]: false }));
+    setGameLocked((prev) => ({ ...prev, [stageIdSafe]: false }));
     setGameTunes((prev) => {
       const next = { ...prev };
-      delete next[currentStageId];
+      delete next[stageIdSafe];
       return next;
     });
   };
@@ -299,10 +277,10 @@ export default function MiniGameManager() {
       const dx = e.clientX - drag.startX;
       const dy = e.clientY - drag.startY;
       setLayoutTunes((prev) => {
-        const base = prev[currentStageId] ?? DEFAULT_LAYOUT_TUNES[currentStageId] ?? DEFAULT_LAYOUT_TUNES[1];
+        const base = prev[stageIdSafe] ?? DEFAULT_LAYOUT_TUNES[stageIdSafe] ?? DEFAULT_LAYOUT_TUNES[1];
         return {
           ...prev,
-          [currentStageId]: {
+          [stageIdSafe]: {
             ...base,
             left: clamp(drag.left + dx, -500, 500),
             right: clamp(drag.right - dx, -500, 500),
@@ -323,7 +301,31 @@ export default function MiniGameManager() {
       window.removeEventListener('pointerup', up);
       window.removeEventListener('pointercancel', up);
     };
-  }, [currentStageId]);
+  }, [stageIdSafe]);
+
+  if (!currentStageId) return null;
+
+  if (!CurrentMiniGame) {
+    return (
+      <div style={{ padding: 20 }}>
+        <div style={{ marginBottom: 8 }}>해당 스테이지의 미니게임이 아직 연결되지 않았습니다.</div>
+        <button type="button" onClick={() => setAppPhase('MAP')}>
+          지도로 돌아가기
+        </button>
+      </div>
+    );
+  }
+
+  if (!regionData) {
+    return (
+      <div style={{ padding: 20 }}>
+        <div style={{ marginBottom: 8 }}>지역 데이터를 불러오지 못했습니다.</div>
+        <button type="button" onClick={() => setAppPhase('MAP')}>
+          지도로 돌아가기
+        </button>
+      </div>
+    );
+  }
 
   return (
     <Suspense fallback={<div style={{ padding: 20 }}>게임 불러오는 중...</div>}>
