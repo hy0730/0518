@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { storyDataByStageId } from '../../data/storyData';
 import { useGameStore } from '../../store/useGameStore';
 import styles from './MapScreen.module.css';
@@ -8,6 +8,11 @@ type MapNode = {
   left: number; // %
   top: number; // %
   icon: string;
+};
+
+type MapNodePosition = {
+  left: number;
+  top: number;
 };
 
 // 9개 문화유산 노드 위치 (원하는대로 숫자만 미세 조정하면 됨)
@@ -23,6 +28,8 @@ const NODES: MapNode[] = [
   { stageId: 9, left: 50, top: 80, icon: '/assets/images/relic_seoimyeon_main.png' },
 ];
 
+const MAP_NODE_POSITIONS_STORAGE_KEY = 'mapNodePositions_v1';
+
 export default function MapScreen() {
   const regionData = useGameStore((s) => s.regionData);
   const unlockedStageId = useGameStore((s) => s.unlockedStageId);
@@ -35,11 +42,40 @@ export default function MapScreen() {
 
   // Zoom/Pan
   const viewportRef = useRef<HTMLDivElement | null>(null);
+  const mapContentRef = useRef<HTMLDivElement | null>(null);
   const [scale, setScale] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 }); // px
   const [panning, setPanning] = useState<null | { x: number; y: number; ox: number; oy: number }>(null);
+  const [positionAdjustMode, setPositionAdjustMode] = useState(false);
+  const [nodePositions, setNodePositions] = useState<Record<number, MapNodePosition>>(() => {
+    try {
+      const raw = window.localStorage.getItem(MAP_NODE_POSITIONS_STORAGE_KEY);
+      if (!raw) return Object.fromEntries(NODES.map((n) => [n.stageId, { left: n.left, top: n.top }]));
+      const parsed = JSON.parse(raw) as Record<number, MapNodePosition>;
+      return Object.fromEntries(
+        NODES.map((n) => [
+          n.stageId,
+          {
+            left: parsed?.[n.stageId]?.left ?? n.left,
+            top: parsed?.[n.stageId]?.top ?? n.top,
+          },
+        ])
+      );
+    } catch {
+      return Object.fromEntries(NODES.map((n) => [n.stageId, { left: n.left, top: n.top }]));
+    }
+  });
+  const [draggingNode, setDraggingNode] = useState<null | { stageId: number; pointerId: number }>(null);
 
   const clampScale = (v: number) => Math.min(2.4, Math.max(1, v));
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(MAP_NODE_POSITIONS_STORAGE_KEY, JSON.stringify(nodePositions));
+    } catch {
+      // ignore
+    }
+  }, [nodePositions]);
 
   const progress = useMemo(() => {
     const total = NODES.length;
@@ -53,6 +89,7 @@ export default function MapScreen() {
     <div ref={viewportRef} className={styles.map}>
       {/* 확대/이동이 적용되는 실제 지도 레이어 */}
       <div
+        ref={mapContentRef}
         className={styles.mapContent}
         style={{
           backgroundImage: `url(${mapBg})`,
@@ -62,6 +99,7 @@ export default function MapScreen() {
           const t = e.target as HTMLElement | null;
           const isInteractive = !!t?.closest?.('button,[data-interactive="true"]');
           if (isInteractive) return;
+          if (positionAdjustMode) return;
           (e.currentTarget as HTMLDivElement).setPointerCapture?.(e.pointerId);
           setPanning({ x: e.clientX, y: e.clientY, ox: offset.x, oy: offset.y });
         }}
@@ -94,13 +132,48 @@ export default function MapScreen() {
               data-interactive="true"
               className={`${styles.pin} ${completed ? styles.completed : ''} ${locked ? styles.locked : ''}`}
               style={{
-                left: `${node.left}%`,
-                top: `${node.top}%`,
+                left: `${(nodePositions[stageId] ?? node).left}%`,
+                top: `${(nodePositions[stageId] ?? node).top}%`,
+                cursor: positionAdjustMode ? 'grab' : undefined,
               }}
               disabled={locked}
+              onPointerDown={(e) => {
+                if (!positionAdjustMode) return;
+                e.preventDefault();
+                e.stopPropagation();
+                (e.currentTarget as HTMLButtonElement).setPointerCapture?.(e.pointerId);
+                setDraggingNode({ stageId, pointerId: e.pointerId });
+              }}
+              onPointerMove={(e) => {
+                if (!positionAdjustMode) return;
+                if (!draggingNode || draggingNode.stageId !== stageId || draggingNode.pointerId !== e.pointerId) return;
+                const el = mapContentRef.current;
+                if (!el) return;
+                const rect = el.getBoundingClientRect();
+                const leftPct = ((e.clientX - rect.left) / rect.width) * 100;
+                const topPct = ((e.clientY - rect.top) / rect.height) * 100;
+                setNodePositions((prev) => ({
+                  ...prev,
+                  [stageId]: {
+                    left: Math.max(0, Math.min(100, Number(leftPct.toFixed(2)))),
+                    top: Math.max(0, Math.min(100, Number(topPct.toFixed(2)))),
+                  },
+                }));
+              }}
+              onPointerUp={(e) => {
+                if (draggingNode?.stageId === stageId && draggingNode.pointerId === e.pointerId) {
+                  setDraggingNode(null);
+                }
+              }}
+              onPointerCancel={(e) => {
+                if (draggingNode?.stageId === stageId && draggingNode.pointerId === e.pointerId) {
+                  setDraggingNode(null);
+                }
+              }}
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation(); // 상위 레이어(맵 등)로의 버블링 방지
+                if (positionAdjustMode) return;
                 if (locked) return;
                 // 스테이지 진입 → STORY로 이동
                 useGameStore.getState().playStage(stageId);
@@ -136,6 +209,20 @@ export default function MapScreen() {
           <div className={styles.progressFill} style={{ width: `${progress.pct}%` }} />
         </div>
       </div>
+
+      <button
+        type="button"
+        className={styles.resetBtn}
+        data-interactive="true"
+        style={{ bottom: 78 }}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setPositionAdjustMode((prev) => !prev);
+        }}
+      >
+        {positionAdjustMode ? '위치 조절 끄기' : '위치 조절'}
+      </button>
 
       <button
         type="button"
