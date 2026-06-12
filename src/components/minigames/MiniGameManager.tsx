@@ -300,7 +300,7 @@ export default function MiniGameManager() {
         {/* 전체 레이아웃 조절 */}
         {outerTunerOpen ? (
           <div
-            className="absolute right-4 top-16 z-50 rounded-2xl border border-ink/30 bg-paper2/92 px-2 py-2 shadow-md"
+            className="absolute right-4 top-16 z-50 w-[320px] max-w-[calc(100vw-2rem)] max-h-[calc(50vh-5rem)] rounded-2xl border border-ink/30 bg-paper2/92 px-2 py-2 shadow-md overflow-y-auto"
             onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => e.stopPropagation()}
           >
@@ -319,7 +319,7 @@ export default function MiniGameManager() {
               </button>
             </div>
 
-            <div className="mt-2 text-[10px] font-bold opacity-80 max-w-[270px] leading-snug">{tuneText}</div>
+            <div className="mt-2 text-[10px] font-bold opacity-80 leading-snug break-words">{tuneText}</div>
             <div className="mt-1 flex items-center justify-between gap-2">
               <div className={['text-[10px] font-black', isLocked ? 'text-stamp' : 'text-ink/70'].join(' ')}>
                 {isLocked ? '확정됨(잠금)' : '조절 중'}
@@ -367,12 +367,12 @@ export default function MiniGameManager() {
                   step={10}
                   value={currentTune.baseWidth}
                   onChange={(e) => setTune('baseWidth', Number(e.target.value), 200, 2400)}
-                  className="w-[140px]"
+                  className="flex-1 min-w-0"
                   disabled={isLocked}
                 />
                 <input
                   type="number"
-                  className="w-[70px] rounded-lg border border-ink/20 bg-paper px-2 py-1 font-black"
+                  className="w-[64px] rounded-lg border border-ink/20 bg-paper px-2 py-1 font-black"
                   value={currentTune.baseWidth}
                   onChange={(e) => setTune('baseWidth', Number(e.target.value || 0), 200, 2400)}
                   disabled={isLocked}
@@ -388,12 +388,12 @@ export default function MiniGameManager() {
                   step={10}
                   value={currentTune.baseHeight}
                   onChange={(e) => setTune('baseHeight', Number(e.target.value), 200, 2400)}
-                  className="w-[140px]"
+                  className="flex-1 min-w-0"
                   disabled={isLocked}
                 />
                 <input
                   type="number"
-                  className="w-[70px] rounded-lg border border-ink/20 bg-paper px-2 py-1 font-black"
+                  className="w-[64px] rounded-lg border border-ink/20 bg-paper px-2 py-1 font-black"
                   value={currentTune.baseHeight}
                   onChange={(e) => setTune('baseHeight', Number(e.target.value || 0), 200, 2400)}
                   disabled={isLocked}
@@ -409,12 +409,12 @@ export default function MiniGameManager() {
                   step={2}
                   value={currentTune.top}
                   onChange={(e) => setTune('top', Number(e.target.value), -500, 500)}
-                  className="w-[140px]"
+                  className="flex-1 min-w-0"
                   disabled={isLocked}
                 />
                 <input
                   type="number"
-                  className="w-[70px] rounded-lg border border-ink/20 bg-paper px-2 py-1 font-black"
+                  className="w-[64px] rounded-lg border border-ink/20 bg-paper px-2 py-1 font-black"
                   value={currentTune.top}
                   onChange={(e) => setTune('top', Number(e.target.value || 0), -500, 500)}
                   disabled={isLocked}
@@ -430,12 +430,12 @@ export default function MiniGameManager() {
                   step={2}
                   value={currentTune.bottom}
                   onChange={(e) => setTune('bottom', Number(e.target.value), -500, 500)}
-                  className="w-[140px]"
+                  className="flex-1 min-w-0"
                   disabled={isLocked}
                 />
                 <input
                   type="number"
-                  className="w-[70px] rounded-lg border border-ink/20 bg-paper px-2 py-1 font-black"
+                  className="w-[64px] rounded-lg border border-ink/20 bg-paper px-2 py-1 font-black"
                   value={currentTune.bottom}
                   onChange={(e) => setTune('bottom', Number(e.target.value || 0), -500, 500)}
                   disabled={isLocked}
@@ -451,12 +451,12 @@ export default function MiniGameManager() {
                   step={2}
                   value={currentTune.left}
                   onChange={(e) => setTune('left', Number(e.target.value), -500, 500)}
-                  className="w-[140px]"
+                  className="flex-1 min-w-0"
                   disabled={isLocked}
                 />
                 <input
                   type="number"
-                  className="w-[70px] rounded-lg border border-ink/20 bg-paper px-2 py-1 font-black"
+                  className="w-[64px] rounded-lg border border-ink/20 bg-paper px-2 py-1 font-black"
                   value={currentTune.left}
                   onChange={(e) => setTune('left', Number(e.target.value || 0), -500, 500)}
                   disabled={isLocked}
@@ -472,12 +472,12 @@ export default function MiniGameManager() {
                   step={2}
                   value={currentTune.right}
                   onChange={(e) => setTune('right', Number(e.target.value), -500, 500)}
-                  className="w-[140px]"
+                  className="flex-1 min-w-0"
                   disabled={isLocked}
                 />
                 <input
                   type="number"
-                  className="w-[70px] rounded-lg border border-ink/20 bg-paper px-2 py-1 font-black"
+                  className="w-[64px] rounded-lg border border-ink/20 bg-paper px-2 py-1 font-black"
                   value={currentTune.right}
                   onChange={(e) => setTune('right', Number(e.target.value || 0), -500, 500)}
                   disabled={isLocked}
@@ -523,7 +523,7 @@ export default function MiniGameManager() {
         {stageSchema &&
           (innerTunerOpen ? (
             <div
-              className="absolute right-4 bottom-4 z-50 rounded-2xl border border-ink/30 bg-paper2/92 px-2 py-2 shadow-md"
+              className="absolute right-4 bottom-4 z-50 w-[320px] max-w-[calc(100vw-2rem)] max-h-[calc(50vh-2rem)] rounded-2xl border border-ink/30 bg-paper2/92 px-2 py-2 shadow-md overflow-y-auto"
               onPointerDown={(e) => e.stopPropagation()}
               onClick={(e) => e.stopPropagation()}
             >
@@ -584,12 +584,12 @@ export default function MiniGameManager() {
                         step={it.step}
                         value={v}
                         onChange={(e) => setGameNumber(it.key, Number(e.target.value))}
-                        className="w-[140px]"
+                        className="flex-1 min-w-0"
                         disabled={isGameLocked}
                       />
                       <input
                         type="number"
-                        className="w-[70px] rounded-lg border border-ink/20 bg-paper px-2 py-1 font-black"
+                        className="w-[64px] rounded-lg border border-ink/20 bg-paper px-2 py-1 font-black"
                         value={v}
                         onChange={(e) => setGameNumber(it.key, Number(e.target.value || 0))}
                         disabled={isGameLocked}
