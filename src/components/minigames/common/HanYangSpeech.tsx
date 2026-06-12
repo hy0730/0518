@@ -23,7 +23,12 @@ export default function HanYangSpeech({
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline gap-2 min-w-0">
           <span className="text-[12px] font-black opacity-85 shrink-0">{isHan ? '한' : '양'}</span>
-          <span className="text-[12px] font-bold opacity-95 truncate">{oneLine}</span>
+          <span
+            className="text-[12px] font-bold opacity-95 whitespace-nowrap overflow-x-auto"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          >
+            {oneLine}
+          </span>
         </div>
       </div>
     </div>
