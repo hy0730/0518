@@ -13,6 +13,8 @@ export const GUSEO_ASSETS = {
   activist: '/assets/images/relic_seoimyeon_activist.png',
   policeman: '/assets/images/relic_seoimyeon_policeman.png',
   ricesack: '/assets/images/relic_seoimyeon_ricesack.png',
+  // TODO(디자인): 사용자가 제공할 "수탈당한 백성" 아이콘(1개)로 교체할 예정
+  citizen: '/assets/images/relic_seoimyeon_citizen.png',
 } as const;
 
 // 20x20 맵 데이터(직각 격자) - "샘플 설계" 버전
@@ -112,12 +114,12 @@ export const QUIZ_POOL: Quiz[] = [
     answerIndex: 0,
   },
   {
-    question: '일제강점기에는 농민들이 낸 쌀이 어디로 많이 빼앗겨 갔을까요?',
-    options: ['일본으로', '우주로'],
+    question: '일제강점기에는 농민들이 수탈당한 쌀이 어디로 많이 옮겨져 갔을까요?',
+    options: ['일본으로', '독립군들에게'],
     answerIndex: 0,
   },
   {
-    question: '독립운동가들은 몰래 어떤 일을 했을까요?',
+    question: '독립운동가들은 은밀하게 어떤 일을 했을까요?',
     options: ['나라를 되찾기 위한 활동', '보물찾기 게임만 하기'],
     answerIndex: 0,
   },
@@ -133,12 +135,12 @@ export const QUIZ_POOL: Quiz[] = [
   },
   {
     question: '쌀가마니를 되찾은 뒤에는 어디로 가야 할까요?',
-    options: ['탈출구', '벽 안쪽'],
+    options: ['수탈당한 사람들에게 돌려주기', '일본으로 가져가기'],
     answerIndex: 0,
   },
   {
     question: '만세운동에서 사람들이 외친 말은 무엇일까요?',
-    options: ['대한 독립 만세', '점심 먹자'],
+    options: ['대한 독립 만세', '안양 독립 만세'],
     answerIndex: 0,
   },
 ];
