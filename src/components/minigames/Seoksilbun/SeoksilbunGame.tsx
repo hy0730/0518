@@ -3,6 +3,7 @@ import type { MinigameProps } from '../../../types/game';
 import { storyDataByStageId } from '../../../data/storyData';
 import { getRelicMainImage, getRelicRealImage } from '../../../utils/relicImages';
 import { useToast } from '../common/useToast';
+import { useGameTuning } from '../../common/GameTuningContext';
 
 type Phase = 'INTRO' | 'TUTORIAL' | 'MAIN' | 'QUIZ';
 
@@ -134,6 +135,67 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
   const { toast, showToast } = useToast(900);
   const [shakeSlot, setShakeSlot] = useState<1 | 2 | null>(null);
   const dragThreshold = 3; // 모바일 드래그 인식 개선(너무 높으면 클릭으로 오인)
+  const tuning = useGameTuning();
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const ui = useMemo(() => {
+    const get = (k: string, fallback: number) => tuning?.getNumber(k, fallback) ?? fallback;
+    return {
+      headerX: get('headerX', 0),
+      headerY: get('headerY', 0),
+      boardX: get('boardX', 0),
+      boardY: get('boardY', 0),
+      boardScale: get('boardScale', 1),
+      leftInvX: get('leftInvX', 0),
+      leftInvY: get('leftInvY', 0),
+      rightInvX: get('rightInvX', 0),
+      rightInvY: get('rightInvY', 0),
+      actionY: get('actionY', 0),
+    };
+  }, [tuning]);
+  const layoutDragRef = useRef<null | {
+    target: 'header' | 'board' | 'leftInv' | 'rightInv' | 'action';
+    startX: number;
+    startY: number;
+    baseX: number;
+    baseY: number;
+  }>(null);
+
+  useEffect(() => {
+    const move = (e: PointerEvent) => {
+      const drag = layoutDragRef.current;
+      if (!drag || !tuning || tuning.locked || !tuning.innerTunerOpen) return;
+      const el = rootRef.current;
+      const scale = el ? Math.max(el.getBoundingClientRect().width / Math.max(el.offsetWidth, 1), 0.0001) : 1;
+      const dx = (e.clientX - drag.startX) / scale;
+      const dy = (e.clientY - drag.startY) / scale;
+      if (drag.target === 'header') {
+        tuning.setNumber('headerX', drag.baseX + dx);
+        tuning.setNumber('headerY', drag.baseY + dy);
+      } else if (drag.target === 'board') {
+        tuning.setNumber('boardX', drag.baseX + dx);
+        tuning.setNumber('boardY', drag.baseY + dy);
+      } else if (drag.target === 'leftInv') {
+        tuning.setNumber('leftInvX', drag.baseX + dx);
+        tuning.setNumber('leftInvY', drag.baseY + dy);
+      } else if (drag.target === 'rightInv') {
+        tuning.setNumber('rightInvX', drag.baseX + dx);
+        tuning.setNumber('rightInvY', drag.baseY + dy);
+      } else {
+        tuning.setNumber('actionY', drag.baseY + dy);
+      }
+    };
+    const up = () => {
+      layoutDragRef.current = null;
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
+    return () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
+    };
+  }, [tuning]);
 
   const bg = useMemo(() => {
     if (phase === 'INTRO') {
@@ -432,7 +494,7 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
   };
 
   return (
-    <div className="w-full h-full relative text-ink select-none">
+    <div ref={rootRef} className="w-full h-full relative text-ink select-none">
       <style>{`
         @keyframes slotShake {
           0% { transform: translateY(0); }
@@ -458,7 +520,18 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
       )}
 
       {/* 상단 바 */}
-      <div className="absolute left-0 right-0 top-0 z-10 px-3 py-2 flex items-center justify-between">
+      <div
+        className={[
+          'absolute left-0 right-0 top-0 z-10 px-3 py-2 flex items-center justify-between',
+          tuning?.innerTunerOpen && !tuning.locked ? 'cursor-move ring-2 ring-sky-300/60 rounded-xl bg-sky-100/10' : '',
+        ].join(' ')}
+        style={{ transform: `translate(${ui.headerX}px, ${ui.headerY}px)` }}
+        onPointerDown={(e) => {
+          if (!tuning?.innerTunerOpen || tuning.locked) return;
+          e.stopPropagation();
+          layoutDragRef.current = { target: 'header', startX: e.clientX, startY: e.clientY, baseX: ui.headerX, baseY: ui.headerY };
+        }}
+      >
         <div className="text-sm font-black">
           스테이지 {stageId} · {stageTitle}
         </div>
@@ -467,14 +540,27 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
 
       {/* 보드(드롭 영역) */}
       <div
+        className="absolute inset-x-0 top-[38px] bottom-[64px] z-10 mx-3"
+        style={{ transform: `translate(${ui.boardX}px, ${ui.boardY}px) scale(${ui.boardScale})`, transformOrigin: 'center' }}
+      >
+      <div
         ref={boardRef}
-        className="absolute inset-x-0 top-[38px] bottom-[64px] z-10 mx-3 rounded-3xl border border-ink/25 overflow-hidden shadow-paper touch-none"
+        className="absolute inset-0 rounded-3xl border border-ink/25 overflow-hidden shadow-paper touch-none"
         onPointerDown={(e) => {
           if (showIntroOverlay && !interactiveGuard(e.target)) {
             advanceIntro();
           }
         }}
       >
+        {tuning?.innerTunerOpen && !tuning.locked && (
+          <div
+            className="absolute inset-0 z-20 rounded-3xl ring-2 ring-sky-300/60 bg-sky-100/10 cursor-move"
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              layoutDragRef.current = { target: 'board', startX: e.clientX, startY: e.clientY, baseX: ui.boardX, baseY: ui.boardY };
+            }}
+          />
+        )}
         {/* 중앙 "무덤" 영역 (좌/우 인벤토리를 제외한 자유 배치 영역)
             주의: Tailwind에서 `relative`/`absolute`를 같이 쓰면 뒤의 class가 position을 덮어써서
             높이/너비가 0이 되어 배치 좌표가 한 곳에 몰릴 수 있음. */}
@@ -525,6 +611,17 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
         {phase === 'MAIN' && (
           <>
             <div className="absolute left-3 top-3 bottom-3 w-[132px] flex flex-col gap-2" data-inventory="true">
+              {tuning?.innerTunerOpen && !tuning.locked && (
+                <div
+                  className="absolute inset-0 z-20 rounded-2xl ring-2 ring-sky-300/60 bg-sky-100/10 cursor-move"
+                  style={{ transform: `translate(${ui.leftInvX}px, ${ui.leftInvY}px)` }}
+                  onPointerDown={(e) => {
+                    e.stopPropagation();
+                    layoutDragRef.current = { target: 'leftInv', startX: e.clientX, startY: e.clientY, baseX: ui.leftInvX, baseY: ui.leftInvY };
+                  }}
+                />
+              )}
+              <div style={{ transform: `translate(${ui.leftInvX}px, ${ui.leftInvY}px)` }}>
               {leftArtifacts.map((a) => (
                 <div
                   key={a.id}
@@ -545,9 +642,21 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
                   <div className="text-[11px] font-black leading-tight">{a.name}</div>
                 </div>
               ))}
+              </div>
             </div>
 
             <div className="absolute right-3 top-3 bottom-3 w-[132px] flex flex-col gap-2 justify-start" data-inventory="true">
+              {tuning?.innerTunerOpen && !tuning.locked && (
+                <div
+                  className="absolute inset-0 z-20 rounded-2xl ring-2 ring-sky-300/60 bg-sky-100/10 cursor-move"
+                  style={{ transform: `translate(${ui.rightInvX}px, ${ui.rightInvY}px)` }}
+                  onPointerDown={(e) => {
+                    e.stopPropagation();
+                    layoutDragRef.current = { target: 'rightInv', startX: e.clientX, startY: e.clientY, baseX: ui.rightInvX, baseY: ui.rightInvY };
+                  }}
+                />
+              )}
+              <div style={{ transform: `translate(${ui.rightInvX}px, ${ui.rightInvY}px)` }}>
               {rightArtifacts.map((a) => (
                 <div
                   key={a.id}
@@ -568,6 +677,7 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
                   <div className="text-[11px] font-black leading-tight">{a.name}</div>
                 </div>
               ))}
+              </div>
             </div>
           </>
         )}
@@ -634,9 +744,21 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
           </div>
         )}
       </div>
+      </div>
 
       {/* 하단 액션 바 */}
-      <div className="absolute left-0 right-0 bottom-0 z-10 px-3 py-2 flex items-center justify-between gap-2 bg-paper2/95 border-t-2 border-ink/20">
+      <div
+        className={[
+          'absolute left-0 right-0 bottom-0 z-10 px-3 py-2 flex items-center justify-between gap-2 bg-paper2/95 border-t-2 border-ink/20',
+          tuning?.innerTunerOpen && !tuning.locked ? 'cursor-move ring-2 ring-sky-300/60' : '',
+        ].join(' ')}
+        style={{ transform: `translateY(${ui.actionY}px)` }}
+        onPointerDown={(e) => {
+          if (!tuning?.innerTunerOpen || tuning.locked) return;
+          e.stopPropagation();
+          layoutDragRef.current = { target: 'action', startX: e.clientX, startY: e.clientY, baseX: 0, baseY: ui.actionY };
+        }}
+      >
         <div className="text-[12px] font-bold opacity-95 leading-relaxed">
           {phase === 'INTRO' && introText}
           {phase === 'TUTORIAL' && (dragHint ?? '토우를 무덤 안으로 드래그(또는 클릭)해서 배치해 보세요!')}

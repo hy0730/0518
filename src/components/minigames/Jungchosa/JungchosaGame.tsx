@@ -4,6 +4,7 @@ import { storyDataByStageId } from '../../../data/storyData';
 import { audio } from '../../../utils/audio';
 import { getRelicMainImage, getRelicRealImage } from '../../../utils/relicImages';
 import { useToast } from '../common/useToast';
+import { useGameTuning } from '../../common/GameTuningContext';
 
 type Phase = 'QUIZ';
 type QuizId = 'A' | 'B' | 'C' | 'D';
@@ -55,6 +56,48 @@ export default function JungchosaGame({ stageId, onComplete, regionData }: Minig
   const [introInfoOpen, setIntroInfoOpen] = useState(true);
 
   const { toast, showToast } = useToast(1200);
+  const tuning = useGameTuning();
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const ui = useMemo(() => {
+    const get = (k: string, fallback: number) => tuning?.getNumber(k, fallback) ?? fallback;
+    return {
+      headerX: get('headerX', 0),
+      headerY: get('headerY', 0),
+      boardX: get('boardX', 0),
+      boardY: get('boardY', 30),
+      boardScale: get('boardScale', 1),
+    };
+  }, [tuning]);
+  const dragRef = useRef<null | { target: 'header' | 'board'; startX: number; startY: number; baseX: number; baseY: number }>(null);
+
+  useEffect(() => {
+    const move = (e: PointerEvent) => {
+      const drag = dragRef.current;
+      if (!drag || !tuning || tuning.locked || !tuning.innerTunerOpen) return;
+      const el = rootRef.current;
+      const scale = el ? Math.max(el.getBoundingClientRect().width / Math.max(el.offsetWidth, 1), 0.0001) : 1;
+      const dx = (e.clientX - drag.startX) / scale;
+      const dy = (e.clientY - drag.startY) / scale;
+      if (drag.target === 'header') {
+        tuning.setNumber('headerX', drag.baseX + dx);
+        tuning.setNumber('headerY', drag.baseY + dy);
+      } else {
+        tuning.setNumber('boardX', drag.baseX + dx);
+        tuning.setNumber('boardY', drag.baseY + dy);
+      }
+    };
+    const up = () => {
+      dragRef.current = null;
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
+    return () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
+    };
+  }, [tuning]);
 
   // Phase 2: 명문 해독(클릭 퀴즈)
   const quizOrder: QuizId[] = ['A', 'B', 'C', 'D'];
@@ -198,7 +241,7 @@ export default function JungchosaGame({ stageId, onComplete, regionData }: Minig
   }, [phase, quizSlots]);
 
   return (
-    <div className="w-full h-full relative text-ink">
+    <div ref={rootRef} className="w-full h-full relative text-ink">
       <style>{`
         @keyframes shakeX {
           0% { transform: translateX(0); }
@@ -231,13 +274,37 @@ export default function JungchosaGame({ stageId, onComplete, regionData }: Minig
       `}</style>
 
       {/* 상단 바: 게임 컨테이너를 직접 사용하고, 보드는 그 아래부터 거의 전체 높이를 사용 */}
-      <div className="absolute left-0 right-0 top-0 z-10 px-2 py-1.5 flex items-center justify-between">
+      <div
+        className={[
+          'absolute left-0 right-0 top-0 z-10 px-2 py-1.5 flex items-center justify-between',
+          tuning?.innerTunerOpen && !tuning.locked ? 'cursor-move ring-2 ring-sky-300/60 rounded-xl bg-sky-100/10' : '',
+        ].join(' ')}
+        style={{ transform: `translate(${ui.headerX}px, ${ui.headerY}px)` }}
+        onPointerDown={(e) => {
+          if (!tuning?.innerTunerOpen || tuning.locked) return;
+          e.stopPropagation();
+          dragRef.current = { target: 'header', startX: e.clientX, startY: e.clientY, baseX: ui.headerX, baseY: ui.headerY };
+        }}
+      >
         <div className="text-sm font-black tracking-tight">{title}</div>
         <div className="text-[10px] font-bold opacity-80">명문 해독</div>
       </div>
 
       {/* 바깥 레이아웃 조절은 MiniGameManager에서 처리 */}
-      <div className="absolute inset-x-0 top-[30px] bottom-0 px-1.5 pb-1.5 grid grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)_minmax(0,0.9fr)] gap-1.5">
+      <div
+        className="absolute inset-x-0 top-0 bottom-0"
+        style={{ transform: `translate(${ui.boardX}px, ${ui.boardY}px) scale(${ui.boardScale})`, transformOrigin: 'top center' }}
+      >
+        {tuning?.innerTunerOpen && !tuning.locked && (
+          <div
+            className="absolute inset-x-0 top-0 bottom-0 z-20 mx-1.5 rounded-[24px] ring-2 ring-sky-300/60 bg-sky-100/10 cursor-move"
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              dragRef.current = { target: 'board', startX: e.clientX, startY: e.clientY, baseX: ui.boardX, baseY: ui.boardY };
+            }}
+          />
+        )}
+      <div className="absolute inset-x-0 top-0 bottom-0 px-1.5 pb-1.5 grid grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)_minmax(0,0.9fr)] gap-1.5">
             {/* 왼쪽: 명문 이미지 */}
             <div className="min-h-0 min-w-0 rounded-[22px] border border-ink/20 bg-paper/92 overflow-hidden relative shadow-paper">
               <div className="h-full px-2 py-2 flex flex-col gap-2">
@@ -325,6 +392,7 @@ export default function JungchosaGame({ stageId, onComplete, regionData }: Minig
                 })}
               </div>
             </div>
+      </div>
       </div>
 
       {/* 플라잉 애니메이션 토큰 */}

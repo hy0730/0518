@@ -4,6 +4,7 @@ import { storyDataByStageId } from '../../../data/storyData';
 import { audio } from '../../../utils/audio';
 import { getRelicMainImage, getRelicRealImage } from '../../../utils/relicImages';
 import { useToast } from '../common/useToast';
+import { useGameTuning } from '../../common/GameTuningContext';
 
 type Phase = 'INTRO' | 'BUILD' | 'MERGE' | 'BRIDGE_REVEAL' | 'FORCE' | 'RESULT';
 
@@ -129,6 +130,55 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
   // (요청) 팝업은 left_1을 "끼울 때"만 1회 출력
   const [showFirstPopup, setShowFirstPopup] = useState(false);
   const { toast, showToast } = useToast(1300);
+  const tuning = useGameTuning();
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const ui = useMemo(() => {
+    const get = (k: string, fallback: number) => tuning?.getNumber(k, fallback) ?? fallback;
+    return {
+      boardX: get('boardX', 0),
+      boardY: get('boardY', 0),
+      boardScaleTune: get('boardScaleTune', 1),
+      inventoryX: get('inventoryX', 0),
+      inventoryY: get('inventoryY', 0),
+      inventoryScale: get('inventoryScale', 1),
+    };
+  }, [tuning]);
+  const layoutDragRef = useRef<null | {
+    target: 'board' | 'inventory';
+    startX: number;
+    startY: number;
+    baseX: number;
+    baseY: number;
+  }>(null);
+
+  useEffect(() => {
+    const move = (e: PointerEvent) => {
+      const drag = layoutDragRef.current;
+      if (!drag || !tuning || tuning.locked || !tuning.innerTunerOpen) return;
+      const el = rootRef.current;
+      const scale = el ? Math.max(el.getBoundingClientRect().width / Math.max(el.offsetWidth, 1), 0.0001) : 1;
+      const dx = (e.clientX - drag.startX) / scale;
+      const dy = (e.clientY - drag.startY) / scale;
+      if (drag.target === 'board') {
+        tuning.setNumber('boardX', drag.baseX + dx);
+        tuning.setNumber('boardY', drag.baseY + dy);
+      } else {
+        tuning.setNumber('inventoryX', drag.baseX + dx);
+        tuning.setNumber('inventoryY', drag.baseY + dy);
+      }
+    };
+    const up = () => {
+      layoutDragRef.current = null;
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
+    return () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
+    };
+  }, [tuning]);
 
   const beginDrag = (e: React.PointerEvent, pieceIndex: number, origin: DragState['origin'], originSlotIdx: number | null) => {
     startIfNeeded();
@@ -321,7 +371,7 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
   }, [phase]);
 
   return (
-    <div className="w-full h-full text-ink relative">
+    <div ref={rootRef} className="w-full h-full text-ink relative">
       <style>{`
         @keyframes arrowDown {
           0% { transform: translate(-50%, -18px); opacity: 0; }
@@ -360,10 +410,19 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
           <div
             className="absolute inset-0"
             style={{
-              transform: `translateY(${BOARD_SHIFT_Y}px) scale(${BOARD_SCALE})`,
+              transform: `translate(${ui.boardX}px, ${BOARD_SHIFT_Y + ui.boardY}px) scale(${BOARD_SCALE * ui.boardScaleTune})`,
               transformOrigin: 'center',
             }}
           >
+            {tuning?.innerTunerOpen && !tuning.locked && (
+              <div
+                className="absolute inset-0 z-30 rounded-3xl ring-2 ring-sky-300/60 bg-sky-100/10 cursor-move"
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  layoutDragRef.current = { target: 'board', startX: e.clientX, startY: e.clientY, baseX: ui.boardX, baseY: ui.boardY };
+                }}
+              />
+            )}
             {/* 배경 레이어 */}
             <div
               className="absolute inset-0 bg-center bg-no-repeat bg-contain pointer-events-none transition-opacity duration-500"
@@ -479,6 +538,15 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
           {/* 인벤토리(하단 2줄: 7+6) */}
           {phase === 'BUILD' && (
           <div className="absolute left-3 right-3 bottom-3 rounded-3xl border border-ink/20 bg-paper/70 px-3 py-2 z-40 overflow-visible">
+            <div
+              className={tuning?.innerTunerOpen && !tuning.locked ? 'rounded-3xl ring-2 ring-sky-300/60 bg-sky-100/10 cursor-move' : ''}
+              style={{ transform: `translate(${ui.inventoryX}px, ${ui.inventoryY}px) scale(${ui.inventoryScale})`, transformOrigin: 'bottom center' }}
+              onPointerDown={(e) => {
+                if (!tuning?.innerTunerOpen || tuning.locked) return;
+                e.stopPropagation();
+                layoutDragRef.current = { target: 'inventory', startX: e.clientX, startY: e.clientY, baseX: ui.inventoryX, baseY: ui.inventoryY };
+              }}
+            >
             <div className="flex items-center justify-between">
               <div className="text-[12px] font-bold opacity-90">퍼즐 조각을 끼워보자! ({placedCount}/{SLOT_COUNT})</div>
               {phase === 'BUILD' ? <div className="text-[11px] opacity-80">드래그</div> : null}
@@ -510,6 +578,7 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
                   </div>
                 );
               })}
+            </div>
             </div>
           </div>
           )}

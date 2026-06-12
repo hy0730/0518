@@ -69,6 +69,50 @@ const GAME_TUNES_STORAGE_KEY = 'gameTunes_v1';
 const GAME_TUNES_LOCKED_KEY = 'gameTunes_locked_v1';
 
 const STAGE_TUNING_SCHEMAS: Record<number, StageTuneSchema> = {
+  3: {
+    title: '석실분 레이아웃',
+    defaults: {
+      headerX: 0,
+      headerY: 0,
+      boardX: 0,
+      boardY: 0,
+      boardScale: 1,
+      leftInvX: 0,
+      leftInvY: 0,
+      rightInvX: 0,
+      rightInvY: 0,
+      actionY: 0,
+    },
+    items: [
+      { key: 'headerX', label: '상단 X', min: -400, max: 400, step: 2 },
+      { key: 'headerY', label: '상단 Y', min: -200, max: 200, step: 2 },
+      { key: 'boardX', label: '보드 X', min: -400, max: 400, step: 2 },
+      { key: 'boardY', label: '보드 Y', min: -250, max: 250, step: 2 },
+      { key: 'boardScale', label: '보드 크기', min: 0.5, max: 1.8, step: 0.05 },
+      { key: 'leftInvX', label: '좌인벤 X', min: -300, max: 300, step: 2 },
+      { key: 'leftInvY', label: '좌인벤 Y', min: -250, max: 250, step: 2 },
+      { key: 'rightInvX', label: '우인벤 X', min: -300, max: 300, step: 2 },
+      { key: 'rightInvY', label: '우인벤 Y', min: -250, max: 250, step: 2 },
+      { key: 'actionY', label: '하단 Y', min: -200, max: 200, step: 2 },
+    ],
+  },
+  4: {
+    title: '당간지주 레이아웃',
+    defaults: {
+      headerX: 0,
+      headerY: 0,
+      boardX: 0,
+      boardY: 30,
+      boardScale: 1,
+    },
+    items: [
+      { key: 'headerX', label: '상단 X', min: -300, max: 300, step: 2 },
+      { key: 'headerY', label: '상단 Y', min: -120, max: 120, step: 2 },
+      { key: 'boardX', label: '보드 X', min: -300, max: 300, step: 2 },
+      { key: 'boardY', label: '보드 Y', min: -120, max: 220, step: 2 },
+      { key: 'boardScale', label: '보드 크기', min: 0.6, max: 1.8, step: 0.05 },
+    ],
+  },
   6: {
     title: '안양사 퍼즐 레이아웃',
     defaults: {
@@ -98,6 +142,25 @@ const STAGE_TUNING_SCHEMAS: Record<number, StageTuneSchema> = {
       { key: 'slotW', label: '조각 폭', min: 40, max: 320, step: 2 },
       { key: 'slotH', label: '조각 높이', min: 40, max: 260, step: 2 },
       { key: 'pieceScale', label: '조각 크기', min: 0.4, max: 2.5, step: 0.05 },
+    ],
+  },
+  8: {
+    title: '만안교 레이아웃',
+    defaults: {
+      boardX: 0,
+      boardY: 0,
+      boardScaleTune: 1,
+      inventoryX: 0,
+      inventoryY: 0,
+      inventoryScale: 1,
+    },
+    items: [
+      { key: 'boardX', label: '보드 X', min: -350, max: 350, step: 2 },
+      { key: 'boardY', label: '보드 Y', min: -250, max: 250, step: 2 },
+      { key: 'boardScaleTune', label: '보드 크기', min: 0.5, max: 1.8, step: 0.05 },
+      { key: 'inventoryX', label: '인벤 X', min: -350, max: 350, step: 2 },
+      { key: 'inventoryY', label: '인벤 Y', min: -250, max: 250, step: 2 },
+      { key: 'inventoryScale', label: '인벤 크기', min: 0.5, max: 1.8, step: 0.05 },
     ],
   },
 };
