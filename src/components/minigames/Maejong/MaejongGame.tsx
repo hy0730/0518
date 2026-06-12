@@ -4,6 +4,7 @@ import { storyDataByStageId } from '../../../data/storyData';
 import { audio } from '../../../utils/audio';
 import { getRelicMainImage, getRelicRealImage } from '../../../utils/relicImages';
 import { useToast } from '../common/useToast';
+import HanYangCoach from '../common/HanYangCoach';
 
 type Phase = 'RUBBING' | 'LABEL';
 
@@ -65,6 +66,11 @@ export default function MaejongGame({ stageId, onComplete, regionData }: Minigam
 
   // 공통 토스트(기존 1400ms 유지)
   const { toast, showToast } = useToast(1400);
+  const [coachOpen, setCoachOpen] = useState(true);
+  const coachText = useMemo(() => {
+    if (phase === 'RUBBING') return '한: 화면을 문질러 탁본을 완성해보자!\n양: 종 모양이 충분히 드러나면 다음 단계로 넘어갈 수 있어.';
+    return '한: 라벨을 끌어서 그림의 올바른 위치에 붙여보자!\n양: 4개를 모두 맞추면 성공이야!';
+  }, [phase]);
 
   // Phase 1: 탁본(스크래치)
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -294,6 +300,12 @@ export default function MaejongGame({ stageId, onComplete, regionData }: Minigam
             backgroundImage: `linear-gradient(rgba(244,235,217,0.10), rgba(244,235,217,0.30)), url('${mainBg || RUBBING_IMG}')`,
           }}
         />
+
+        {coachOpen && (
+          <div className="absolute left-3 top-14 z-[9000]">
+            <HanYangCoach title="한·양 설명" text={coachText} onClose={() => setCoachOpen(false)} />
+          </div>
+        )}
 
         {phase === 'RUBBING' ? (
           <div className="absolute inset-0 grid place-items-center">

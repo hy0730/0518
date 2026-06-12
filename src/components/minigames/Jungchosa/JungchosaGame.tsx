@@ -5,6 +5,7 @@ import { audio } from '../../../utils/audio';
 import { getRelicMainImage, getRelicRealImage } from '../../../utils/relicImages';
 import { useToast } from '../common/useToast';
 import { useGameTuning } from '../../common/GameTuningContext';
+import HanYangCoach from '../common/HanYangCoach';
 
 type Phase = 'QUIZ';
 type QuizId = 'A' | 'B' | 'C' | 'D';
@@ -56,6 +57,10 @@ export default function JungchosaGame({ stageId, onComplete, regionData }: Minig
   const [introInfoOpen, setIntroInfoOpen] = useState(true);
 
   const { toast, showToast } = useToast(1200);
+  const [coachOpen, setCoachOpen] = useState(true);
+  const coachText = useMemo(() => {
+    return '한: 당간지주의 글자를 맞춰 기록을 복원해보자.\n양: 아래 카드들을 빈칸에 순서대로 넣으면 돼!';
+  }, []);
   const tuning = useGameTuning();
   const rootRef = useRef<HTMLDivElement | null>(null);
   const ui = useMemo(() => {
@@ -272,6 +277,12 @@ export default function JungchosaGame({ stageId, onComplete, regionData }: Minig
         }
         .popInFx { animation: popIn 180ms ease-out both; }
       `}</style>
+
+      {coachOpen && (
+        <div className="absolute left-3 top-3 z-[9000]">
+          <HanYangCoach title="한·양 설명" text={coachText} onClose={() => setCoachOpen(false)} />
+        </div>
+      )}
 
       {/* 상단 바: 게임 컨테이너를 직접 사용하고, 보드는 그 아래부터 거의 전체 높이를 사용 */}
       <div

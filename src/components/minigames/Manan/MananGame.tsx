@@ -5,6 +5,7 @@ import { audio } from '../../../utils/audio';
 import { getRelicMainImage, getRelicRealImage } from '../../../utils/relicImages';
 import { useToast } from '../common/useToast';
 import { useGameTuning } from '../../common/GameTuningContext';
+import HanYangCoach from '../common/HanYangCoach';
 
 type Phase = 'INTRO' | 'BUILD' | 'MERGE' | 'BRIDGE_REVEAL' | 'FORCE' | 'RESULT';
 
@@ -130,6 +131,12 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
   // (요청) 팝업은 left_1을 "끼울 때"만 1회 출력
   const [showFirstPopup, setShowFirstPopup] = useState(false);
   const { toast, showToast } = useToast(1300);
+  const [coachOpen, setCoachOpen] = useState(true);
+  const coachText = useMemo(() => {
+    if (phase === 'INTRO') return '한: 만안교의 흔적을 찾아 다리의 길을 복원해보자.\n양: 안내에 따라 길을 연결하면 돼!';
+    if (phase === 'PLAY') return '한: 표시된 경로를 따라 다리를 완성해보자.\n양: 실수하면 다시 시도할 수 있어!';
+    return '한: 잘했어! 만안교 이야기가 다시 이어졌어.\n양: 계속 진행해보자!';
+  }, [phase]);
   const tuning = useGameTuning();
   const rootRef = useRef<HTMLDivElement | null>(null);
   const ui = useMemo(() => {
@@ -392,6 +399,12 @@ export default function MananGame({ stageId, onComplete, regionData }: MinigameP
         }
         .glowFx { animation: glowPulse 1.2s ease-in-out infinite; }
       `}</style>
+
+      {coachOpen && phase !== 'RESULT' && (
+        <div className="absolute left-3 top-3 z-[9000]">
+          <HanYangCoach title="한·양 설명" text={coachText} onClose={() => setCoachOpen(false)} />
+        </div>
+      )}
 
       <div className="absolute left-0 right-0 top-0 z-50 px-2 pt-2 flex items-center justify-between gap-2 pointer-events-none">
         <div className="text-sm font-black tracking-tight">스테이지 {stageId} · {title}</div>

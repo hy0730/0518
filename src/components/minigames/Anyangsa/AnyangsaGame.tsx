@@ -5,6 +5,7 @@ import { storyDataByStageId } from '../../../data/storyData';
 import { audio } from '../../../utils/audio';
 import { useToast } from '../common/useToast';
 import { useGameTuning } from '../../common/GameTuningContext';
+import HanYangCoach from '../common/HanYangCoach';
 
 type Phase = 'PUZZLE' | 'ENGRAVE';
 type PieceId = 1 | 2 | 3 | 4 | 5 | 6;
@@ -175,6 +176,11 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
 
   // Toast
   const { toast, showToast } = useToast(1400);
+  const [coachOpen, setCoachOpen] = useState(true);
+  const coachText = useMemo(() => {
+    if (phase === 'PUZZLE') return '한: 조각을 끌어서 거북이비(귀부)를 완성해보자!\n양: 가까이 가져가면 착 붙을 거야.';
+    return '한: 마지막으로 비문을 새겨 넣어 소원을 완성하자.\n양: 글자를 다 새기면 성공이야!';
+  }, [phase]);
 
   // Phase1: 6조각 드래그 앤 드롭 퍼즐
   const [placedPieces, setPlacedPieces] = useState<PieceId[]>([]);
@@ -340,6 +346,12 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
             backgroundImage: `linear-gradient(rgba(244,235,217,0.12), rgba(244,235,217,0.30)), url('${BG}')`,
           }}
         />
+
+        {introStatus === 'DONE' && coachOpen && (
+          <div className="absolute left-3 top-3 z-[9000]">
+            <HanYangCoach title="한·양 설명" text={coachText} onClose={() => setCoachOpen(false)} />
+          </div>
+        )}
 
         {/* 시작 팝업: 비희의 소원 (클릭하면 시작) */}
         {introStatus !== 'DONE' && (

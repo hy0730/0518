@@ -18,6 +18,7 @@ import {
 import type { GuseoTile as Tile, Pos, Quiz } from '../../../data/guseoMazeConfig';
 import { useToast } from '../common/useToast';
 import { useGameTuning } from '../../common/GameTuningContext';
+import HanYangCoach from '../common/HanYangCoach';
 
 type Phase = 'INTRO' | 'MAZE' | 'FINALE';
 
@@ -320,6 +321,7 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
   const { toast, showToast } = useToast(1400);
 
   const [shake, setShake] = useState(false);
+  const [coachOpen, setCoachOpen] = useState(true);
   const [encounter, setEncounter] = useState<{
     active: boolean;
     tile: { r: number; c: number } | null;
@@ -402,6 +404,11 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
 
     return { tx: clampAxis(centeredX, minX), ty: clampAxis(centeredY, minY), z };
   }, [viewSize, zoomTarget, pos, cell, gridW, gridH]);
+
+  const coachText = useMemo(() => {
+    if (phase !== 'MAZE') return '한: 순사의 눈을 피해 쌀을 되찾아 백성에게 전달하자.\n양: 위험 칸(시야)을 조심하고, 숨을 곳(숨기)을 활용해!';
+    return `한: 쌀을 챙겨 백성에게 전달한 뒤 탈출구로 가자.\n양: 순사가 정면 2칸 안으로 다가오면 바로 추격해!`;
+  }, [phase]);
 
   // 가드 상태 참조(추격 로직 안정화)
   const guardsRef = useRef<Guard[]>(guards);
@@ -781,16 +788,30 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
             <div className="absolute inset-0 bg-ink/45" />
             <div className="relative z-10 h-full grid place-items-center">
               <div className="note-panel max-w-[620px] px-5 py-4">
-                <div className="text-lg font-black">구서이면사무소 잠입 작전</div>
+                <div className="flex items-start gap-3">
+                  <div className="flex items-start gap-2 shrink-0">
+                    <img src="/assets/images/han_2.png" alt="한" className="w-10 h-10 object-contain" draggable={false} />
+                    <img src="/assets/images/yang_2.png" alt="양" className="w-10 h-10 object-contain" draggable={false} />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-lg font-black">구서이면사무소 잠입 작전</div>
                 <div className="mt-2 text-sm leading-relaxed opacity-95">
                   구서이면사무소 한가운데에 수탈된 쌀가마니가 숨겨져 있어요.
                   <br />
                   순사의 눈을 피해 쌀을 되찾고, 마을 3곳의 수탈당한 백성에게 전달해 돌려주세요!
                 </div>
                 <div className="mt-3 text-sm font-black text-stamp">화면을 터치하면 작전을 시작합니다.</div>
+                  </div>
+                </div>
               </div>
             </div>
           </button>
+        )}
+
+        {introStatus === 'DONE' && coachOpen && (
+          <div className="absolute left-3 top-3 z-[11000]">
+            <HanYangCoach title="한·양 설명" text={coachText} onClose={() => setCoachOpen(false)} />
+          </div>
         )}
 
         {/* 미로 */}

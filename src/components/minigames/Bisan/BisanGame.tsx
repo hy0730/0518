@@ -5,6 +5,7 @@ import { audio } from '../../../utils/audio';
 import { getRelicRealImage } from '../../../utils/relicImages';
 import { useToast } from '../common/useToast';
 import { useGameTuning } from '../../common/GameTuningContext';
+import HanYangCoach from '../common/HanYangCoach';
 
 type Phase = 'LOAD' | 'FIRE' | 'FINALE';
 type PotteryId = 'p1' | 'p2';
@@ -158,6 +159,7 @@ export default function BisanGame({ stageId, onComplete, regionData }: MinigameP
   };
 
   const { toast, showToast } = useToast(1500);
+  const [coachOpen, setCoachOpen] = useState(true);
   const [drag, setDrag] = useState<DragState | null>(null);
   const [placed, setPlaced] = useState<Array<PotteryId | null>>([null, null]);
   const [slotGlow, setSlotGlow] = useState<Record<number, boolean>>({});
@@ -183,6 +185,12 @@ export default function BisanGame({ stageId, onComplete, regionData }: MinigameP
   }>(null);
 
   const canInteract = introStep === 'DONE';
+
+  const coachText = useMemo(() => {
+    if (phase === 'LOAD') return '한: 흙빛 도자기를 소성실 2칸에 넣어보자.\n양: 아궁이(연소실)에 넣으면 안 돼!';
+    if (phase === 'FIRE') return `한: 장작과 부채질로 온도를 ${SAFE_MIN}~${SAFE_MAX}℃에 유지하자.\n양: 초록 구간을 ${HOLD_SECONDS}초 유지하면 성공!`;
+    return '한: 완성된 도자기를 확인하고 다음으로 넘어가자.\n양: 빛이 나면 성공이야!';
+  }, [phase]);
 
   const tutorialMessage = useMemo(() => {
     if (tutorialStep === 'INVENTORY') {
@@ -467,6 +475,12 @@ export default function BisanGame({ stageId, onComplete, regionData }: MinigameP
 
       <div ref={rootRef} className="mt-2 flex-1 min-h-0 rounded-3xl border border-ink/30 bg-paper2/90 shadow-paper overflow-hidden relative">
         <div className="absolute inset-0 bg-[linear-gradient(rgba(44,34,24,0.15),rgba(44,34,24,0.28))]" />
+
+        {introStep === 'DONE' && coachOpen && (
+          <div className="absolute left-3 top-3 z-[11000]">
+            <HanYangCoach title="한·양 설명" text={coachText} onClose={() => setCoachOpen(false)} />
+          </div>
+        )}
 
         <div className="relative z-10 h-full grid grid-cols-[1fr_220px] grid-rows-[1fr_130px] gap-3 p-3">
           <div
