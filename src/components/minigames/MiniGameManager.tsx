@@ -120,6 +120,7 @@ export default function MiniGameManager() {
     }
   });
   const [outerTunerOpen, setOuterTunerOpen] = useState(true);
+  const [innerTunerOpen, setInnerTunerOpen] = useState(true);
 
   // 게임별 튜닝(미니게임 내부 레이아웃) - 공통 HUD에서 제어
   const [gameTunes, setGameTunes] = useState<Record<number, Record<string, number>>>(() => {
@@ -288,7 +289,7 @@ export default function MiniGameManager() {
           ← 뒤로
         </button>
 
-        {/* 공통 튜닝 HUD(바깥 레이아웃 + 게임별 튜닝) */}
+        {/* 전체 레이아웃 조절 */}
         {outerTunerOpen ? (
           <div
             className="absolute right-4 top-16 z-50 rounded-2xl border border-ink/30 bg-paper2/92 px-2 py-2 shadow-md"
@@ -495,79 +496,6 @@ export default function MiniGameManager() {
               </button>
             </div>
 
-            {stageSchema && (
-              <div className="mt-3 pt-3 border-t border-ink/15">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="text-[11px] font-black">{stageSchema.title}</div>
-                  <div className={['text-[10px] font-black', isGameLocked ? 'text-stamp' : 'text-ink/70'].join(' ')}>
-                    {isGameLocked ? '확정됨(잠금)' : '조절 중'}
-                  </div>
-                </div>
-                <div className="mt-1 flex items-center justify-between gap-2">
-                  {isGameLocked ? (
-                    <button
-                      type="button"
-                      className="px-2 py-1 rounded-lg border border-ink/20 bg-paper text-[10px] font-black"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setGameLocked((prev) => ({ ...prev, [currentStageId]: false }));
-                      }}
-                    >
-                      확정 해제
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      className="px-2 py-1 rounded-lg border border-ink/20 bg-stamp text-white text-[10px] font-black"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setGameLocked((prev) => ({ ...prev, [currentStageId]: true }));
-                      }}
-                    >
-                      이 값 확정
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    className="px-2 py-1 rounded-lg border border-ink/20 bg-paper text-[10px] font-black"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      resetGameTunes();
-                    }}
-                  >
-                    초기화
-                  </button>
-                </div>
-
-                <div className="mt-2 flex flex-col gap-2 text-[10px]">
-                  {stageSchema.items.map((it) => {
-                    const v = getGameNumber(it.key, 0);
-                    return (
-                      <div key={it.key} className="flex items-center gap-2">
-                        <span className="w-12 font-black">{it.label}</span>
-                        <input
-                          type="range"
-                          min={it.min}
-                          max={it.max}
-                          step={it.step}
-                          value={v}
-                          onChange={(e) => setGameNumber(it.key, Number(e.target.value))}
-                          className="w-[140px]"
-                          disabled={isGameLocked}
-                        />
-                        <input
-                          type="number"
-                          className="w-[70px] rounded-lg border border-ink/20 bg-paper px-2 py-1 font-black"
-                          value={v}
-                          onChange={(e) => setGameNumber(it.key, Number(e.target.value || 0))}
-                          disabled={isGameLocked}
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
           </div>
         ) : (
           <button
@@ -582,6 +510,111 @@ export default function MiniGameManager() {
             튜닝
           </button>
         )}
+
+        {/* 게임 내부 레이아웃 조절(스테이지별 스키마) */}
+        {stageSchema &&
+          (innerTunerOpen ? (
+            <div
+              className="absolute right-4 bottom-4 z-50 rounded-2xl border border-ink/30 bg-paper2/92 px-2 py-2 shadow-md"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <div className="text-[11px] font-black">{stageSchema.title}</div>
+                <button
+                  type="button"
+                  className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper text-[10px] font-black"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setInnerTunerOpen(false);
+                  }}
+                  title="접기"
+                >
+                  접기
+                </button>
+              </div>
+
+              <div className="mt-1 flex items-center justify-between gap-2">
+                <div className={['text-[10px] font-black', isGameLocked ? 'text-stamp' : 'text-ink/70'].join(' ')}>
+                  {isGameLocked ? '확정됨(잠금)' : '조절 중'}
+                </div>
+                {isGameLocked ? (
+                  <button
+                    type="button"
+                    className="px-2 py-1 rounded-lg border border-ink/20 bg-paper text-[10px] font-black"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setGameLocked((prev) => ({ ...prev, [currentStageId]: false }));
+                    }}
+                  >
+                    확정 해제
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="px-2 py-1 rounded-lg border border-ink/20 bg-stamp text-white text-[10px] font-black"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setGameLocked((prev) => ({ ...prev, [currentStageId]: true }));
+                    }}
+                  >
+                    이 값 확정
+                  </button>
+                )}
+              </div>
+
+              <div className="mt-2 flex flex-col gap-2 text-[10px]">
+                {stageSchema.items.map((it) => {
+                  const v = getGameNumber(it.key, 0);
+                  return (
+                    <div key={it.key} className="flex items-center gap-2">
+                      <span className="w-12 font-black">{it.label}</span>
+                      <input
+                        type="range"
+                        min={it.min}
+                        max={it.max}
+                        step={it.step}
+                        value={v}
+                        onChange={(e) => setGameNumber(it.key, Number(e.target.value))}
+                        className="w-[140px]"
+                        disabled={isGameLocked}
+                      />
+                      <input
+                        type="number"
+                        className="w-[70px] rounded-lg border border-ink/20 bg-paper px-2 py-1 font-black"
+                        value={v}
+                        onChange={(e) => setGameNumber(it.key, Number(e.target.value || 0))}
+                        disabled={isGameLocked}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+
+              <button
+                type="button"
+                className="mt-2 px-2 py-1 rounded-lg border border-ink/20 bg-paper text-[10px] font-black"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  resetGameTunes();
+                }}
+              >
+                초기화
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              className="absolute right-4 bottom-4 z-50 px-3 py-2 rounded-2xl border border-ink/30 bg-paper2/92 text-ink font-black shadow-md"
+              onClick={(e) => {
+                e.stopPropagation();
+                setInnerTunerOpen(true);
+              }}
+              title="게임 내부 레이아웃 조절 열기"
+            >
+              퍼즐 레이아웃
+            </button>
+          ))}
 
         <div
           className="absolute"
