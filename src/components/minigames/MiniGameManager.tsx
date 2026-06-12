@@ -70,6 +70,45 @@ const GAME_TUNES_STORAGE_KEY = 'gameTunes_v1';
 const GAME_TUNES_LOCKED_KEY = 'gameTunes_locked_v1';
 
 const STAGE_TUNING_SCHEMAS: Record<number, StageTuneSchema> = {
+  2: {
+    title: '평촌동 지석묘 레이아웃',
+    defaults: {
+      mountainX: 0,
+      mountainY: 0,
+      mountainScale: 1,
+      workX: 0,
+      workY: 0,
+      workScale: 1,
+      capstoneX: 0,
+      capstoneY: 0,
+      capstoneScale: 1,
+      logsX: 0,
+      logsY: 0,
+      logsScale: 1,
+      goalX: 0,
+      goalY: 0,
+      goalScale: 1,
+      actionBarY: 0,
+    },
+    items: [
+      { key: 'mountainX', label: '산 X', min: -400, max: 400, step: 2 },
+      { key: 'mountainY', label: '산 Y', min: -300, max: 300, step: 2 },
+      { key: 'mountainScale', label: '산 크기', min: 0.4, max: 2.5, step: 0.05 },
+      { key: 'workX', label: '작업 X', min: -400, max: 400, step: 2 },
+      { key: 'workY', label: '작업 Y', min: -300, max: 300, step: 2 },
+      { key: 'workScale', label: '작업 크기', min: 0.5, max: 2.5, step: 0.05 },
+      { key: 'capstoneX', label: '덮개돌 X', min: -400, max: 400, step: 2 },
+      { key: 'capstoneY', label: '덮개돌 Y', min: -300, max: 300, step: 2 },
+      { key: 'capstoneScale', label: '덮개돌 크기', min: 0.4, max: 2.5, step: 0.05 },
+      { key: 'logsX', label: '통나무 X', min: -400, max: 400, step: 2 },
+      { key: 'logsY', label: '통나무 Y', min: -300, max: 300, step: 2 },
+      { key: 'logsScale', label: '통나무 크기', min: 0.4, max: 2.5, step: 0.05 },
+      { key: 'goalX', label: '목표 X', min: -400, max: 400, step: 2 },
+      { key: 'goalY', label: '목표 Y', min: -300, max: 300, step: 2 },
+      { key: 'goalScale', label: '목표 크기', min: 0.4, max: 2.5, step: 0.05 },
+      { key: 'actionBarY', label: '하단 Y', min: -250, max: 250, step: 2 },
+    ],
+  },
   3: {
     title: '석실분 레이아웃',
     defaults: {

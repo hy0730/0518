@@ -4,6 +4,7 @@ import { audio } from '../../../utils/audio';
 import { storyDataByStageId } from '../../../data/storyData';
 import { getRelicMainImage, getRelicRealImage } from '../../../utils/relicImages';
 import { useToast } from '../common/useToast';
+import { useGameTuning } from '../../common/GameTuningContext';
 
 type Phase = 'QUARRY' | 'BIND' | 'PREPARE' | 'MOVE';
 type TutorialMode = 'DIALOGUE' | 'WEDGE' | 'LOG' | 'PULL' | 'DONE';
@@ -18,14 +19,6 @@ const WEDGE_POS = [
   { left: '58%', top: '38%' },
   { left: '44%', top: '54%' },
   { left: '62%', top: '64%' },
-] as const;
-
-// 지석묘 아래 굴림대(통나무) 슬롯
-// 각 슬롯마다 위치/기울기/원근(scale)을 달리 줘서 배경 사진에 더 자연스럽게 맞춘다.
-const LOG_SLOT_LAYOUT = [
-  { left: '18%', top: '102%', rotate: -10, scale: 0.92 },
-  { left: '41%', top: '104%', rotate: -4, scale: 1.0 },
-  { left: '66%', top: '106%', rotate: 6, scale: 1.08 },
 ] as const;
 
 export default function DolmenGame({ stageId, onComplete, regionData }: MinigameProps) {
@@ -65,6 +58,77 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
   const [tTyping, setTTyping] = useState(false);
   const tTimer = useRef<number | null>(null);
   const { toast, showToast } = useToast(1200);
+  const tuning = useGameTuning();
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const ui = useMemo(() => {
+    const get = (k: string, fallback: number) => tuning?.getNumber(k, fallback) ?? fallback;
+    return {
+      mountainX: get('mountainX', 0),
+      mountainY: get('mountainY', 0),
+      mountainScale: get('mountainScale', 1),
+      workX: get('workX', 0),
+      workY: get('workY', 0),
+      workScale: get('workScale', 1),
+      capstoneX: get('capstoneX', 0),
+      capstoneY: get('capstoneY', 0),
+      capstoneScale: get('capstoneScale', 1),
+      logsX: get('logsX', 0),
+      logsY: get('logsY', 0),
+      logsScale: get('logsScale', 1),
+      goalX: get('goalX', 0),
+      goalY: get('goalY', 0),
+      goalScale: get('goalScale', 1),
+      actionBarY: get('actionBarY', 0),
+    };
+  }, [tuning]);
+
+  const dragRef = useRef<null | {
+    target: 'mountain' | 'work' | 'capstone' | 'logs' | 'goal' | 'action';
+    startX: number;
+    startY: number;
+    baseX: number;
+    baseY: number;
+  }>(null);
+
+  useEffect(() => {
+    const move = (e: PointerEvent) => {
+      const drag = dragRef.current;
+      if (!drag || !tuning || tuning.locked || !tuning.innerTunerOpen) return;
+      const el = rootRef.current;
+      const scale = el ? Math.max(el.getBoundingClientRect().width / Math.max(el.offsetWidth, 1), 0.0001) : 1;
+      const dx = (e.clientX - drag.startX) / scale;
+      const dy = (e.clientY - drag.startY) / scale;
+      if (drag.target === 'mountain') {
+        tuning.setNumber('mountainX', drag.baseX + dx);
+        tuning.setNumber('mountainY', drag.baseY + dy);
+      } else if (drag.target === 'work') {
+        tuning.setNumber('workX', drag.baseX + dx);
+        tuning.setNumber('workY', drag.baseY + dy);
+      } else if (drag.target === 'capstone') {
+        tuning.setNumber('capstoneX', drag.baseX + dx);
+        tuning.setNumber('capstoneY', drag.baseY + dy);
+      } else if (drag.target === 'logs') {
+        tuning.setNumber('logsX', drag.baseX + dx);
+        tuning.setNumber('logsY', drag.baseY + dy);
+      } else if (drag.target === 'goal') {
+        tuning.setNumber('goalX', drag.baseX + dx);
+        tuning.setNumber('goalY', drag.baseY + dy);
+      } else {
+        tuning.setNumber('actionBarY', drag.baseY + dy);
+      }
+    };
+    const up = () => {
+      dragRef.current = null;
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
+    return () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
+    };
+  }, [tuning]);
 
   // 통나무 배치 이후(당기기 안내) 대사 모달
   const [postModalOpen, setPostModalOpen] = useState(false);
@@ -195,9 +259,9 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
 
   const placeLogToFirstEmpty = () => {
     if (logsCount <= 0) return;
-    const i = logSlots.findIndex((x) => !x);
-    if (i < 0) return;
     setLogSlots((prev) => {
+      const i = prev.findIndex((x) => !x);
+      if (i < 0) return prev;
       const next = prev.slice();
       next[i] = 'log';
       return next;
@@ -316,7 +380,7 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
   };
 
   return (
-    <div className="w-full h-full p-2 text-ink flex flex-col relative">
+    <div ref={rootRef} className="w-full h-full p-2 text-ink flex flex-col relative">
       <style>{`
         @keyframes shake {
           0% { transform: translate(0,0) rotate(0); }
@@ -381,7 +445,26 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
                 mountainShake ? 'shakeStrongFx' : '',
                 tutorialMode === 'WEDGE' ? 'ring-4 ring-amber-300/25' : '',
               ].join(' ')}
+              style={{
+                transform: `translate(${ui.mountainX}px, ${ui.mountainY}px) scale(${ui.mountainScale})`,
+                transformOrigin: 'left top',
+                touchAction: tuning?.innerTunerOpen ? 'none' : undefined,
+              }}
+              onPointerDown={(e) => {
+                if (!tuning?.innerTunerOpen || tuning.locked) return;
+                e.stopPropagation();
+                dragRef.current = {
+                  target: 'mountain',
+                  startX: e.clientX,
+                  startY: e.clientY,
+                  baseX: ui.mountainX,
+                  baseY: ui.mountainY,
+                };
+              }}
             >
+              {tuning?.innerTunerOpen && !tuning.locked && (
+                <div className="absolute inset-0 z-20 rounded-2xl ring-2 ring-sky-300/60 bg-sky-100/10 pointer-events-none" />
+              )}
               <img
                 src="/assets/images/capstone_mountain.png"
                 alt="바위산"
@@ -447,14 +530,41 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
             </div>
 
             {/* 우측 작업 공간 */}
-            <div className="absolute left-[36%] right-2 top-2 bottom-2">
+            <div
+              className="absolute left-[36%] right-2 top-2 bottom-2"
+              style={{
+                transform: `translate(${ui.workX}px, ${ui.workY}px) scale(${ui.workScale})`,
+                transformOrigin: 'left top',
+                touchAction: tuning?.innerTunerOpen ? 'none' : undefined,
+              }}
+              onPointerDown={(e) => {
+                if (!tuning?.innerTunerOpen || tuning.locked) return;
+                // 버튼/슬롯 클릭은 그대로, 빈 영역만 드래그 허용
+                if ((e.target as HTMLElement).closest('button, [role="button"], [data-interactive="true"]')) return;
+                e.stopPropagation();
+                dragRef.current = { target: 'work', startX: e.clientX, startY: e.clientY, baseX: ui.workX, baseY: ui.workY };
+              }}
+            >
+              {tuning?.innerTunerOpen && !tuning.locked && (
+                <div className="absolute inset-0 z-10 rounded-3xl ring-2 ring-sky-300/60 bg-sky-100/10 pointer-events-none" />
+              )}
               {/* 떼돌(밧줄 묶기 전): 바위산 바로 옆에 고정 배치 */}
               {phase === 'BIND' && rockFallen && !ropeBound && (
                 <img
                   src="/assets/images/capstone_raw.png"
                   alt="떼돌"
                   className="absolute left-0 top-[18%] w-[clamp(170px,32vw,280px)] select-none object-contain drop-shadow-[0_18px_40px_rgba(0,0,0,0.45)] fallFx"
-                  style={{ left: `${CAPSTONE_X_OFFSET_PX}px` }}
+                  style={{
+                    left: `${CAPSTONE_X_OFFSET_PX}px`,
+                    transform: `translate(${ui.capstoneX}px, ${ui.capstoneY}px) scale(${ui.capstoneScale})`,
+                    transformOrigin: 'left top',
+                    touchAction: tuning?.innerTunerOpen ? 'none' : undefined,
+                  }}
+                  onPointerDown={(e) => {
+                    if (!tuning?.innerTunerOpen || tuning.locked) return;
+                    e.stopPropagation();
+                    dragRef.current = { target: 'capstone', startX: e.clientX, startY: e.clientY, baseX: ui.capstoneX, baseY: ui.capstoneY };
+                  }}
                   draggable={false}
                 />
               )}
@@ -471,31 +581,49 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
                       src="/assets/images/capstone_rope.png"
                       alt="떼돌"
                       className="w-[clamp(170px,32vw,280px)] select-none object-contain drop-shadow-[0_18px_40px_rgba(0,0,0,0.45)]"
-                      style={{ marginLeft: `${CAPSTONE_X_OFFSET_PX}px` }}
+                      style={{
+                        marginLeft: `${CAPSTONE_X_OFFSET_PX}px`,
+                        transform: `translate(${ui.capstoneX}px, ${ui.capstoneY}px) scale(${ui.capstoneScale})`,
+                        transformOrigin: 'left top',
+                        touchAction: tuning?.innerTunerOpen ? 'none' : undefined,
+                      }}
+                      onPointerDown={(e) => {
+                        if (!tuning?.innerTunerOpen || tuning.locked) return;
+                        e.stopPropagation();
+                        dragRef.current = { target: 'capstone', startX: e.clientX, startY: e.clientY, baseX: ui.capstoneX, baseY: ui.capstoneY };
+                      }}
                       draggable={false}
                     />
                   )}
 
                   {/* 통나무(돌 아래) */}
                   {(phase === 'PREPARE' || phase === 'MOVE') && ropeBound && (
-                    <div className="relative mt-1 w-[min(320px,48vw)] md:w-[320px] h-[86px]">
-                      {logSlots.map((s, i) => {
-                        const layout = LOG_SLOT_LAYOUT[i];
-                        return (
+                    <div
+                      className={[
+                        'mt-2 grid grid-cols-3 gap-2 w-[min(300px,46vw)] md:w-[300px]',
+                        tuning?.innerTunerOpen && !tuning.locked ? 'cursor-move ring-2 ring-sky-300/60 bg-sky-100/10 rounded-2xl p-1' : '',
+                      ].join(' ')}
+                      style={{
+                        transform: `translate(${ui.logsX}px, ${ui.logsY}px) scale(${ui.logsScale})`,
+                        transformOrigin: 'left top',
+                        touchAction: tuning?.innerTunerOpen ? 'none' : undefined,
+                      }}
+                      onPointerDown={(e) => {
+                        if (!tuning?.innerTunerOpen || tuning.locked) return;
+                        e.stopPropagation();
+                        dragRef.current = { target: 'logs', startX: e.clientX, startY: e.clientY, baseX: ui.logsX, baseY: ui.logsY };
+                      }}
+                    >
+                      {logSlots.map((s, i) => (
                         <div
                           key={i}
                           className={[
-                            'absolute w-[86px] h-[54px] md:w-[92px] md:h-[58px] grid place-items-center',
+                            'rounded-xl border-2 border-dashed border-ink/25 bg-paper/55 h-12 md:h-14 grid place-items-center',
                             // 튜토리얼(LOG)에서는 "비어있는 슬롯"만 더 강하게 하이라이트
                             tutorialMode === 'LOG' && !s
-                              ? 'animate-pulse'
+                              ? 'ring-4 ring-amber-300/80 bg-amber-300/10 shadow-[0_0_22px_rgba(251,191,36,0.35)] animate-pulse'
                               : '',
                           ].join(' ')}
-                          style={{
-                            left: layout.left,
-                            top: layout.top,
-                            transform: `translate(-50%, -50%) rotate(${layout.rotate}deg) scale(${layout.scale})`,
-                          }}
                           onDragOver={(e) => e.preventDefault()}
                           onDrop={(e) => {
                             e.preventDefault();
@@ -528,42 +656,41 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
                             audio.playUrl('/assets/sounds/sfw_log_roll.mp3', 0.75);
                           }}
                         >
-                          {/* 슬롯 그림자/레일 */}
-                          <div
-                            className={[
-                              'absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full',
-                              tutorialMode === 'LOG' && !s
-                                ? 'w-[84px] h-[22px] bg-amber-300/18 ring-4 ring-amber-300/75 shadow-[0_0_24px_rgba(251,191,36,0.38)]'
-                                : 'w-[84px] h-[18px] bg-ink/12 ring-2 ring-ink/10',
-                            ].join(' ')}
-                          />
                           {s ? (
-                            <>
-                              <div className="absolute left-1/2 top-[58%] -translate-x-1/2 w-[72px] h-[16px] rounded-full bg-ink/20 blur-[2px]" />
-                              <img
-                                src="/assets/images/log.png"
-                                alt="통나무"
-                                className="relative z-10 w-[74px] h-[42px] object-contain drop-shadow-[0_8px_16px_rgba(0,0,0,0.28)]"
-                              />
-                            </>
+                            <img src="/assets/images/log.png" alt="통나무" className="w-12 h-12 object-contain" />
                           ) : (
                             <span
                               className={[
-                                'relative z-10 text-[11px] font-black opacity-70',
-                                tutorialMode === 'LOG' ? 'text-amber-200' : 'text-ink/55',
+                                'text-xs opacity-70',
+                                tutorialMode === 'LOG' ? 'text-amber-200 font-black animate-pulse' : '',
                               ].join(' ')}
                             >
-                              받침
+                              빈 칸
                             </span>
                           )}
                         </div>
-                      )})}
+                      ))}
                     </div>
                   )}
                 </div>
 
                 {/* 목표 지점 (85%) */}
-                <div className="absolute right-2 top-[28%]">
+                <div
+                  className={[
+                    'absolute right-2 top-[28%]',
+                    tuning?.innerTunerOpen && !tuning.locked ? 'cursor-move ring-2 ring-sky-300/60 bg-sky-100/10 rounded-xl p-1' : '',
+                  ].join(' ')}
+                  style={{
+                    transform: `translate(${ui.goalX}px, ${ui.goalY}px) scale(${ui.goalScale})`,
+                    transformOrigin: 'right top',
+                    touchAction: tuning?.innerTunerOpen ? 'none' : undefined,
+                  }}
+                  onPointerDown={(e) => {
+                    if (!tuning?.innerTunerOpen || tuning.locked) return;
+                    e.stopPropagation();
+                    dragRef.current = { target: 'goal', startX: e.clientX, startY: e.clientY, baseX: ui.goalX, baseY: ui.goalY };
+                  }}
+                >
                   <div className="w-20 h-12 rounded-xl border border-olive/35 bg-olive/10 grid place-items-center text-[11px] font-black">
                     굴(85%)
                   </div>
@@ -573,7 +700,18 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
           </div>
 
           {/* 하단 고정 버튼바: 4개 버튼(쐐기/물/통나무/협동) */}
-          <div className="px-3 py-2 bg-paper/70">
+          <div
+            className={[
+              'px-3 py-2 bg-paper/70',
+              tuning?.innerTunerOpen && !tuning.locked ? 'cursor-move ring-2 ring-sky-300/60' : '',
+            ].join(' ')}
+            style={{ transform: `translateY(${ui.actionBarY}px)`, touchAction: tuning?.innerTunerOpen ? 'none' : undefined }}
+            onPointerDown={(e) => {
+              if (!tuning?.innerTunerOpen || tuning.locked) return;
+              e.stopPropagation();
+              dragRef.current = { target: 'action', startX: e.clientX, startY: e.clientY, baseX: 0, baseY: ui.actionBarY };
+            }}
+          >
             <div className="text-[12px] font-bold leading-relaxed min-h-[34px]">{guideText}</div>
             <div className="mt-2 grid grid-cols-4 gap-2">
               {/* 1) 나무쐐기 */}
