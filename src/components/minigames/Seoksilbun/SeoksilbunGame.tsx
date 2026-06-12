@@ -805,7 +805,10 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
         }}
       >
         <div className="text-[12px] font-bold opacity-95 leading-relaxed">
-          <HanYangDialogue lines={actionDialogue} />
+          <HanYangDialogue
+            lines={actionDialogue}
+            resetKey={`${phase}-${introStep}-${muddollPlaced ? 1 : 0}-${placed.length >= 3 ? 1 : 0}-${dragHint ?? ''}`}
+          />
         </div>
 
         <div className="flex items-center gap-2">
