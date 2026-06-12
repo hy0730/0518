@@ -401,12 +401,15 @@ export default function GuseoGame({ stageId, onComplete, regionData }: MinigameP
         nextP = bfsNextStep(map, { r: g.r, c: g.c }, playerPos, blocked);
       }
       if (!nextP) {
+        // 플레이어가 멀어지면 "순찰 경로로 복귀"하되, 다음 순찰 좌표로 순간이동하지 않고 1칸씩 이동
         const nextIdx = (g.patrolIdx + 1) % g.patrol.length;
-        nextP = g.patrol[nextIdx];
-        const dr = nextP.r - g.r;
-        const dc = nextP.c - g.c;
+        const patrolTarget = g.patrol[nextIdx];
+        const step = bfsNextStep(map, { r: g.r, c: g.c }, patrolTarget, blocked) ?? { r: g.r, c: g.c };
+        const dr = step.r - g.r;
+        const dc = step.c - g.c;
         const facing = dr === 0 && dc === 0 ? g.dirFacing : dirFromDelta(dr, dc);
-        next.push({ ...g, r: nextP.r, c: nextP.c, patrolIdx: nextIdx, dirFacing: facing });
+        const reached = step.r === patrolTarget.r && step.c === patrolTarget.c;
+        next.push({ ...g, r: step.r, c: step.c, patrolIdx: reached ? nextIdx : g.patrolIdx, dirFacing: facing });
       } else {
         const dr = nextP.r - g.r;
         const dc = nextP.c - g.c;
