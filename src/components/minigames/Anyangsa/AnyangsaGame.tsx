@@ -592,23 +592,12 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
                         onClick={() => setPhase('ENGRAVE')}
                         onTouchStart={() => setPhase('ENGRAVE')}
                       >
-                        {/* NOTE: 단색(회색/흰색)처럼 보이지 않도록 배경을 한번 더 깔고 살짝만 어둡게 처리 */}
-                        <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url('${BG}')` }} />
-                        <div className="absolute inset-0 bg-ink/25" />
+                        {/* NOTE: 뒤 배경을 또 깔면 "겹쳐 보임"이 생겨서, 기존 배경 위에 블러+딤만 적용 */}
+                        <div className="absolute inset-0 bg-ink/18 backdrop-blur-sm" />
                         <div className="note-panel px-6 py-5 max-w-[520px] popInFx relative z-10">
-                          <div className="flex items-center gap-4">
-                            <img
-                              src={STELE_BODY}
-                              alt="복원된 비석"
-                              className="w-20 h-24 object-contain rounded-xl bg-paper/55 border border-ink/20"
-                              draggable={false}
-                            />
-                            <div className="min-w-0">
-                              <div className="text-lg font-black">비석 복원 완료!</div>
-                              <div className="mt-2 text-sm opacity-90 leading-relaxed">잘했어! 이제 비석에 글씨를 새겨보자.</div>
-                              <div className="mt-3 text-sm font-black text-stamp">화면을 탭하면 다음 단계로 넘어가요.</div>
-                            </div>
-                          </div>
+                          <div className="text-lg font-black">비석 복원 완료!</div>
+                          <div className="mt-2 text-sm opacity-90 leading-relaxed">잘했어! 이제 비석에 글씨를 새겨보자.</div>
+                          <div className="mt-3 text-sm font-black text-stamp">화면을 탭하면 다음 단계로 넘어가요.</div>
                         </div>
                       </button>
                     )}
