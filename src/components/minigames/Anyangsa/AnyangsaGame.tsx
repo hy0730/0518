@@ -55,7 +55,8 @@ function PuzzlePiece({
   piece,
   home,
   slot,
-  size,
+  homeSize,
+  slotSize,
   dimmed,
   placed,
   disabled,
@@ -67,7 +68,8 @@ function PuzzlePiece({
   piece: PuzzlePieceDef;
   home: Point;
   slot: Point;
-  size: { w: number; h: number };
+  homeSize: { w: number; h: number };
+  slotSize: { w: number; h: number };
   dimmed: boolean;
   placed: boolean;
   disabled: boolean;
@@ -103,8 +105,8 @@ function PuzzlePiece({
       style={{
         left: home.x,
         top: home.y,
-        width: size.w,
-        height: size.h,
+        width: placed ? slotSize.w : homeSize.w,
+        height: placed ? slotSize.h : homeSize.h,
         x,
         y,
         touchAction: 'none',
@@ -126,10 +128,10 @@ function PuzzlePiece({
         // 현재 조각의 중심점과 정답 슬롯 중심점 거리로 스냅 판정
         const px = home.x + x.get();
         const py = home.y + y.get();
-        const cx = px + size.w / 2;
-        const cy = py + size.h / 2;
-        const tx = slot.x + size.w / 2;
-        const ty = slot.y + size.h / 2;
+        const cx = px + homeSize.w / 2;
+        const cy = py + homeSize.h / 2;
+        const tx = slot.x + slotSize.w / 2;
+        const ty = slot.y + slotSize.h / 2;
         const dist = Math.hypot(cx - tx, cy - ty);
         if (dist <= threshold) {
           onPlaced(piece.id, piece.slotIndex);
@@ -187,12 +189,16 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
     return {
       headerX: get('headerX', 16),
       headerY: get('headerY', 12),
+      headerScale: get('headerScale', 1),
       boardX: get('boardX', 26),
       boardY: get('boardY', Math.round((PUZZLE_BASE_H - (SLOT_H * 2 + SLOT_GAP)) / 2)),
+      boardScale: get('boardScale', 1),
       invX: get('invX', 402),
       invY: get('invY', 84),
+      inventoryScale: get('inventoryScale', 1),
       slotW: get('slotW', SLOT_W),
       slotH: get('slotH', SLOT_H),
+      pieceScale: get('pieceScale', 1),
     };
   }, [tuning]);
 
@@ -349,17 +355,24 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
             >
               {(() => {
                 const slotGap = puzzleCompleted ? SLOT_GAP_MERGED : SLOT_GAP;
-                const boardW = puzzleLayout.slotW * 3 + slotGap * 2;
-                const boardH = puzzleLayout.slotH * 2 + slotGap;
-                const invW = puzzleLayout.slotW * 3 + 12 * 2;
+                const boardSlotW = Math.round(puzzleLayout.slotW * puzzleLayout.boardScale);
+                const boardSlotH = Math.round(puzzleLayout.slotH * puzzleLayout.boardScale);
+                const pieceW = Math.round(puzzleLayout.slotW * puzzleLayout.pieceScale);
+                const pieceH = Math.round(puzzleLayout.slotH * puzzleLayout.pieceScale);
                 const invGap = 12;
+                const invTitleH = Math.round(60 * puzzleLayout.inventoryScale);
+                const invPad = Math.round(12 * puzzleLayout.inventoryScale);
+                const invW = pieceW * 3 + invGap * 2 + invPad * 2;
+                const invH = pieceH * 2 + invGap + invTitleH + invPad * 2;
+                const boardW = boardSlotW * 3 + slotGap * 2;
+                const boardH = boardSlotH * 2 + slotGap;
 
                 const slotPos = (slotIndex: number) => {
                   const r = Math.floor(slotIndex / 3);
                   const c = slotIndex % 3;
                   return {
-                    x: puzzleLayout.boardX + c * (puzzleLayout.slotW + slotGap),
-                    y: puzzleLayout.boardY + r * (puzzleLayout.slotH + slotGap),
+                    x: puzzleLayout.boardX + c * (boardSlotW + slotGap),
+                    y: puzzleLayout.boardY + r * (boardSlotH + slotGap),
                   };
                 };
 
@@ -367,7 +380,12 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
                   <>
                     <div
                       className="absolute rounded-2xl border border-ink/20 bg-paper2/80 px-4 py-3 shadow-paper"
-                      style={{ left: puzzleLayout.headerX, top: puzzleLayout.headerY }}
+                      style={{
+                        left: puzzleLayout.headerX,
+                        top: puzzleLayout.headerY,
+                        transform: `scale(${puzzleLayout.headerScale})`,
+                        transformOrigin: 'top left',
+                      }}
                     >
                       <div className="text-sm font-black">6조각 퍼즐</div>
                       <div className="mt-1 text-[12px] font-bold opacity-80">
@@ -392,8 +410,8 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
                             style={{
                               left: x - puzzleLayout.boardX,
                               top: y - puzzleLayout.boardY,
-                              width: puzzleLayout.slotW,
-                              height: puzzleLayout.slotH,
+                              width: boardSlotW,
+                              height: boardSlotH,
                             }}
                           />
                         );
@@ -406,8 +424,8 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
                       style={{
                         left: puzzleLayout.invX,
                         top: puzzleLayout.invY,
-                        width: invW + 12,
-                        height: puzzleLayout.slotH * 2 + invGap + 60,
+                        width: invW,
+                        height: invH,
                       }}
                     >
                       <div className="text-sm font-black">조각 대기열</div>
@@ -419,8 +437,8 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
                       const row = Math.floor(idx / 3);
                       const col = idx % 3;
                       const home: Point = {
-                        x: puzzleLayout.invX + col * (puzzleLayout.slotW + invGap),
-                        y: puzzleLayout.invY + 46 + row * (puzzleLayout.slotH + invGap),
+                        x: puzzleLayout.invX + invPad + col * (pieceW + invGap),
+                        y: puzzleLayout.invY + invPad + Math.round(invTitleH * 0.75) + row * (pieceH + invGap),
                       };
                       const slot = slotPos(p.slotIndex);
                       const placed = placedPieces.includes(p.id);
@@ -430,12 +448,13 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
                           piece={p}
                           home={home}
                           slot={slot}
-                          size={{ w: puzzleLayout.slotW, h: puzzleLayout.slotH }}
+                          homeSize={{ w: pieceW, h: pieceH }}
+                          slotSize={{ w: boardSlotW, h: boardSlotH }}
                           dimmed={puzzleCompleted}
                           placed={placed}
                           disabled={introStatus !== 'DONE' || puzzleCompleteOverlay}
                           scale={puzzleScale}
-                          threshold={Math.max(52, Math.round((SNAP_THRESHOLD * puzzleLayout.slotW) / SLOT_W))}
+                          threshold={Math.max(52, Math.round((SNAP_THRESHOLD * boardSlotW) / SLOT_W))}
                           showGlow={!!slotGlow[p.slotIndex]}
                           onPlaced={onPlacePiece}
                         />
