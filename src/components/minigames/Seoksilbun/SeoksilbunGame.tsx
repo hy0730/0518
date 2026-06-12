@@ -655,7 +655,10 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
         {/* Phase3 좌우 인벤토리 (보드 안에 배치) */}
         {phase === 'MAIN' && (
           <>
-            <div className="absolute left-3 top-3 bottom-3 w-[132px] flex flex-col gap-2" data-inventory="true">
+            <div
+              className="absolute left-3 top-3 bottom-3 w-[144px] flex flex-col gap-2 rounded-2xl border border-ink/20 bg-paper2/70 backdrop-blur-sm shadow-paper p-2"
+              data-inventory="true"
+            >
               {tuning?.innerTunerOpen && !tuning.locked && (
                 <div
                   className="absolute inset-0 z-20 rounded-2xl ring-2 ring-sky-300/60 bg-sky-100/10 cursor-move"
@@ -672,8 +675,8 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
                   key={a.id}
                   data-interactive="true"
                   className={[
-                    'rounded-xl border border-ink/25 bg-paper/78 p-2 flex items-center gap-2 shadow-md touch-none min-h-[58px]',
-                    placedIds[a.id] ? 'opacity-35' : 'hover:bg-paper/90',
+                    'rounded-xl border-2 border-ink/25 bg-paper2/95 p-2 flex items-center gap-2 shadow-paper touch-none min-h-[58px]',
+                    placedIds[a.id] ? 'opacity-60 grayscale' : 'hover:bg-paper2 ring-2 ring-amber-300/50',
                   ].join(' ')}
                   onPointerDown={(e) => {
                     if (placedIds[a.id]) return;
@@ -690,7 +693,10 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
               </div>
             </div>
 
-            <div className="absolute right-3 top-3 bottom-3 w-[132px] flex flex-col gap-2 justify-start" data-inventory="true">
+            <div
+              className="absolute right-3 top-3 bottom-3 w-[144px] flex flex-col gap-2 justify-start rounded-2xl border border-ink/20 bg-paper2/70 backdrop-blur-sm shadow-paper p-2"
+              data-inventory="true"
+            >
               {tuning?.innerTunerOpen && !tuning.locked && (
                 <div
                   className="absolute inset-0 z-20 rounded-2xl ring-2 ring-sky-300/60 bg-sky-100/10 cursor-move"
@@ -707,8 +713,8 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
                   key={a.id}
                   data-interactive="true"
                   className={[
-                    'rounded-xl border border-ink/25 bg-paper/78 p-2 flex items-center gap-2 shadow-md touch-none min-h-[58px]',
-                    placedIds[a.id] ? 'opacity-35' : 'hover:bg-paper/90',
+                    'rounded-xl border-2 border-ink/25 bg-paper2/95 p-2 flex items-center gap-2 shadow-paper touch-none min-h-[58px]',
+                    placedIds[a.id] ? 'opacity-60 grayscale' : 'hover:bg-paper2 ring-2 ring-amber-300/50',
                   ].join(' ')}
                   onPointerDown={(e) => {
                     if (placedIds[a.id]) return;
