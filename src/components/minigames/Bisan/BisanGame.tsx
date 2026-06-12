@@ -30,6 +30,10 @@ type FurnaceState = {
   started: boolean;
 };
 
+type IntroStep = 'STRUCTURE' | 'CUTAWAY' | 'GUIDE' | 'DONE';
+type TutorialStep = 'INVENTORY' | 'SLOTS' | 'FIREBOX' | 'CONTROLS' | 'DONE';
+
+const KILN_STRUCTURE_BG = '/assets/images/relic_bisan_kiln_structure.png';
 const KILN_BG = '/assets/images/relic_bisan_kiln_cutaway_empty.png';
 const SAFE_MIN = 850;
 const SAFE_MAX = 1300;
@@ -89,6 +93,8 @@ function CircularGauge({ temp }: { temp: number }) {
   );
 }
 
+const TUTORIAL_ORDER: TutorialStep[] = ['INVENTORY', 'SLOTS', 'FIREBOX', 'CONTROLS'];
+
 export default function BisanGame({ stageId, onComplete, regionData }: MinigameProps) {
   const stageTitle = useMemo(
     () => storyDataByStageId[stageId]?.title ?? regionData?.map?.nodes?.[stageId - 1]?.title ?? `스테이지 ${stageId}`,
@@ -145,6 +151,9 @@ export default function BisanGame({ stageId, onComplete, regionData }: MinigameP
   const [drag, setDrag] = useState<DragState | null>(null);
   const [placed, setPlaced] = useState<Array<PotteryId | null>>([null, null]);
   const [slotGlow, setSlotGlow] = useState<Record<number, boolean>>({});
+  const [introStep, setIntroStep] = useState<IntroStep>('STRUCTURE');
+  const [tutorialStep, setTutorialStep] = useState<TutorialStep>('INVENTORY');
+  const [rewardPopupOpen, setRewardPopupOpen] = useState(false);
   const [successModal, setSuccessModal] = useState(false);
   const [furnace, setFurnace] = useState<FurnaceState>({
     temp: 20,
@@ -162,6 +171,33 @@ export default function BisanGame({ stageId, onComplete, regionData }: MinigameP
     baseA: number;
     baseB: number;
   }>(null);
+
+  const canInteract = introStep === 'DONE';
+
+  const tutorialMessage = useMemo(() => {
+    if (tutorialStep === 'INVENTORY') {
+      return '오른쪽 인벤토리의 흙빛 도자기 2개를 확인해보자. 이 도자기들을 가마 안에 넣어야 해!';
+    }
+    if (tutorialStep === 'SLOTS') {
+      return '가마 안의 노란 테두리 2곳이 소성실이야. 도자기를 이 칸에 넣어 구워야 해!';
+    }
+    if (tutorialStep === 'FIREBOX') {
+      return '왼쪽 아래 아궁이(연소실)는 불을 피우는 곳이야. 도자기를 여기에 넣으면 안 돼!';
+    }
+    if (tutorialStep === 'CONTROLS') {
+      return `하단 버튼으로 장작과 부채질을 해. 온도를 ${SAFE_MIN}~${SAFE_MAX}℃ 구간에 ${HOLD_SECONDS}초 유지하면 성공이야!`;
+    }
+    return '';
+  }, [tutorialStep]);
+
+  const isTutorialHighlight = (part: 'inventory' | 'slots' | 'firebox' | 'controls') => {
+    if (introStep !== 'GUIDE') return false;
+    if (tutorialStep === 'INVENTORY') return part === 'inventory';
+    if (tutorialStep === 'SLOTS') return part === 'slots';
+    if (tutorialStep === 'FIREBOX') return part === 'firebox';
+    if (tutorialStep === 'CONTROLS') return part === 'controls';
+    return false;
+  };
 
   useEffect(() => {
     const move = (e: PointerEvent) => {
@@ -212,6 +248,7 @@ export default function BisanGame({ stageId, onComplete, regionData }: MinigameP
   const unplacedIds = POTTERIES.filter((p) => !placed.includes(p.id)).map((p) => p.id);
 
   const startDrag = (e: React.PointerEvent, id: PotteryId) => {
+    if (!canInteract) return;
     if (phase !== 'LOAD') return;
     if (placed.includes(id)) return;
     startIfNeeded();
@@ -259,6 +296,7 @@ export default function BisanGame({ stageId, onComplete, regionData }: MinigameP
     if (!drag) return;
     const ended = drag;
     setDrag(null);
+    if (!canInteract) return;
     if (phase !== 'LOAD') return;
 
     if (!ended.moved) {
@@ -343,13 +381,14 @@ export default function BisanGame({ stageId, onComplete, regionData }: MinigameP
     showToast('가마 문이 열리며 아름다운 도자기가 완성됐어요!', 1800);
     const t = window.setTimeout(() => {
       setPhase('FINALE');
-      setSuccessModal(true);
+      setRewardPopupOpen(true);
     }, 900);
     return () => window.clearTimeout(t);
   }, [phase, furnace.holdMs, showToast]);
 
   const addWood = () => {
     startIfNeeded();
+    if (!canInteract) return;
     if (phase !== 'FIRE' || furnace.cooldownMs > 0) return;
     setFurnace((prev) => ({ ...prev, started: true, temp: Math.max(prev.temp, 180), fuel: clamp(prev.fuel + 22, 0, 100) }));
     audio.playUrl('/assets/sounds/sfx_pop.mp3', 0.55);
@@ -357,6 +396,7 @@ export default function BisanGame({ stageId, onComplete, regionData }: MinigameP
 
   const fanFire = () => {
     startIfNeeded();
+    if (!canInteract) return;
     if (phase !== 'FIRE' || furnace.cooldownMs > 0) return;
     if (!furnace.started) {
       showToast('먼저 장작을 넣어 불을 붙여보자!', 1200);
@@ -368,6 +408,26 @@ export default function BisanGame({ stageId, onComplete, regionData }: MinigameP
 
   const convectionLevel = useMemo(() => clamp((furnace.temp - 200) / 900, 0, 1), [furnace.temp]);
   const holdRatio = clamp(furnace.holdMs / TARGET_HOLD_MS, 0, 1);
+
+  const advanceIntro = () => {
+    if (introStep === 'STRUCTURE') {
+      setIntroStep('CUTAWAY');
+    } else if (introStep === 'CUTAWAY') {
+      setIntroStep('GUIDE');
+      setTutorialStep('INVENTORY');
+    }
+  };
+
+  const advanceTutorial = () => {
+    const idx = TUTORIAL_ORDER.indexOf(tutorialStep);
+    if (idx < 0 || idx === TUTORIAL_ORDER.length - 1) {
+      setTutorialStep('DONE');
+      setIntroStep('DONE');
+      showToast('좋아! 이제 직접 가마를 운영해보자.', 1200);
+      return;
+    }
+    setTutorialStep(TUTORIAL_ORDER[idx + 1]);
+  };
 
   return (
     <div className="w-full h-full p-2 text-ink flex flex-col relative">
@@ -403,6 +463,7 @@ export default function BisanGame({ stageId, onComplete, regionData }: MinigameP
             className={[
               'relative rounded-3xl border border-ink/20 bg-paper/35 overflow-hidden shadow-paper row-span-1',
               tuning?.innerTunerOpen && !tuning.locked ? 'cursor-move ring-2 ring-sky-300/60' : '',
+              isTutorialHighlight('slots') ? 'ring-4 ring-yellow-300/90' : '',
             ].join(' ')}
             style={{ transform: `translate(${ui.kilnX}px, ${ui.kilnY}px) scale(${ui.kilnScale})`, transformOrigin: 'center' }}
             onPointerDown={(e) => {
@@ -452,6 +513,7 @@ export default function BisanGame({ stageId, onComplete, regionData }: MinigameP
                 className={[
                   'absolute rounded-2xl border-2 border-dashed border-red-400/60 bg-red-200/10',
                   tuning?.innerTunerOpen && !tuning.locked ? 'cursor-move ring-2 ring-sky-300/60' : '',
+                  isTutorialHighlight('firebox') ? 'ring-4 ring-yellow-300/90' : '',
                 ].join(' ')}
                 style={{ left: `${ui.fireboxX}%`, bottom: `${ui.fireboxY}%`, width: `${ui.fireboxW}%`, height: `${ui.fireboxH}%` }}
                 title="연소실"
@@ -551,6 +613,7 @@ export default function BisanGame({ stageId, onComplete, regionData }: MinigameP
             className={[
               'rounded-3xl border border-ink/20 bg-paper/70 p-3 flex flex-col shadow-paper',
               tuning?.innerTunerOpen && !tuning.locked ? 'cursor-move ring-2 ring-sky-300/60' : '',
+              isTutorialHighlight('inventory') ? 'ring-4 ring-yellow-300/90' : '',
             ].join(' ')}
             style={{ transform: `translate(${ui.inventoryX}px, ${ui.inventoryY}px) scale(${ui.inventoryScale})`, transformOrigin: 'top right' }}
             onPointerDown={(e) => {
@@ -599,6 +662,7 @@ export default function BisanGame({ stageId, onComplete, regionData }: MinigameP
             className={[
               'col-span-2 rounded-3xl border border-ink/20 bg-paper/78 p-3 shadow-paper',
               tuning?.innerTunerOpen && !tuning.locked ? 'cursor-move ring-2 ring-sky-300/60' : '',
+              isTutorialHighlight('controls') ? 'ring-4 ring-yellow-300/90' : '',
             ].join(' ')}
             style={{ transform: `translateY(${ui.controlsY}px) scale(${ui.controlsScale})`, transformOrigin: 'bottom center' }}
             onPointerDown={(e) => {
@@ -657,6 +721,27 @@ export default function BisanGame({ stageId, onComplete, regionData }: MinigameP
         </div>
       </div>
 
+      {introStep === 'GUIDE' && (
+        <div className="absolute left-1/2 bottom-4 -translate-x-1/2 z-[9500] w-[min(640px,92%)]">
+          <div className="rounded-3xl border border-ink/25 bg-paper2/96 px-5 py-4 shadow-paper">
+            <div className="text-sm font-black">가마 운영 방법</div>
+            <div className="mt-2 text-sm leading-relaxed opacity-90">{tutorialMessage}</div>
+            <div className="mt-3 flex items-center justify-between gap-3">
+              <div className="text-[11px] font-black opacity-70">
+                {TUTORIAL_ORDER.indexOf(tutorialStep) + 1} / {TUTORIAL_ORDER.length}
+              </div>
+              <button
+                type="button"
+                className="rounded-xl bg-olive text-white border border-ink/25 px-4 py-2 text-sm font-black shadow-md hover:opacity-95"
+                onClick={advanceTutorial}
+              >
+                {tutorialStep === 'CONTROLS' ? '시작하기' : '다음'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {drag && (
         <div
           className="fixed z-[99999] pointer-events-none"
@@ -677,6 +762,65 @@ export default function BisanGame({ stageId, onComplete, regionData }: MinigameP
       {toast && (
         <div className="absolute left-1/2 top-2 -translate-x-1/2 z-[9000] pointer-events-none">
           <div className="rounded-xl border border-ink/25 bg-paper2 px-3 py-2 text-xs font-black shadow-paper">{toast}</div>
+        </div>
+      )}
+
+      {(introStep === 'STRUCTURE' || introStep === 'CUTAWAY') && (
+        <div className="fixed inset-0 z-[99998] bg-ink/55 p-4" onClick={advanceIntro}>
+          <div className="w-full h-full rounded-3xl overflow-hidden bg-paper2 border border-ink/25 shadow-paper flex flex-col">
+            <div className="px-4 py-3 border-b border-ink/15 bg-paper/75">
+              <div className="text-lg font-black">
+                {introStep === 'STRUCTURE' ? '비산동 가마 구조 먼저 보기' : '빈 가마 단면도 살펴보기'}
+              </div>
+              <div className="mt-1 text-sm opacity-85">
+                {introStep === 'STRUCTURE'
+                  ? '먼저 가마의 구조를 크게 보고, 다음 화면에서 실제로 도자기를 어디에 넣는지 확인해보자.'
+                  : '이 빈 단면도를 기준으로 소성실, 연소실, 도자기 위치를 익힌 뒤 직접 플레이해보자.'}
+              </div>
+            </div>
+            <div className="flex-1 min-h-0 bg-[#201711]">
+              <img
+                src={introStep === 'STRUCTURE' ? KILN_STRUCTURE_BG : KILN_BG}
+                alt={introStep === 'STRUCTURE' ? '비산동 가마 구조' : '비산동 빈 가마 단면도'}
+                className="w-full h-full object-contain"
+                draggable={false}
+              />
+            </div>
+            <div className="px-4 py-3 border-t border-ink/15 bg-paper/75 text-sm font-black text-center">
+              화면을 클릭하면 {introStep === 'STRUCTURE' ? '빈 가마 단면도로' : '플레이 화면으로'} 넘어가요.
+            </div>
+          </div>
+        </div>
+      )}
+
+      {rewardPopupOpen && (
+        <div className="fixed inset-0 z-[99998] bg-ink/55 p-4">
+          <div className="w-full h-full rounded-3xl overflow-hidden bg-paper2 border border-ink/25 shadow-paper flex flex-col">
+            <div className="px-4 py-3 border-b border-ink/15 bg-paper/75">
+              <div className="text-lg font-black">가마에서 구워진 도자기 감상</div>
+              <div className="mt-1 text-sm opacity-85">흙빛 도자기가 고려 시대의 아름다운 백자와 청자로 완성됐어요.</div>
+            </div>
+            <div className="flex-1 min-h-0 p-4 grid grid-cols-2 gap-4 bg-[#201711]">
+              {POTTERIES.map((p) => (
+                <div key={p.id} className="rounded-3xl bg-paper2/95 border border-ink/15 px-4 py-4 flex flex-col items-center justify-center">
+                  <img src={p.doneImg} alt={p.doneLabel} className="w-full h-full max-h-[55vh] object-contain" draggable={false} />
+                  <div className="mt-3 text-center text-base font-black">{p.doneLabel}</div>
+                </div>
+              ))}
+            </div>
+            <div className="px-4 py-3 border-t border-ink/15 bg-paper/75">
+              <button
+                type="button"
+                className="w-full rounded-xl bg-olive text-white border border-ink/25 px-4 py-3 text-sm font-black shadow-md hover:opacity-95"
+                onClick={() => {
+                  setRewardPopupOpen(false);
+                  setSuccessModal(true);
+                }}
+              >
+                결과창으로 넘어가기
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
