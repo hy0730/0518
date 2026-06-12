@@ -377,7 +377,9 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
               introTimerRef.current = window.setTimeout(() => setIntroStatus('DONE'), 720);
             }}
           >
-            <div className="absolute inset-0 bg-ink/45" />
+            {/* NOTE: 시작 오버레이가 단색 회색처럼 보이지 않도록 배경 이미지를 한번 더 깔고 어둡게 처리 */}
+            <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url('${BG}')` }} />
+            <div className="absolute inset-0 bg-ink/35" />
             <div className="relative z-10 h-full grid place-items-center">
               <div className="note-panel max-w-[620px] px-5 py-4">
                 <div className="text-lg font-black">비희(거북이)의 소원</div>
