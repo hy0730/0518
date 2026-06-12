@@ -868,7 +868,7 @@ export default function MiniGameManager() {
           (objectTunerOpen ? (
             <div
               data-tuning-panel="true"
-              className="absolute left-4 bottom-4 z-50 w-[320px] max-w-[calc(100vw-2rem)] max-h-[calc(50vh-2rem)] rounded-2xl border border-ink/30 bg-paper2/92 px-2 py-2 shadow-md overflow-y-auto"
+              className="absolute right-4 top-32 z-50 w-[320px] max-w-[calc(100vw-2rem)] max-h-[calc(50vh-2rem)] rounded-2xl border border-ink/30 bg-paper2/92 px-2 py-2 shadow-md overflow-y-auto"
               onPointerDown={(e) => e.stopPropagation()}
               onClick={(e) => e.stopPropagation()}
             >
@@ -958,7 +958,7 @@ export default function MiniGameManager() {
           ) : (
             <button
               type="button"
-              className="absolute left-4 bottom-4 z-50 px-3 py-2 rounded-2xl border border-ink/30 bg-paper2/92 text-ink font-black shadow-md"
+              className="absolute right-4 top-32 z-50 px-3 py-2 rounded-2xl border border-ink/30 bg-paper2/92 text-ink font-black shadow-md"
               onClick={(e) => {
                 e.stopPropagation();
                 setObjectTunerOpen(true);
