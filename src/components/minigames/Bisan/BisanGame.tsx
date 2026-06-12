@@ -118,6 +118,8 @@ export default function BisanGame({ stageId, onComplete, regionData }: MinigameP
       fireboxY: get('fireboxY', 4),
       fireboxW: get('fireboxW', 15),
       fireboxH: get('fireboxH', 22),
+      slotGroupX: get('slotGroupX', 0),
+      slotGroupY: get('slotGroupY', 0),
       slot1X: get('slot1X', 46),
       slot1Y: get('slot1Y', 46),
       slot2X: get('slot2X', 60),
@@ -134,10 +136,10 @@ export default function BisanGame({ stageId, onComplete, regionData }: MinigameP
 
   const slotDefs = useMemo(
     () => [
-      { idx: 0, x: ui.slot1X, y: ui.slot1Y },
-      { idx: 1, x: ui.slot2X, y: ui.slot2Y },
+      { idx: 0, x: ui.slot1X + ui.slotGroupX, y: ui.slot1Y + ui.slotGroupY },
+      { idx: 1, x: ui.slot2X + ui.slotGroupX, y: ui.slot2Y + ui.slotGroupY },
     ],
-    [ui.slot1X, ui.slot1Y, ui.slot2X, ui.slot2Y]
+    [ui.slot1X, ui.slot1Y, ui.slot2X, ui.slot2Y, ui.slotGroupX, ui.slotGroupY]
   );
 
   const [phase, setPhase] = useState<Phase>('LOAD');
@@ -722,12 +724,12 @@ export default function BisanGame({ stageId, onComplete, regionData }: MinigameP
       </div>
 
       {introStep === 'GUIDE' && (
-        <div className="absolute left-1/2 bottom-4 -translate-x-1/2 z-[9500] w-[min(640px,92%)]">
-          <div className="rounded-3xl border border-ink/25 bg-paper2/96 px-5 py-4 shadow-paper">
-            <div className="text-sm font-black">가마 운영 방법</div>
-            <div className="mt-2 text-sm leading-relaxed opacity-90">{tutorialMessage}</div>
+      <div className="absolute left-1/2 bottom-4 -translate-x-1/2 z-[9500] w-[min(700px,94%)]">
+          <div className="rounded-3xl border-2 border-ink/30 bg-paper2 px-5 py-4 shadow-[0_16px_36px_rgba(0,0,0,0.28)]">
+            <div className="text-base font-black">가마 운영 방법</div>
+            <div className="mt-2 text-[15px] leading-relaxed text-ink">{tutorialMessage}</div>
             <div className="mt-3 flex items-center justify-between gap-3">
-              <div className="text-[11px] font-black opacity-70">
+              <div className="text-[12px] font-black opacity-80">
                 {TUTORIAL_ORDER.indexOf(tutorialStep) + 1} / {TUTORIAL_ORDER.length}
               </div>
               <button
