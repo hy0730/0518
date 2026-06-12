@@ -51,19 +51,20 @@ type StageTuneSchema = {
 };
 
 const DEFAULT_LAYOUT_TUNES: Record<number, LayoutTune> = {
-  1: { baseWidth: 800, baseHeight: 450, top: 0, right: 0, bottom: 0, left: 0 },
-  2: { baseWidth: 800, baseHeight: 450, top: 0, right: 0, bottom: 0, left: 0 },
-  3: { baseWidth: 800, baseHeight: 450, top: 0, right: 0, bottom: 0, left: 0 },
-  4: { baseWidth: 1200, baseHeight: 600, top: 0, right: -80, bottom: 0, left: -80 },
-  5: { baseWidth: 800, baseHeight: 450, top: 0, right: 0, bottom: 0, left: 0 },
-  6: { baseWidth: 800, baseHeight: 450, top: 0, right: 0, bottom: 0, left: 0 },
-  7: { baseWidth: 800, baseHeight: 450, top: 0, right: 0, bottom: 0, left: 0 },
-  8: { baseWidth: 800, baseHeight: 450, top: 0, right: 0, bottom: 0, left: 0 },
-  9: { baseWidth: 800, baseHeight: 450, top: 0, right: 0, bottom: 0, left: 0 },
+  1: { baseWidth: 800, baseHeight: 450, top: 12, right: 0, bottom: 12, left: 0 },
+  2: { baseWidth: 800, baseHeight: 450, top: 12, right: 0, bottom: 12, left: 0 },
+  3: { baseWidth: 800, baseHeight: 450, top: 12, right: 0, bottom: 12, left: 0 },
+  4: { baseWidth: 800, baseHeight: 450, top: 12, right: 0, bottom: 12, left: 0 },
+  5: { baseWidth: 800, baseHeight: 450, top: 12, right: 0, bottom: 12, left: 0 },
+  6: { baseWidth: 800, baseHeight: 450, top: 12, right: 0, bottom: 12, left: 0 },
+  7: { baseWidth: 800, baseHeight: 450, top: 12, right: 0, bottom: 12, left: 0 },
+  8: { baseWidth: 800, baseHeight: 450, top: 12, right: 0, bottom: 12, left: 0 },
+  9: { baseWidth: 800, baseHeight: 450, top: 12, right: 0, bottom: 12, left: 0 },
 };
 
-const OUTER_TUNES_STORAGE_KEY = 'outerLayoutTunes_v1';
-const OUTER_TUNES_LOCKED_KEY = 'outerLayoutTunes_locked_v1';
+// NOTE: 값 통일 반영을 위해 키를 올려 기존 로컬 저장값을 무시(초기화 효과)
+const OUTER_TUNES_STORAGE_KEY = 'outerLayoutTunes_v2';
+const OUTER_TUNES_LOCKED_KEY = 'outerLayoutTunes_locked_v2';
 
 const GAME_TUNES_STORAGE_KEY = 'gameTunes_v1';
 const GAME_TUNES_LOCKED_KEY = 'gameTunes_locked_v1';
