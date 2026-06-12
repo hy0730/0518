@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { storyDataByStageId } from '../../data/storyData';
 import { useGameStore } from '../../store/useGameStore';
 import styles from './EndingScreen.module.css';
@@ -14,6 +14,8 @@ export default function EndingScreen() {
 
   const [step, setStep] = useState<EndingStep>(1);
   const completedCount = Math.max(0, Math.min(9, unlockedStageId - 1));
+  const tapRef = useRef<{ x: number; y: number; t: number } | null>(null);
+  const lastTapAt = useRef(0);
 
   useEffect(() => {
     const play = async () => {
@@ -52,14 +54,37 @@ export default function EndingScreen() {
     if (step === 2) {
       return `이번 탐험으로 되찾은 문화유산은 모두 ${completedCount}개야.\n선사 시대의 흔적부터 조선 시대의 도자기와 다리까지,\n${regionName}의 천 년 이야기가 다시 한 장의 지도로 이어졌어!`;
     }
-    return `${who}, 이제 너는 ${regionName} 문화유산 수호대의 든든한 동료야.\n언제든 다시 지도로 돌아가 인트로와 아웃트로를 재생하며 장면을 다듬어 보자.\n다음 복원 작전에서도 함께 출동하자!`;
+    return `${who}, 이제 너는 ${regionName} 문화유산 수호대의 든든한 동료야.\n다음 복원 작전에서도 함께 출동하자!`;
   }, [completedCount, playerName, playerOrg, regionName, step]);
 
   return (
     <div className={styles.root} style={{ backgroundImage: `url(/assets/images/map_real.png)` }}>
       <img className={styles.overlay} src="/assets/images/map_main.png" alt="" aria-hidden="true" />
 
-      <div className={styles.card}>
+      <div
+        className={styles.card}
+        onPointerDown={(e) => {
+          tapRef.current = { x: e.clientX, y: e.clientY, t: Date.now() };
+        }}
+        onPointerUp={(e) => {
+          const start = tapRef.current;
+          tapRef.current = null;
+          if (!start) return;
+          const dx = Math.abs(e.clientX - start.x);
+          const dy = Math.abs(e.clientY - start.y);
+          if (dx + dy > 8) return; // 스크롤/드래그는 무시
+
+          const now = Date.now();
+          if (now - lastTapAt.current < 250) return;
+          lastTapAt.current = now;
+
+          if (step === 3) {
+            setAppPhase('MAP');
+            return;
+          }
+          setStep((prev) => ((prev + 1) as EndingStep));
+        }}
+      >
         <div className={styles.eyebrow}>아웃트로</div>
         <div className={styles.title}>{headline}</div>
         <div className={styles.desc}>{description}</div>
@@ -82,7 +107,7 @@ export default function EndingScreen() {
                   </div>
                 ))
               ) : (
-                <div className={styles.item}>• 아직 복원된 문화유산이 없어. 개발 중엔 버튼으로 장면만 먼저 확인할 수 있어.</div>
+                <div className={styles.item}>• 아직 복원된 문화유산이 없어. 개발 중엔 장면 흐름만 먼저 확인할 수 있어.</div>
               )}
             </div>
           </div>
@@ -94,40 +119,10 @@ export default function EndingScreen() {
             <div className={styles.stampDesc}>
               안양의 문화유산을 지키는 임무를 성공적으로 마쳤어요.
               <br />
-              필요하면 메인 지도에서 인트로와 아웃트로를 다시 재생해 연출을 계속 다듬어보자.
+              다음 복원 작전에서도 함께 출동하자!
             </div>
           </div>
         )}
-
-        <div className={styles.actions}>
-          <button
-            type="button"
-            className={styles.ghostBtn}
-            onClick={() => {
-              if (step === 1) {
-                setAppPhase('MAP');
-                return;
-              }
-              setStep((prev) => (prev === 1 ? 1 : ((prev - 1) as EndingStep)));
-            }}
-          >
-            {step === 1 ? '지도에서 다시 보기' : '이전 장면'}
-          </button>
-
-          <button
-            type="button"
-            className={styles.primaryBtn}
-            onClick={() => {
-              if (step === 3) {
-                setAppPhase('MAP');
-                return;
-              }
-              setStep((prev) => ((prev + 1) as EndingStep));
-            }}
-          >
-            {step === 1 ? '되찾은 기록 보기' : step === 2 ? '수호대 인증 받기' : '지도에서 다시 보기'}
-          </button>
-        </div>
       </div>
     </div>
   );
