@@ -318,7 +318,7 @@ export default function MiniGameManager() {
   });
   const [outerTunerOpen, setOuterTunerOpen] = useState(true);
   const [innerTunerOpen, setInnerTunerOpen] = useState(true);
-  const [objectTunerOpen, setObjectTunerOpen] = useState(true);
+  const [objectTunerOpen, setObjectTunerOpen] = useState(false);
 
   // 게임별 튜닝(미니게임 내부 레이아웃) - 공통 HUD에서 제어
   const [gameTunes, setGameTunes] = useState<Record<number, Record<string, number>>>(() => {
