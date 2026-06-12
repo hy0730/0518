@@ -110,6 +110,20 @@
   color: var(--ink);
 }
 
+.stepBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 74px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: rgba(74, 55, 40, 0.08);
+  border: 2px solid rgba(74, 55, 40, 0.16);
+  font-size: 11px;
+  font-weight: 900;
+  color: rgba(74, 55, 40, 0.78);
+}
+
 .desc {
   margin-top: 10px;
   font-size: 13px;
@@ -209,12 +223,40 @@
 }
 
 .warning {
+  margin-top: 10px;
   font-size: 16px;
   font-weight: 900;
   letter-spacing: -0.2px;
   color: var(--stamp);
   text-shadow: 0 10px 24px rgba(217, 83, 79, 0.18);
   line-height: 1.4;
+}
+
+.missionCard {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  border: 2px solid rgba(74, 55, 40, 0.16);
+  background: rgba(244, 235, 217, 0.9);
+}
+
+.missionTitle {
+  font-size: 12px;
+  font-weight: 900;
+  color: rgba(74, 55, 40, 0.9);
+}
+
+.missionList {
+  margin-top: 8px;
+  display: grid;
+  gap: 6px;
+}
+
+.missionItem {
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.35;
+  color: rgba(74, 55, 40, 0.9);
 }
 
 /* 글리치(가벼운 흔들림 + 노이즈 오버레이) */

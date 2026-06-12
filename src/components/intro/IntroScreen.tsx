@@ -3,10 +3,55 @@ import { useGameStore } from '../../store/useGameStore';
 import { nudgeHideBrowserUI, tryEnterFullscreen } from '../../utils/fullscreen';
 import styles from './IntroScreen.module.css';
 
-type IntroStep = 1 | 2 | 3;
+type IntroStep = 1 | 2 | 3 | 4 | 5;
+
+type SceneConfig = {
+  bgImage: string;
+  title: string;
+  text: string;
+  buttonLabel: string;
+  characterMode: '3d' | '2d' | 'mixed';
+  tone?: 'normal' | 'warning';
+  missionPoints?: string[];
+};
+
+const SCENE_CONFIG: Record<Exclude<IntroStep, 1>, SceneConfig> = {
+  2: {
+    bgImage: '/assets/images/lab.png',
+    title: '문화유산연구원',
+    text: '안녕? 나는 한이야.\n한양문화유산연구원에서 문화유산을 조사하고 기록하는 일을 하고 있어.\n문화유산은 옛사람들의 삶과 기억이 담긴 아주 소중한 흔적이란다.',
+    buttonLabel: '기록 살펴보기',
+    characterMode: '3d',
+  },
+  3: {
+    bgImage: '/assets/images/map_real.png',
+    title: '긴급 상황',
+    text: '나는 양이야! 앗, 큰일이야!\n안양 곳곳의 문화유산 기록이 흐려지고 있어!\n이대로 두면 이름도, 모습도, 이야기도 점점 잊혀질지 몰라!',
+    buttonLabel: '무슨 일이 생긴 거지?',
+    characterMode: '2d',
+    tone: 'warning',
+  },
+  4: {
+    bgImage: '/assets/images/map_main.png',
+    title: '수호대 임무',
+    text: '그래서 우리가 문화유산 수호대를 모으고 있어.\n각 장소를 직접 찾아가 흔적을 복원하고, 문화유산의 이야기를 다시 되찾아야 해.\n이번 임무는 바로 너와 함께하는 거야!',
+    buttonLabel: '임무 받기',
+    characterMode: 'mixed',
+    missionPoints: ['문화유산 위치 찾기', '흔적 복원하기', '이야기 되찾기'],
+  },
+  5: {
+    bgImage: '/assets/images/map_real.png',
+    title: '출동 준비 완료',
+    text: '좋아, 이제 안양 지도를 펼쳐보자!\n사라진 문화유산을 다시 찾아 떠나는 거야.\n문화유산 수호대 출동!',
+    buttonLabel: '지도 펼치기',
+    characterMode: '2d',
+  },
+};
 
 export default function IntroScreen() {
   const regionName = useGameStore((s) => s.regionData?.region.name);
+  const storedPlayerName = useGameStore((s) => s.playerName);
+  const storedPlayerOrg = useGameStore((s) => s.playerOrg);
   const setPlayerName = useGameStore((s) => s.setPlayerName);
   const setPlayerOrg = useGameStore((s) => s.setPlayerOrg);
   const setAppPhase = useGameStore((s) => s.setAppPhase);
@@ -16,8 +61,8 @@ export default function IntroScreen() {
   const [glitch, setGlitch] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [typedText, setTypedText] = useState('');
-  const [org, setOrg] = useState('');
-  const [name, setName] = useState('');
+  const [org, setOrg] = useState(storedPlayerOrg);
+  const [name, setName] = useState(storedPlayerName);
   const [error, setError] = useState<string | null>(null);
   const [issued, setIssued] = useState(false);
   const [enterAnim, setEnterAnim] = useState(true);
@@ -31,14 +76,76 @@ export default function IntroScreen() {
 
   const title = useMemo(() => (regionName ? `${regionName} 문화유산 수호대` : '문화유산 수호대'), [regionName]);
 
-  const bgImage =
-    step === 1 ? '/assets/images/thumnail_1.png' : step === 2 ? '/assets/images/map_real.png' : '/assets/images/map_main.png';
+  const bgImage = step === 1 ? '/assets/images/thumnail_1.png' : SCENE_CONFIG[step].bgImage;
 
   const typingSource = useMemo(() => {
-    if (step === 2) return '안녕? 나는 한양문화유산연구원의 한이야.\n문화유산을 발굴하고 보존하는 일을 하지!';
-    if (step === 3) return '나는 양이야! 만나서 반가워! 앗, 무슨 일이지? 안양의 문화유산들이 사라지고 있어!';
-    return '';
+    if (step === 1) return '';
+    return SCENE_CONFIG[step].text;
   }, [step]);
+
+  const currentScene = step === 1 ? null : SCENE_CONFIG[step];
+
+  useEffect(() => {
+    setOrg(storedPlayerOrg);
+    setName(storedPlayerName);
+  }, [storedPlayerOrg, storedPlayerName]);
+
+  const goToNextScene = () => {
+    if (isTyping) {
+      if (typingTimer.current) window.clearInterval(typingTimer.current);
+      typingTimer.current = null;
+      setTypedText(typingSource);
+      setIsTyping(false);
+      return;
+    }
+
+    const now = Date.now();
+    if (now - lastClickAt.current < 450) return;
+    lastClickAt.current = now;
+
+    if (step === 2) {
+      setGlitch(true);
+      if (stepTimer.current) window.clearTimeout(stepTimer.current);
+      stepTimer.current = window.setTimeout(() => {
+        setGlitch(false);
+        setStep(3);
+      }, 800);
+      return;
+    }
+
+    if (step === 5) {
+      setAppPhase('MAP');
+      return;
+    }
+
+    setStep((prev) => ((prev + 1) as IntroStep));
+  };
+
+  const characterBlock = () => {
+    if (!currentScene) return null;
+    if (currentScene.characterMode === '3d') {
+      return (
+        <div className={styles.characters3d}>
+          <img src="/assets/images/han_3.png" alt="한 연구원" />
+          <img src="/assets/images/yang_3.png" alt="양 연구원" />
+        </div>
+      );
+    }
+    if (currentScene.characterMode === 'mixed') {
+      return (
+        <div className={styles.characters2d}>
+          <img src="/assets/images/han_2.png" alt="한" />
+          <img src="/assets/images/yang_2.png" alt="양" />
+        </div>
+      );
+    }
+    return (
+      <div className={styles.characters2d}>
+        <img src="/assets/images/han_1.png" alt="한" />
+        <img src="/assets/images/yang_1.png" alt="양" />
+      </div>
+    );
+  };
 
   // 진입 연출 + 페이지 넘김 사운드
   useEffect(() => {
@@ -219,79 +326,37 @@ export default function IntroScreen() {
           </>
         )}
 
-        {step === 2 && (
+        {step >= 2 && (
           <>
-            <div className={styles.title}>문화유산연구원</div>
-            <div className={styles.desc}>
+            <div className={styles.stepBadge}>인트로 {step}/5</div>
+            <div className={styles.title}>{currentScene?.title}</div>
+            <div className={currentScene?.tone === 'warning' ? styles.warning : styles.desc}>
               {typedText.split('\n').map((l, i) => (
                 <div key={i}>{l}</div>
               ))}
             </div>
 
-            <div className={styles.characters3d}>
-              <img src="/assets/images/han_3.png" alt="한 연구원" />
-              <img src="/assets/images/yang_3.png" alt="양 연구원" />
-            </div>
+            {currentScene?.missionPoints?.length ? (
+              <div className={styles.missionCard}>
+                <div className={styles.missionTitle}>이번 임무</div>
+                <div className={styles.missionList}>
+                  {currentScene.missionPoints.map((point) => (
+                    <div key={point} className={styles.missionItem}>
+                      • {point}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            {characterBlock()}
 
             <button
               type="button"
               className={styles.primaryBtn}
-              onClick={() => {
-                // 타이핑 중이면 먼저 전체 표시
-                if (isTyping) {
-                  if (typingTimer.current) window.clearInterval(typingTimer.current);
-                  typingTimer.current = null;
-                  setTypedText(typingSource);
-                  setIsTyping(false);
-                  return;
-                }
-
-                // 연타 방지(중복 진행 방지)
-                const now = Date.now();
-                if (now - lastClickAt.current < 450) return;
-                lastClickAt.current = now;
-
-                // Step3: 글리치 → 2D 전환
-                setGlitch(true);
-                if (stepTimer.current) window.clearTimeout(stepTimer.current);
-                stepTimer.current = window.setTimeout(() => {
-                  setGlitch(false);
-                  setStep(3);
-                }, 800);
-              }}
+              onClick={goToNextScene}
             >
-              다음
-            </button>
-          </>
-        )}
-
-        {step === 3 && (
-          <>
-            <div className={styles.warning}>{typedText}</div>
-
-            <div className={styles.characters2d}>
-              <img src="/assets/images/han_1.png" alt="한" />
-              <img src="/assets/images/yang_1.png" alt="양" />
-            </div>
-
-            <button
-              type="button"
-              className={styles.primaryBtn}
-              onClick={() => {
-                if (isTyping) {
-                  if (typingTimer.current) window.clearInterval(typingTimer.current);
-                  typingTimer.current = null;
-                  setTypedText(typingSource);
-                  setIsTyping(false);
-                  return;
-                }
-                const now = Date.now();
-                if (now - lastClickAt.current < 450) return;
-                lastClickAt.current = now;
-                setAppPhase('MAP');
-              }}
-            >
-              지도 화면으로 이동
+              {currentScene?.buttonLabel ?? '다음'}
             </button>
           </>
         )}
