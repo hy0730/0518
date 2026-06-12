@@ -4,6 +4,7 @@
   display: grid;
   place-items: center;
   padding: 18px;
+  padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px));
   position: relative;
   overflow: hidden;
   background-color: var(--paper);
@@ -35,6 +36,9 @@
 
 .card {
   width: min(520px, 100%);
+  max-height: calc(100dvh - 36px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   border-radius: 24px;
   padding: 20px 18px;
   background: rgba(248, 241, 227, 0.97);
@@ -77,6 +81,8 @@
 .characters img {
   width: 100%;
   height: auto;
+  max-height: clamp(120px, 26vh, 200px);
+  object-fit: contain;
   display: block;
   filter: drop-shadow(0 18px 26px rgba(74, 55, 40, 0.25));
 }
