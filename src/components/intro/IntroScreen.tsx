@@ -19,30 +19,30 @@ const SCENE_CONFIG: Record<Exclude<IntroStep, 1>, SceneConfig> = {
   2: {
     bgImage: '/assets/images/lab.png',
     title: '문화유산연구원',
-    text: '안녕? 나는 한이야.\n한양문화유산연구원에서 문화유산을 조사하고 기록하는 일을 하고 있어.\n문화유산은 옛사람들의 삶과 기억이 담긴 아주 소중한 흔적이란다.',
-    buttonLabel: '기록 살펴보기',
+    text: "안녕? 나는 안양의 역사를 기록하는 '한'이야.\n문화유산은 옛사람들의 삶과 지혜가 담긴 아주 소중한 보물이지.\n그런데 방금, 심상치 않은 일이 생겼어.",
+    buttonLabel: '무슨 일인데?',
     characterMode: '3d',
   },
   3: {
     bgImage: '/assets/images/map_real.png',
     title: '긴급 상황',
-    text: '나는 양이야! 앗, 큰일이야!\n안양 곳곳의 문화유산 기록이 흐려지고 있어!\n이대로 두면 이름도, 모습도, 이야기도 점점 잊혀질지 몰라!',
-    buttonLabel: '무슨 일이 생긴 거지?',
+    text: "나는 '양'이야! 앗, 큰일 났어!\n안양 지도에서 문화유산들이 빛을 잃고 사라지고 있어!\n이대로면 이름도, 모습도, 천 년의 이야기도 모두 지워질지 몰라!",
+    buttonLabel: '어떻게 하면 돼?',
     characterMode: '2d',
     tone: 'warning',
   },
   4: {
     bgImage: '/assets/images/map_main.png',
     title: '수호대 임무',
-    text: '그래서 우리가 문화유산 수호대를 모으고 있어.\n각 장소를 직접 찾아가 흔적을 복원하고, 문화유산의 이야기를 다시 되찾아야 해.\n이번 임무는 바로 너와 함께하는 거야!',
-    buttonLabel: '임무 받기',
+    text: "그래서 널 '문화유산 수호대'로 부른 거야.\n직접 현장으로 가서 흩어진 조각을 맞추고, 숨겨진 이야기를 해독해 줘!\n이번 복원 작전은 네 활약에 달렸어!",
+    buttonLabel: '임무 수락하기',
     characterMode: 'mixed',
     missionPoints: ['문화유산 위치 찾기', '흔적 복원하기', '이야기 되찾기'],
   },
   5: {
     bgImage: '/assets/images/map_real.png',
     title: '출동 준비 완료',
-    text: '좋아, 이제 안양 지도를 펼쳐보자!\n사라진 문화유산을 다시 찾아 떠나는 거야.\n문화유산 수호대 출동!',
+    text: '좋아, 이제 안양 지도를 펼치자!\n빛을 잃은 9개의 문화유산을 찾아내는 거야!\n문화유산 수호대, 지금 바로 출동!',
     buttonLabel: '지도 펼치기',
     characterMode: '2d',
   },
@@ -234,7 +234,7 @@ export default function IntroScreen() {
             ) : (
               <>
                 <div className={styles.desc}>
-                  안양의 문화유산 기록이 사라지고 있어요. 수호대원 정보를 등록하고 복원 노트를 열어주세요.
+                  안양의 지도가 빛을 잃어버렸어요! 지금 바로 수호대원 정보를 등록하고, 당신만의 '문화유산 복원 노트'를 펼쳐주세요!
                 </div>
 
                 <div className={styles.form}>
