@@ -202,6 +202,45 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
     };
   }, [tuning]);
 
+  // 튜닝 창이 열려 있을 때 상단/보드/인벤을 직접 드래그해서 위치 조절
+  const layoutDragRef = useRef<null | {
+    target: 'header' | 'board' | 'inventory';
+    startX: number;
+    startY: number;
+    startPosX: number;
+    startPosY: number;
+  }>(null);
+
+  useEffect(() => {
+    const move = (e: PointerEvent) => {
+      const drag = layoutDragRef.current;
+      if (!drag || !tuning || tuning.locked || !tuning.innerTunerOpen) return;
+      const dx = (e.clientX - drag.startX) / Math.max(puzzleScale, 0.0001);
+      const dy = (e.clientY - drag.startY) / Math.max(puzzleScale, 0.0001);
+      if (drag.target === 'header') {
+        tuning.setNumber('headerX', drag.startPosX + dx);
+        tuning.setNumber('headerY', drag.startPosY + dy);
+      } else if (drag.target === 'board') {
+        tuning.setNumber('boardX', drag.startPosX + dx);
+        tuning.setNumber('boardY', drag.startPosY + dy);
+      } else {
+        tuning.setNumber('invX', drag.startPosX + dx);
+        tuning.setNumber('invY', drag.startPosY + dy);
+      }
+    };
+    const up = () => {
+      layoutDragRef.current = null;
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
+    return () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
+    };
+  }, [tuning, puzzleScale]);
+
   // 내부 캔버스 스케일링(기준 해상도 -> transform: scale로 contain)
   const puzzleViewportRef = useRef<HTMLDivElement | null>(null);
   const [puzzleScale, setPuzzleScale] = useState(1);
@@ -379,12 +418,27 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
                 return (
                   <>
                     <div
-                      className="absolute rounded-2xl border border-ink/20 bg-paper2/80 px-4 py-3 shadow-paper"
+                      className={[
+                        'absolute rounded-2xl border border-ink/20 bg-paper2/80 px-4 py-3 shadow-paper',
+                        tuning?.innerTunerOpen && !tuning.locked ? 'cursor-move ring-2 ring-sky-300/60' : '',
+                      ].join(' ')}
                       style={{
                         left: puzzleLayout.headerX,
                         top: puzzleLayout.headerY,
                         transform: `scale(${puzzleLayout.headerScale})`,
                         transformOrigin: 'top left',
+                        touchAction: tuning?.innerTunerOpen ? 'none' : undefined,
+                      }}
+                      onPointerDown={(e) => {
+                        if (!tuning?.innerTunerOpen || tuning.locked) return;
+                        e.stopPropagation();
+                        layoutDragRef.current = {
+                          target: 'header',
+                          startX: e.clientX,
+                          startY: e.clientY,
+                          startPosX: puzzleLayout.headerX,
+                          startPosY: puzzleLayout.headerY,
+                        };
                       }}
                     >
                       <div className="text-sm font-black">6조각 퍼즐</div>
@@ -395,9 +449,29 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
 
                     {/* 정답 슬롯(도안) */}
                     <div
-                      className="absolute"
-                      style={{ left: puzzleLayout.boardX, top: puzzleLayout.boardY, width: boardW, height: boardH }}
+                      className={['absolute', tuning?.innerTunerOpen && !tuning.locked ? 'cursor-move' : ''].join(' ')}
+                      style={{
+                        left: puzzleLayout.boardX,
+                        top: puzzleLayout.boardY,
+                        width: boardW,
+                        height: boardH,
+                        touchAction: tuning?.innerTunerOpen ? 'none' : undefined,
+                      }}
+                      onPointerDown={(e) => {
+                        if (!tuning?.innerTunerOpen || tuning.locked) return;
+                        e.stopPropagation();
+                        layoutDragRef.current = {
+                          target: 'board',
+                          startX: e.clientX,
+                          startY: e.clientY,
+                          startPosX: puzzleLayout.boardX,
+                          startPosY: puzzleLayout.boardY,
+                        };
+                      }}
                     >
+                      {tuning?.innerTunerOpen && !tuning.locked && (
+                        <div className="absolute inset-0 rounded-2xl ring-2 ring-sky-300/60 bg-sky-100/10 pointer-events-none" />
+                      )}
                       {Array.from({ length: 6 }).map((_, i) => {
                         const { x, y } = slotPos(i);
                         return (
@@ -420,12 +494,27 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
 
                     {/* 인벤토리 */}
                     <div
-                      className="absolute rounded-3xl border border-ink/20 bg-paper2/80 shadow-paper px-3 py-3"
+                      className={[
+                        'absolute rounded-3xl border border-ink/20 bg-paper2/80 shadow-paper px-3 py-3',
+                        tuning?.innerTunerOpen && !tuning.locked ? 'cursor-move ring-2 ring-sky-300/60' : '',
+                      ].join(' ')}
                       style={{
                         left: puzzleLayout.invX,
                         top: puzzleLayout.invY,
                         width: invW,
                         height: invH,
+                        touchAction: tuning?.innerTunerOpen ? 'none' : undefined,
+                      }}
+                      onPointerDown={(e) => {
+                        if (!tuning?.innerTunerOpen || tuning.locked) return;
+                        e.stopPropagation();
+                        layoutDragRef.current = {
+                          target: 'inventory',
+                          startX: e.clientX,
+                          startY: e.clientY,
+                          startPosX: puzzleLayout.invX,
+                          startPosY: puzzleLayout.invY,
+                        };
                       }}
                     >
                       <div className="text-sm font-black">조각 대기열</div>

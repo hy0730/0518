@@ -7,6 +7,7 @@ export type GameTuningValue = {
   reset: () => void;
   locked: boolean;
   setLocked: (locked: boolean) => void;
+  innerTunerOpen: boolean;
 };
 
 const GameTuningContext = createContext<GameTuningValue | null>(null);
@@ -24,4 +25,3 @@ export function GameTuningProvider({
 export function useGameTuning() {
   return useContext(GameTuningContext);
 }
-

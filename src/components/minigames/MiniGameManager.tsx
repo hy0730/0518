@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useEffect, useMemo, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
 import FitScaleWrapper from '../common/FitScaleWrapper';
 import { GameTuningProvider } from '../common/GameTuningContext';
 import { useGameStore } from '../../store/useGameStore';
@@ -281,6 +281,50 @@ export default function MiniGameManager() {
     });
   };
 
+  // 전체 레이아웃 드래그 이동(튜닝 창이 열려 있을 때)
+  const outerDragRef = useRef<null | {
+    pointerId: number;
+    startX: number;
+    startY: number;
+    left: number;
+    right: number;
+    top: number;
+    bottom: number;
+  }>(null);
+
+  useEffect(() => {
+    const move = (e: PointerEvent) => {
+      const drag = outerDragRef.current;
+      if (!drag) return;
+      const dx = e.clientX - drag.startX;
+      const dy = e.clientY - drag.startY;
+      setLayoutTunes((prev) => {
+        const base = prev[currentStageId] ?? DEFAULT_LAYOUT_TUNES[currentStageId] ?? DEFAULT_LAYOUT_TUNES[1];
+        return {
+          ...prev,
+          [currentStageId]: {
+            ...base,
+            left: clamp(drag.left + dx, -500, 500),
+            right: clamp(drag.right - dx, -500, 500),
+            top: clamp(drag.top + dy, -500, 500),
+            bottom: clamp(drag.bottom - dy, -500, 500),
+          },
+        };
+      });
+    };
+    const up = () => {
+      outerDragRef.current = null;
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
+    return () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
+    };
+  }, [currentStageId]);
+
   return (
     <Suspense fallback={<div style={{ padding: 20 }}>게임 불러오는 중...</div>}>
       <div className="w-full h-full relative">
@@ -300,6 +344,7 @@ export default function MiniGameManager() {
         {/* 전체 레이아웃 조절 */}
         {outerTunerOpen ? (
           <div
+            data-tuning-panel="true"
             className="absolute right-4 top-16 z-50 w-[320px] max-w-[calc(100vw-2rem)] max-h-[calc(50vh-5rem)] rounded-2xl border border-ink/30 bg-paper2/92 px-2 py-2 shadow-md overflow-y-auto"
             onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => e.stopPropagation()}
@@ -523,6 +568,7 @@ export default function MiniGameManager() {
         {stageSchema &&
           (innerTunerOpen ? (
             <div
+              data-tuning-panel="true"
               className="absolute right-4 bottom-4 z-50 w-[320px] max-w-[calc(100vw-2rem)] max-h-[calc(50vh-2rem)] rounded-2xl border border-ink/30 bg-paper2/92 px-2 py-2 shadow-md overflow-y-auto"
               onPointerDown={(e) => e.stopPropagation()}
               onClick={(e) => e.stopPropagation()}
@@ -633,25 +679,53 @@ export default function MiniGameManager() {
             left: `${currentTune.left}px`,
           }}
         >
-          <FitScaleWrapper baseWidth={fit.baseWidth} baseHeight={fit.baseHeight}>
-            <GameTuningProvider
-              value={{
-                stageId: currentStageId,
-                getNumber: getGameNumber,
-                setNumber: setGameNumber,
-                reset: resetGameTunes,
-                locked: isGameLocked,
-                setLocked: (locked) => setGameLocked((prev) => ({ ...prev, [currentStageId]: locked })),
-              }}
-            >
-              <CurrentMiniGame
-                stageId={currentStageId}
-                regionData={regionData}
-                onComplete={() => completeStage(currentStageId)}
-                onFail={() => setAppPhase('MAP')}
-              />
-            </GameTuningProvider>
-          </FitScaleWrapper>
+          <div className="relative w-full h-full">
+            {outerTunerOpen && !isLocked && (
+              <div
+                className="absolute inset-0 z-40 rounded-3xl border-2 border-dashed border-sky-400/70 bg-sky-100/10 cursor-move"
+                style={{ touchAction: 'none' }}
+                onPointerDown={(e) => {
+                  // 패널/버튼이 아닌 게임 프레임 자체를 드래그하면 전체 레이아웃 이동
+                  if ((e.target as HTMLElement).closest('[data-tuning-panel="true"]')) return;
+                  e.stopPropagation();
+                  outerDragRef.current = {
+                    pointerId: e.pointerId,
+                    startX: e.clientX,
+                    startY: e.clientY,
+                    left: currentTune.left,
+                    right: currentTune.right,
+                    top: currentTune.top,
+                    bottom: currentTune.bottom,
+                  };
+                }}
+              >
+                <div className="absolute left-3 top-3 rounded-xl border border-sky-400/60 bg-paper2/92 px-3 py-1 text-[11px] font-black text-sky-700 shadow-md">
+                  전체 레이아웃 드래그 이동
+                </div>
+              </div>
+            )}
+
+            <FitScaleWrapper baseWidth={fit.baseWidth} baseHeight={fit.baseHeight}>
+              <GameTuningProvider
+                value={{
+                  stageId: currentStageId,
+                  getNumber: getGameNumber,
+                  setNumber: setGameNumber,
+                  reset: resetGameTunes,
+                  locked: isGameLocked,
+                  setLocked: (locked) => setGameLocked((prev) => ({ ...prev, [currentStageId]: locked })),
+                  innerTunerOpen,
+                }}
+              >
+                <CurrentMiniGame
+                  stageId={currentStageId}
+                  regionData={regionData}
+                  onComplete={() => completeStage(currentStageId)}
+                  onFail={() => setAppPhase('MAP')}
+                />
+              </GameTuningProvider>
+            </FitScaleWrapper>
+          </div>
         </div>
       </div>
     </Suspense>
