@@ -4,7 +4,6 @@ import { storyDataByStageId } from '../../../data/storyData';
 import { getRelicMainImage, getRelicRealImage } from '../../../utils/relicImages';
 import { useToast } from '../common/useToast';
 import { useGameTuning } from '../../common/GameTuningContext';
-import HanYangCoach from '../common/HanYangCoach';
 import HanYangSpeech from '../common/HanYangSpeech';
 
 type Phase = 'INTRO' | 'TUTORIAL' | 'MAIN' | 'QUIZ';
@@ -135,13 +134,6 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
 
   // 피드백(툭 튕기기/잘못된 드롭 등)
   const { toast, showToast } = useToast(900);
-  const [coachOpen, setCoachOpen] = useState(true);
-  const coachText = useMemo(() => {
-    if (phase === 'INTRO') return '한: 석실분 안에서 단서를 찾아 무덤의 주인을 추리해보자.\n양: 화면을 탭해서 안내를 따라가면 돼!';
-    if (phase === 'TUTORIAL') return '한: 먼저 흙인형(흙인형)을 무덤 안에 놓아보자.\n양: 놓을 위치를 탭하면 돼!';
-    if (phase === 'MAIN') return '한: 유물들을 알맞은 위치에 배치해 단서를 모으자.\n양: 유물을 탭하면 설명도 볼 수 있어!';
-    return '한: 마지막으로 단어 카드를 골라 정답을 완성하자.\n양: 맞추면 무덤의 주인을 알 수 있어!';
-  }, [phase]);
   const [shakeSlot, setShakeSlot] = useState<1 | 2 | null>(null);
   const dragThreshold = 3; // 모바일 드래그 인식 개선(너무 높으면 클릭으로 오인)
   const tuning = useGameTuning();
@@ -555,12 +547,6 @@ export default function SeoksilbunGame({ stageId, onComplete }: MinigameProps) {
         </div>
         <div className="text-xs font-bold opacity-80">{phase}</div>
       </div>
-
-      {coachOpen && (
-        <div className="absolute left-3 top-14 z-[9000]">
-          <HanYangCoach title="한·양 설명" text={coachText} onClose={() => setCoachOpen(false)} />
-        </div>
-      )}
 
       {/* 보드(드롭 영역) */}
       <div
