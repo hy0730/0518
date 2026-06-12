@@ -819,11 +819,11 @@ export default function BisanGame({ stageId, onComplete, regionData }: MinigameP
               <div className="text-lg font-black">가마에서 구워진 도자기 감상</div>
               <div className="mt-1 text-sm opacity-85">흙빛 도자기가 고려 시대의 아름다운 백자와 청자로 완성됐어요.</div>
             </div>
-            <div className="flex-1 min-h-0 p-4 grid grid-cols-2 gap-4 bg-[#201711]">
+            <div className="flex-1 min-h-0 p-4 grid grid-cols-2 gap-4 bg-[#201711] items-center">
               {POTTERIES.map((p) => (
-                <div key={p.id} className="rounded-3xl bg-paper2/95 border border-ink/15 px-4 py-4 flex flex-col items-center justify-center">
-                  <img src={p.doneImg} alt={p.doneLabel} className="w-full h-full max-h-[55vh] object-contain" draggable={false} />
-                  <div className="mt-3 text-center text-base font-black">{p.doneLabel}</div>
+                <div key={p.id} className="rounded-3xl bg-paper2/95 border border-ink/15 px-4 py-4 flex flex-col items-center justify-center min-h-0">
+                  <img src={p.doneImg} alt={p.doneLabel} className="w-full h-auto max-h-[38vh] object-contain" draggable={false} />
+                  <div className="mt-2 text-center text-base font-black">{p.doneLabel}</div>
                 </div>
               ))}
             </div>
