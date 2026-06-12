@@ -154,7 +154,7 @@ const STAGE_TUNING_SCHEMAS: Record<number, StageTuneSchema> = {
       { key: 'boardScale', label: '보드 크기', min: 0.6, max: 1.8, step: 0.05 },
     ],
   },
-  5: {
+  7: {
     title: '비산동 가마 레이아웃',
     defaults: {
       kilnX: 0,
