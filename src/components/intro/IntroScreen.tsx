@@ -24,7 +24,7 @@ const SCENE_CONFIG: Record<Exclude<IntroStep, 1>, SceneConfig> = {
     characterMode: '3d',
   },
   3: {
-    bgImage: '/assets/images/map_real.png',
+    bgImage: '/assets/images/map_1.png',
     title: '긴급 상황',
     text: "나는 '양'이야! 앗, 큰일 났어!\n안양 지도에서 문화유산들이 빛을 잃고 사라지고 있어!\n이대로면 이름도, 모습도, 천 년의 이야기도 모두 지워질지 몰라!",
     buttonLabel: '어떻게 하면 돼?',
@@ -32,7 +32,7 @@ const SCENE_CONFIG: Record<Exclude<IntroStep, 1>, SceneConfig> = {
     tone: 'warning',
   },
   4: {
-    bgImage: '/assets/images/map_main.png',
+    bgImage: '/assets/images/map_2.png',
     title: '수호대 임무',
     text: "그래서 널 '문화유산 수호대'로 부른 거야.\n직접 현장으로 가서 흩어진 조각을 맞추고, 숨겨진 이야기를 해독해 줘!\n이번 복원 작전은 네 활약에 달렸어!",
     buttonLabel: '임무 수락하기',
@@ -85,6 +85,23 @@ export default function IntroScreen() {
 
   const currentScene = step === 1 ? null : SCENE_CONFIG[step];
 
+  const playSceneSound = async (targetStep: IntroStep) => {
+    try {
+      const { audio } = await import('../../utils/audio');
+      if (targetStep === 2) {
+        audio.playUrl('/assets/sounds/sfx_paper_slide.mp3', 0.72);
+      } else if (targetStep === 3) {
+        audio.playUrl('/assets/sounds/sfx_negative_beep.mp3', 0.72);
+      } else if (targetStep === 4) {
+        audio.playUrl('/assets/sounds/sfx_interface_click.mp3', 0.68);
+      } else if (targetStep === 5) {
+        audio.playUrl('/assets/sounds/sfx_unlock.mp3', 0.72);
+      }
+    } catch {
+      // ignore
+    }
+  };
+
   useEffect(() => {
     setOrg(storedPlayerOrg);
     setName(storedPlayerName);
@@ -109,16 +126,20 @@ export default function IntroScreen() {
       stepTimer.current = window.setTimeout(() => {
         setGlitch(false);
         setStep(3);
+        void playSceneSound(3);
       }, 800);
       return;
     }
 
     if (step === 5) {
+      void playSceneSound(5);
       setAppPhase('MAP');
       return;
     }
 
-    setStep((prev) => ((prev + 1) as IntroStep));
+    const nextStep = (step + 1) as IntroStep;
+    setStep(nextStep);
+    void playSceneSound(nextStep);
   };
 
   const characterBlock = () => {
@@ -282,6 +303,7 @@ export default function IntroScreen() {
                         window.setTimeout(() => {
                           setExiting(false);
                           setStep(2);
+                          void playSceneSound(2);
                         }, 520);
                         return;
                       }

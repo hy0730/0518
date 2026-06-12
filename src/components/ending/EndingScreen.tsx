@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { storyDataByStageId } from '../../data/storyData';
 import { useGameStore } from '../../store/useGameStore';
 import styles from './EndingScreen.module.css';
@@ -15,6 +15,24 @@ export default function EndingScreen() {
   const [step, setStep] = useState<EndingStep>(1);
   const completedCount = Math.max(0, Math.min(9, unlockedStageId - 1));
 
+  useEffect(() => {
+    const play = async () => {
+      try {
+        const { audio } = await import('../../utils/audio');
+        if (step === 1) {
+          audio.playUrl('/assets/sounds/sfx_completed.mp3', 0.7);
+        } else if (step === 2) {
+          audio.playUrl('/assets/sounds/sfx_unlock.mp3', 0.68);
+        } else {
+          audio.playUrl('/assets/sounds/sfx_fanfare.mp3', 0.75);
+        }
+      } catch {
+        // ignore
+      }
+    };
+    void play();
+  }, [step]);
+
   const recoveredTitles = useMemo(() => {
     return Array.from({ length: completedCount }, (_, idx) => storyDataByStageId[idx + 1]?.title ?? `스테이지 ${idx + 1}`);
   }, [completedCount]);
@@ -29,12 +47,12 @@ export default function EndingScreen() {
     const who = playerName ? `${playerName} 대원` : '수호대원';
     const org = playerOrg ? `${playerOrg}의 ` : '';
     if (step === 1) {
-      return `${org}${who}, 수고했어!\n흩어졌던 ${regionName}의 문화유산 기록이 다시 제자리를 찾기 시작했어.\n한이와 양이 덕분에 안양의 시간이 다시 이어졌어.`;
+      return `${org}${who}, 정말 멋졌어!\n흩어졌던 ${regionName}의 문화유산 기록이 다시 빛을 되찾기 시작했어.\n한이와 양이랑 함께 안양의 시간을 다시 이어 붙인 거야!`;
     }
     if (step === 2) {
-      return `이번 탐험으로 되찾은 문화유산은 모두 ${completedCount}개야.\n선사 시대의 흔적부터 조선 시대의 도자기와 다리까지,\n${regionName}의 이야기가 한 장의 지도로 다시 이어졌어.`;
+      return `이번 탐험으로 되찾은 문화유산은 모두 ${completedCount}개야.\n선사 시대의 흔적부터 조선 시대의 도자기와 다리까지,\n${regionName}의 천 년 이야기가 다시 한 장의 지도로 이어졌어!`;
     }
-    return `${who}, 이제 너는 ${regionName} 문화유산 수호대의 정식 대원이야.\n언제든 다시 지도로 돌아가 인트로와 아웃트로를 재생하며 장면을 다듬을 수 있어.`;
+    return `${who}, 이제 너는 ${regionName} 문화유산 수호대의 든든한 동료야.\n언제든 다시 지도로 돌아가 인트로와 아웃트로를 재생하며 장면을 다듬어 보자.\n다음 복원 작전에서도 함께 출동하자!`;
   }, [completedCount, playerName, playerOrg, regionName, step]);
 
   return (
@@ -93,7 +111,7 @@ export default function EndingScreen() {
               setStep((prev) => (prev === 1 ? 1 : ((prev - 1) as EndingStep)));
             }}
           >
-            {step === 1 ? '지도로 돌아가기' : '이전'}
+            {step === 1 ? '지도에서 다시 보기' : '이전 장면'}
           </button>
 
           <button
@@ -107,7 +125,7 @@ export default function EndingScreen() {
               setStep((prev) => ((prev + 1) as EndingStep));
             }}
           >
-            {step === 3 ? '지도로 돌아가기' : '다음'}
+            {step === 1 ? '되찾은 기록 보기' : step === 2 ? '수호대 인증 받기' : '지도에서 다시 보기'}
           </button>
         </div>
       </div>
