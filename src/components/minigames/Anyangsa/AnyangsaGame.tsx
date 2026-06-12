@@ -588,16 +588,27 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
                     {puzzleCompleteOverlay && (
                       <button
                         type="button"
-                        className="absolute inset-0 grid place-items-center bg-ink/18"
+                        className="absolute inset-0 grid place-items-center"
                         onClick={() => setPhase('ENGRAVE')}
                         onTouchStart={() => setPhase('ENGRAVE')}
                       >
-                        <div className="note-panel px-6 py-5 max-w-[480px] popInFx">
-                          <div className="text-lg font-black">비석 복원 완료!</div>
-                          <div className="mt-2 text-sm opacity-90 leading-relaxed">
-                            잘했어! 이제 비석에 글씨를 새겨보자.
+                        {/* NOTE: 단색(회색/흰색)처럼 보이지 않도록 배경을 한번 더 깔고 살짝만 어둡게 처리 */}
+                        <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url('${BG}')` }} />
+                        <div className="absolute inset-0 bg-ink/25" />
+                        <div className="note-panel px-6 py-5 max-w-[520px] popInFx relative z-10">
+                          <div className="flex items-center gap-4">
+                            <img
+                              src={STELE_BODY}
+                              alt="복원된 비석"
+                              className="w-20 h-24 object-contain rounded-xl bg-paper/55 border border-ink/20"
+                              draggable={false}
+                            />
+                            <div className="min-w-0">
+                              <div className="text-lg font-black">비석 복원 완료!</div>
+                              <div className="mt-2 text-sm opacity-90 leading-relaxed">잘했어! 이제 비석에 글씨를 새겨보자.</div>
+                              <div className="mt-3 text-sm font-black text-stamp">화면을 탭하면 다음 단계로 넘어가요.</div>
+                            </div>
                           </div>
-                          <div className="mt-3 text-sm font-black text-stamp">화면을 탭하면 다음 단계로 넘어가요.</div>
                         </div>
                       </button>
                     )}
@@ -716,17 +727,30 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
 
       {/* 결과 모달 */}
       {resultModal && (
-        <div className="fixed inset-0 z-[99999] bg-ink/35 p-0">
-          <div className="w-full h-full bg-paper2 text-ink shadow-paper flex flex-col">
-            <div className="flex-1 min-h-0 overflow-hidden">
+        <div className="fixed inset-0 z-[99999] bg-ink/45 p-4">
+          <div className="w-full h-full max-w-[820px] mx-auto rounded-3xl overflow-hidden bg-paper2 text-ink shadow-paper border border-ink/25 flex flex-col">
+            <div className="relative flex-1 min-h-0 overflow-hidden">
               <img src={REAL} alt="" className="w-full h-full object-cover" draggable={false} />
+              <div className="absolute left-3 top-3 note-panel px-4 py-3">
+                <div className="text-xs font-black opacity-85">복원 완료</div>
+                <div className="mt-0.5 text-sm font-black">안양사 귀부</div>
+              </div>
             </div>
-            <div className="p-4 border-t border-ink/20 bg-paper/70">
+
+            <div className="p-4 border-t border-ink/20 bg-paper/75">
               <div className="text-lg font-black">성공! 복원 완료</div>
-              <div className="mt-1 text-sm opacity-85 leading-relaxed">성공! 여러분의 멋진 다짐이 안양사 귀부에 영원히 새겨졌어요!</div>
+              <div className="mt-1 text-sm opacity-90 leading-relaxed">여러분의 멋진 다짐이 안양사 귀부에 새겨졌어요!</div>
+
+              {engraved && (
+                <div className="mt-3 rounded-2xl border border-ink/20 bg-paper2/85 px-3 py-2">
+                  <div className="text-xs font-black opacity-80">내가 새긴 글</div>
+                  <div className="mt-1 text-sm font-bold opacity-95">{engraved.replace(/\s*\n\s*/g, ' ')}</div>
+                </div>
+              )}
+
               <button
                 type="button"
-                className="mt-3 w-full rounded-xl bg-olive text-white border border-ink/25 font-black py-3 shadow-md hover:opacity-95"
+                className="mt-3 w-full rounded-2xl bg-olive text-white border border-ink/25 font-black py-3 shadow-md hover:opacity-95"
                 onClick={() => {
                   const now = Date.now();
                   const started = startedAt ?? now;
