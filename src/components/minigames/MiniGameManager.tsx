@@ -42,6 +42,7 @@ type TuneSchemaItem = {
   min: number;
   max: number;
   step: number;
+  panel?: 'tuning' | 'object';
 };
 
 type StageTuneSchema = {
@@ -195,31 +196,31 @@ const STAGE_TUNING_SCHEMAS: Record<number, StageTuneSchema> = {
       { key: 'infoX', label: '설명 X', min: -200, max: 500, step: 2 },
       { key: 'infoY', label: '설명 Y', min: -100, max: 250, step: 2 },
       { key: 'infoScale', label: '설명 크기', min: 0.6, max: 1.8, step: 0.05 },
-      { key: 'fireboxX', label: '연소실 X', min: 0, max: 40, step: 1 },
-      { key: 'fireboxY', label: '연소실 Y', min: 0, max: 50, step: 1 },
-      { key: 'fireboxW', label: '연소실 폭', min: 8, max: 35, step: 1 },
-      { key: 'fireboxH', label: '연소실 높이', min: 8, max: 35, step: 1 },
-      { key: 'slotGroupX', label: '소성실 전체X', min: -30, max: 30, step: 1 },
-      { key: 'slotGroupY', label: '소성실 전체Y', min: -30, max: 30, step: 1 },
-      { key: 'slot1X', label: '소성1 X', min: 20, max: 80, step: 1 },
-      { key: 'slot1Y', label: '소성1 Y', min: 15, max: 75, step: 1 },
-      { key: 'slot2X', label: '소성2 X', min: 20, max: 85, step: 1 },
-      { key: 'slot2Y', label: '소성2 Y', min: 15, max: 75, step: 1 },
-      { key: 'slotSize', label: '소성실 크기', min: 56, max: 180, step: 2 },
-      { key: 'potteryScale', label: '도자기 크기', min: 0.5, max: 2, step: 0.05 },
+      { key: 'fireboxX', label: '연소실 X', min: 0, max: 40, step: 1, panel: 'object' },
+      { key: 'fireboxY', label: '연소실 Y', min: 0, max: 50, step: 1, panel: 'object' },
+      { key: 'fireboxW', label: '연소실 폭', min: 8, max: 35, step: 1, panel: 'object' },
+      { key: 'fireboxH', label: '연소실 높이', min: 8, max: 35, step: 1, panel: 'object' },
+      { key: 'slotGroupX', label: '소성실 전체X', min: -30, max: 30, step: 1, panel: 'object' },
+      { key: 'slotGroupY', label: '소성실 전체Y', min: -30, max: 30, step: 1, panel: 'object' },
+      { key: 'slot1X', label: '소성1 X', min: 20, max: 80, step: 1, panel: 'object' },
+      { key: 'slot1Y', label: '소성1 Y', min: 15, max: 75, step: 1, panel: 'object' },
+      { key: 'slot2X', label: '소성2 X', min: 20, max: 85, step: 1, panel: 'object' },
+      { key: 'slot2Y', label: '소성2 Y', min: 15, max: 75, step: 1, panel: 'object' },
+      { key: 'slotSize', label: '소성실 크기', min: 56, max: 180, step: 2, panel: 'object' },
+      { key: 'potteryScale', label: '도자기 크기', min: 0.5, max: 2, step: 0.05, panel: 'object' },
       { key: 'inventoryX', label: '인벤 X', min: -250, max: 250, step: 2 },
       { key: 'inventoryY', label: '인벤 Y', min: -200, max: 200, step: 2 },
       { key: 'inventoryScale', label: '인벤 크기', min: 0.6, max: 1.8, step: 0.05 },
       { key: 'controlsY', label: '하단 Y', min: -160, max: 180, step: 2 },
       { key: 'controlsScale', label: '하단 크기', min: 0.7, max: 1.5, step: 0.05 },
-      { key: 'introPopupY', label: '구조팝업 Y', min: -120, max: 120, step: 2 },
-      { key: 'introPopupScale', label: '구조팝업 크기', min: 0.7, max: 1.3, step: 0.05 },
-      { key: 'tutorialPopupY', label: '튜토리얼 Y', min: -200, max: 120, step: 2 },
-      { key: 'tutorialPopupScale', label: '튜토리얼 크기', min: 0.7, max: 1.3, step: 0.05 },
-      { key: 'rewardPopupY', label: '도자기팝업 Y', min: -120, max: 120, step: 2 },
-      { key: 'rewardPopupScale', label: '도자기팝업 크기', min: 0.7, max: 1.3, step: 0.05 },
-      { key: 'resultPopupY', label: '결과창 Y', min: -120, max: 120, step: 2 },
-      { key: 'resultPopupScale', label: '결과창 크기', min: 0.7, max: 1.3, step: 0.05 },
+      { key: 'introPopupY', label: '구조팝업 Y', min: -120, max: 120, step: 2, panel: 'object' },
+      { key: 'introPopupScale', label: '구조팝업 크기', min: 0.7, max: 1.3, step: 0.05, panel: 'object' },
+      { key: 'tutorialPopupY', label: '튜토리얼 Y', min: -200, max: 120, step: 2, panel: 'object' },
+      { key: 'tutorialPopupScale', label: '튜토리얼 크기', min: 0.7, max: 1.3, step: 0.05, panel: 'object' },
+      { key: 'rewardPopupY', label: '도자기팝업 Y', min: -120, max: 120, step: 2, panel: 'object' },
+      { key: 'rewardPopupScale', label: '도자기팝업 크기', min: 0.7, max: 1.3, step: 0.05, panel: 'object' },
+      { key: 'resultPopupY', label: '결과창 Y', min: -120, max: 120, step: 2, panel: 'object' },
+      { key: 'resultPopupScale', label: '결과창 크기', min: 0.7, max: 1.3, step: 0.05, panel: 'object' },
     ],
   },
   6: {
@@ -317,6 +318,7 @@ export default function MiniGameManager() {
   });
   const [outerTunerOpen, setOuterTunerOpen] = useState(true);
   const [innerTunerOpen, setInnerTunerOpen] = useState(true);
+  const [objectTunerOpen, setObjectTunerOpen] = useState(true);
 
   // 게임별 튜닝(미니게임 내부 레이아웃) - 공통 HUD에서 제어
   const [gameTunes, setGameTunes] = useState<Record<number, Record<string, number>>>(() => {
@@ -416,6 +418,8 @@ export default function MiniGameManager() {
 
   const stageSchema = STAGE_TUNING_SCHEMAS[stageIdSafe];
   const isGameLocked = !!gameLocked[stageIdSafe];
+  const tuningItems = (stageSchema?.items ?? []).filter((it) => (it.panel ?? 'tuning') === 'tuning');
+  const objectItems = (stageSchema?.items ?? []).filter((it) => it.panel === 'object');
   const getGameNumber = (key: string, fallback: number) => {
     const base = stageSchema?.defaults?.[key] ?? fallback;
     return gameTunes[stageIdSafe]?.[key] ?? base;
@@ -754,7 +758,7 @@ export default function MiniGameManager() {
         )}
 
         {/* 게임 내부 레이아웃 조절(스테이지별 스키마) */}
-        {stageSchema &&
+        {stageSchema && tuningItems.length > 0 &&
           (innerTunerOpen ? (
             <div
               data-tuning-panel="true"
@@ -807,7 +811,7 @@ export default function MiniGameManager() {
               </div>
 
               <div className="mt-2 flex flex-col gap-2 text-[10px]">
-                {stageSchema.items.map((it) => {
+                {tuningItems.map((it) => {
                   const v = getGameNumber(it.key, 0);
                   return (
                     <div key={it.key} className="flex items-center gap-2">
@@ -855,7 +859,113 @@ export default function MiniGameManager() {
               }}
               title="게임 내부 레이아웃 조절 열기"
             >
-              퍼즐 레이아웃
+              내부 레이아웃
+            </button>
+          ))}
+
+        {/* 오브젝트 조절 */}
+        {stageSchema && objectItems.length > 0 &&
+          (objectTunerOpen ? (
+            <div
+              data-tuning-panel="true"
+              className="absolute left-4 bottom-4 z-50 w-[320px] max-w-[calc(100vw-2rem)] max-h-[calc(50vh-2rem)] rounded-2xl border border-ink/30 bg-paper2/92 px-2 py-2 shadow-md overflow-y-auto"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <div className="text-[11px] font-black">오브젝트</div>
+                <button
+                  type="button"
+                  className="px-2 py-0.5 rounded-lg border border-ink/20 bg-paper text-[10px] font-black"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setObjectTunerOpen(false);
+                  }}
+                  title="접기"
+                >
+                  접기
+                </button>
+              </div>
+
+              <div className="mt-1 flex items-center justify-between gap-2">
+                <div className={['text-[10px] font-black', isGameLocked ? 'text-stamp' : 'text-ink/70'].join(' ')}>
+                  {isGameLocked ? '확정됨(잠금)' : '조절 중'}
+                </div>
+                {isGameLocked ? (
+                  <button
+                    type="button"
+                    className="px-2 py-1 rounded-lg border border-ink/20 bg-paper text-[10px] font-black"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setGameLocked((prev) => ({ ...prev, [currentStageId]: false }));
+                    }}
+                  >
+                    확정 해제
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="px-2 py-1 rounded-lg border border-ink/20 bg-stamp text-white text-[10px] font-black"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setGameLocked((prev) => ({ ...prev, [currentStageId]: true }));
+                    }}
+                  >
+                    이 값 확정
+                  </button>
+                )}
+              </div>
+
+              <div className="mt-2 flex flex-col gap-2 text-[10px]">
+                {objectItems.map((it) => {
+                  const v = getGameNumber(it.key, 0);
+                  return (
+                    <div key={it.key} className="flex items-center gap-2">
+                      <span className="w-12 font-black">{it.label}</span>
+                      <input
+                        type="range"
+                        min={it.min}
+                        max={it.max}
+                        step={it.step}
+                        value={v}
+                        onChange={(e) => setGameNumber(it.key, Number(e.target.value))}
+                        className="flex-1 min-w-0"
+                        disabled={isGameLocked}
+                      />
+                      <input
+                        type="number"
+                        className="w-[64px] rounded-lg border border-ink/20 bg-paper px-2 py-1 font-black"
+                        value={v}
+                        onChange={(e) => setGameNumber(it.key, Number(e.target.value || 0))}
+                        disabled={isGameLocked}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+
+              <button
+                type="button"
+                className="mt-2 px-2 py-1 rounded-lg border border-ink/20 bg-paper text-[10px] font-black"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  resetGameTunes();
+                }}
+              >
+                초기화
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              className="absolute left-4 bottom-4 z-50 px-3 py-2 rounded-2xl border border-ink/30 bg-paper2/92 text-ink font-black shadow-md"
+              onClick={(e) => {
+                e.stopPropagation();
+                setObjectTunerOpen(true);
+              }}
+              title="오브젝트 조절 열기"
+            >
+              오브젝트
             </button>
           ))}
 
