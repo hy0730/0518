@@ -27,6 +27,10 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,ico,png,svg,jpg,jpeg,webp,mp3,json}'],
         // 에셋(BGM/이미지) 용량이 커서 기본(2MiB) 제한을 초과할 수 있음
         maximumFileSizeToCacheInBytes: 15 * 1024 * 1024,
+        // 배포 후에도 이전 캐시/서비스워커에 묶여 "구버전"이 계속 보이는 문제 완화
+        cleanupOutdatedCaches: true,
+        clientsClaim: true,
+        skipWaiting: true,
       },
     }),
   ],

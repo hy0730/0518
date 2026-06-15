@@ -2,6 +2,7 @@ import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 're
 import type { MinigameProps } from '../../../types/game';
 import { audio } from '../../../utils/audio';
 import { storyDataByStageId } from '../../../data/storyData';
+import { getRelicMainImage, getRelicRealImage } from '../../../utils/relicImages';
 import { useToast } from '../common/useToast';
 import { useGameTuning } from '../../common/GameTuningContext';
 
@@ -27,6 +28,8 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
     [regionData, stageId]
   );
   const title = `${stageTitle} · 고인돌 옮기기`;
+  const realImg = useMemo(() => getRelicRealImage(stageId), [stageId]);
+  const mainImg = useMemo(() => getRelicMainImage(stageId), [stageId]);
 
   const [phase, setPhase] = useState<Phase>('QUARRY');
   const [attempts, setAttempts] = useState(0);
@@ -47,7 +50,7 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
   const [logsCount, setLogsCount] = useState(3);
   const [progress, setProgress] = useState(10);
   const [feedback, setFeedback] = useState<string | null>(null);
-  const completedRef = useRef(false);
+  const [resultModal, setResultModal] = useState(false);
 
   // 튜토리얼(첫 진입): 쐐기+물 → 굴림대 → 당기기
   const [tutorialMode, setTutorialMode] = useState<TutorialMode>('DIALOGUE');
@@ -60,8 +63,6 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
   const rootRef = useRef<HTMLDivElement | null>(null);
   const workAreaRef = useRef<HTMLDivElement | null>(null);
   const [workWidth, setWorkWidth] = useState(0);
-  const capstoneRef = useRef<HTMLImageElement | null>(null);
-  const goalRef = useRef<HTMLDivElement | null>(null);
   const ui = useMemo(() => {
     const get = (k: string, fallback: number) => tuning?.getNumber(k, fallback) ?? fallback;
     return {
@@ -106,35 +107,10 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
     return Math.max(10, Math.min(100, Math.round(shifted)));
   }, [workWidth, ui.goalX]);
 
-  const finishGame = () => {
-    if (completedRef.current) return;
-    completedRef.current = true;
-    const now = Date.now();
-    const started = startedAt ?? now;
-    const clearTime = Math.max(0, Math.round(((now - started) / 1000) * 10) / 10);
-    onComplete({ attempts, clearTime });
-  };
-
-  // 완료 판정: 덮개돌이 목표(굴)과 실제로 닿았을 때
-  useLayoutEffect(() => {
-    if (completedRef.current) return;
-    if (phase !== 'MOVE') return;
-    if (!ropeBound) return;
-    const cap = capstoneRef.current;
-    const goal = goalRef.current;
-    if (!cap || !goal) return;
-    const cr = cap.getBoundingClientRect();
-    const gr = goal.getBoundingClientRect();
-    const overlapX = cr.right >= gr.left && cr.left <= gr.right;
-    const overlapY = cr.bottom >= gr.top && cr.top <= gr.bottom;
-    if (overlapX && overlapY) {
-      finishGame();
-      return;
-    }
-    // 안전장치: 100%까지 갔는데도 닿지 못하면 완료 처리(튜닝으로 목표가 너무 멀어진 경우)
-    if (progress >= 100) finishGame();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, ropeBound, progress, ui.goalX, ui.goalY, ui.goalScale, ui.workX, ui.workY, ui.workScale, targetProgress]);
+  const targetProgressRef = useRef(targetProgress);
+  useEffect(() => {
+    targetProgressRef.current = targetProgress;
+  }, [targetProgress]);
 
   const dragRef = useRef<null | {
     target: 'mountain' | 'work' | 'capstone' | 'logs' | 'goal' | 'action';
@@ -409,6 +385,7 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
     if (postModalOpen) return;
     if (tutorialMode !== 'DONE' && tutorialMode !== 'PULL') return;
     if (!allLogsPlaced) return;
+    if (resultModal) return;
 
     if (tutorialMode === 'PULL') {
       setTutorialMode('DONE');
@@ -422,6 +399,12 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
     setProgress((p) => {
       const delta = 5 + Math.floor(Math.random() * 4); // 5~8
       const next = Math.min(100, p + delta);
+      if (next >= targetProgressRef.current) {
+        window.setTimeout(() => {
+          setResultModal(true);
+          audio.playUrl('/assets/sounds/sfx_completed.mp3', 0.9);
+        }, 450);
+      }
       return next;
     });
   };
@@ -631,7 +614,6 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
                   {/* 돌 이미지(밧줄 묶인 이후: 이동 그룹에 포함) */}
                   {ropeBound && (
                     <img
-                      ref={capstoneRef}
                       src="/assets/images/capstone_rope.png"
                       alt="떼돌"
                       className="w-[clamp(170px,32vw,280px)] select-none object-contain drop-shadow-[0_18px_40px_rgba(0,0,0,0.45)]"
@@ -734,7 +716,6 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
                     'absolute right-2 top-[28%]',
                     tuning?.innerTunerOpen && !tuning.locked ? 'cursor-move ring-2 ring-sky-300/60 bg-sky-100/10 rounded-xl p-1' : '',
                   ].join(' ')}
-                  ref={goalRef}
                   style={{
                     transform: `translate(${ui.goalX}px, ${ui.goalY}px) scale(${ui.goalScale})`,
                     transformOrigin: 'right top',
@@ -965,6 +946,43 @@ export default function DolmenGame({ stageId, onComplete, regionData }: Minigame
         </div>
       )}
 
+      {/* 결과창(수동 복귀) */}
+      {resultModal && (
+        <div className="fixed inset-0 z-[10010] bg-ink/35 p-0">
+          <div className="w-full h-full bg-paper2 text-ink shadow-paper flex flex-col">
+            <div className="flex-1 min-h-0 overflow-hidden">
+              <img
+                src={realImg}
+                alt=""
+                className="w-full h-full object-cover"
+                draggable={false}
+                onError={(e) => {
+                  const img = e.currentTarget;
+                  if (mainImg && img.src !== mainImg) img.src = mainImg;
+                }}
+              />
+            </div>
+            <div className="p-4 border-t border-ink/20 bg-paper/70">
+              <div className="text-lg font-black">성공! 고인돌 완성</div>
+              <div className="mt-1 text-sm opacity-85 leading-relaxed">
+                성공! 나무의 팽창하는 힘으로 바위를 쪼개고, 굴림대로 무거운 지석묘를 옮겨 무덤을 완성했어요!
+              </div>
+              <button
+                type="button"
+                className="mt-3 w-full rounded-xl bg-olive text-white border border-ink/25 font-black py-3 shadow-md hover:opacity-95"
+                onClick={() => {
+                  const now = Date.now();
+                  const started = startedAt ?? now;
+                  const clearTime = Math.max(0, Math.round(((now - started) / 1000) * 10) / 10);
+                  onComplete({ attempts, clearTime });
+                }}
+              >
+                돌아가기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
