@@ -100,6 +100,7 @@ type GameState = {
   // collection UI
   isCollectionOpen: boolean;
   isMuted: boolean;
+  isDevMode: boolean;
 
   // dialog
   currentDialog: CurrentDialog | null;
@@ -128,6 +129,8 @@ type GameState = {
   submitQuiz: (selectedOptionId: string) => void;
   toggleCollection: () => void;
   toggleMute: () => void;
+  toggleDevMode: () => void;
+  setDevMode: (next: boolean) => void;
 
   setStoryIndex: (stageId: number, idx: number) => void;
   resetGameData: () => void;
@@ -173,6 +176,7 @@ export const useGameStore = create<GameState>()(
 
       isCollectionOpen: false,
       isMuted: false,
+      isDevMode: false,
 
       currentDialog: null,
       quizState: null,
@@ -388,6 +392,9 @@ export const useGameStore = create<GameState>()(
         audio.setMuted(next);
       },
 
+      toggleDevMode: () => set((state) => ({ isDevMode: !state.isDevMode })),
+      setDevMode: (next) => set({ isDevMode: next }),
+
       setStoryIndex: (stageId, idx) =>
         set((state) => ({
           storyIndexByStage: { ...state.storyIndexByStage, [stageId]: Math.max(0, idx) },
@@ -406,6 +413,7 @@ export const useGameStore = create<GameState>()(
           quizState: null,
           storyIndexByStage: {},
           isCollectionOpen: false,
+          isDevMode: false,
         })),
 
       markVisited: (nodeId: string) => {
@@ -420,7 +428,7 @@ export const useGameStore = create<GameState>()(
     {
       name: 'local-heritage-save',
       storage: createJSONStorage(() => localStorage),
-      version: 3,
+      version: 4,
       partialize: (state) => ({
         appPhase: state.appPhase,
         unlockedStageId: state.unlockedStageId,
@@ -429,12 +437,14 @@ export const useGameStore = create<GameState>()(
         playerOrg: state.playerOrg,
         visitedNodes: state.visitedNodes,
         isMuted: state.isMuted,
+        isDevMode: state.isDevMode,
       }),
       migrate: (persistedState) => {
         // persistedState는 partialize 결과 형태만 들어옴
         const obj = (persistedState ?? {}) as {
           visitedNodes?: unknown;
           isMuted?: unknown;
+          isDevMode?: unknown;
           appPhase?: unknown;
           unlockedStageId?: unknown;
           currentStageId?: unknown;
@@ -460,6 +470,7 @@ export const useGameStore = create<GameState>()(
           playerOrg,
           visitedNodes: normalizeVisitedNodes(obj.visitedNodes),
           isMuted: typeof obj.isMuted === 'boolean' ? obj.isMuted : false,
+          isDevMode: typeof obj.isDevMode === 'boolean' ? obj.isDevMode : false,
         } as any;
       },
     }

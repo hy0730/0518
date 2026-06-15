@@ -35,6 +35,7 @@ export default function MapScreen() {
   const unlockedStageId = useGameStore((s) => s.unlockedStageId);
   const resetGameData = useGameStore((s) => s.resetGameData);
   const setAppPhase = useGameStore((s) => s.setAppPhase);
+  const isDevMode = useGameStore((s) => s.isDevMode);
 
   if (!regionData) return null;
 
@@ -77,6 +78,10 @@ export default function MapScreen() {
       // ignore
     }
   }, [nodePositions]);
+
+  useEffect(() => {
+    if (!isDevMode) setPositionAdjustMode(false);
+  }, [isDevMode]);
 
   const progress = useMemo(() => {
     const total = NODES.length;
@@ -211,47 +216,51 @@ export default function MapScreen() {
         </div>
       </div>
 
-      <button
-        type="button"
-        className={styles.resetBtn}
-        data-interactive="true"
-        style={{ bottom: 144 }}
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          setAppPhase('INTRO');
-        }}
-      >
-        인트로 재생
-      </button>
+      {isDevMode && (
+        <>
+          <button
+            type="button"
+            className={styles.resetBtn}
+            data-interactive="true"
+            style={{ bottom: 144 }}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setAppPhase('INTRO');
+            }}
+          >
+            인트로 재생
+          </button>
 
-      <button
-        type="button"
-        className={styles.resetBtn}
-        data-interactive="true"
-        style={{ bottom: 111 }}
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          setAppPhase('ENDING');
-        }}
-      >
-        아웃트로 재생
-      </button>
+          <button
+            type="button"
+            className={styles.resetBtn}
+            data-interactive="true"
+            style={{ bottom: 111 }}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setAppPhase('ENDING');
+            }}
+          >
+            아웃트로 재생
+          </button>
 
-      <button
-        type="button"
-        className={styles.resetBtn}
-        data-interactive="true"
-        style={{ bottom: 78 }}
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          setPositionAdjustMode((prev) => !prev);
-        }}
-      >
-        {positionAdjustMode ? '위치 조절 끄기' : '위치 조절'}
-      </button>
+          <button
+            type="button"
+            className={styles.resetBtn}
+            data-interactive="true"
+            style={{ bottom: 78 }}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setPositionAdjustMode((prev) => !prev);
+            }}
+          >
+            {positionAdjustMode ? '위치 조절 끄기' : '위치 조절'}
+          </button>
+        </>
+      )}
 
       <button
         type="button"

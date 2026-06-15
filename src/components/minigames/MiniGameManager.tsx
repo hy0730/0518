@@ -294,6 +294,7 @@ export default function MiniGameManager() {
   const currentStageId = useGameStore((s) => s.currentStageId);
   const completeStage = useGameStore((s) => s.completeStage);
   const setAppPhase = useGameStore((s) => s.setAppPhase);
+  const isDevMode = useGameStore((s) => s.isDevMode);
   const regionData = useGameStore((s) => s.regionData);
   const stageIdSafe = currentStageId ?? 1;
   const [layoutTunes, setLayoutTunes] = useState<Record<number, LayoutTune>>(() => {
@@ -383,6 +384,13 @@ export default function MiniGameManager() {
       // ignore
     }
   }, [gameLocked]);
+
+  useEffect(() => {
+    if (isDevMode) return;
+    setOuterTunerOpen(false);
+    setInnerTunerOpen(false);
+    setObjectTunerOpen(false);
+  }, [isDevMode]);
 
   const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
 
@@ -536,7 +544,7 @@ export default function MiniGameManager() {
         </button>
 
         {/* 전체 레이아웃 조절 */}
-        {outerTunerOpen ? (
+        {isDevMode && (outerTunerOpen ? (
           <div
             data-tuning-panel="true"
             className="absolute right-4 top-16 z-50 w-[320px] max-w-[calc(100vw-2rem)] max-h-[calc(50vh-5rem)] rounded-2xl border border-ink/30 bg-paper2/92 px-2 py-2 shadow-md overflow-y-auto"
@@ -756,10 +764,10 @@ export default function MiniGameManager() {
           >
             튜닝
           </button>
-        )}
+        ))}
 
         {/* 게임 내부 레이아웃 조절(스테이지별 스키마) */}
-        {stageSchema && tuningItems.length > 0 &&
+        {isDevMode && stageSchema && tuningItems.length > 0 &&
           (innerTunerOpen ? (
             <div
               data-tuning-panel="true"
@@ -865,7 +873,7 @@ export default function MiniGameManager() {
           ))}
 
         {/* 오브젝트 조절 */}
-        {stageSchema && objectItems.length > 0 &&
+        {isDevMode && stageSchema && objectItems.length > 0 &&
           (objectTunerOpen ? (
             <div
               data-tuning-panel="true"
@@ -980,7 +988,7 @@ export default function MiniGameManager() {
           }}
         >
           <div className="relative w-full h-full">
-            {outerTunerOpen && !isLocked && (
+            {isDevMode && outerTunerOpen && !isLocked && (
               <div
                 className="absolute inset-0 z-40 rounded-3xl border-2 border-dashed border-sky-400/70 bg-sky-100/10 cursor-move"
                 style={{ touchAction: 'none' }}

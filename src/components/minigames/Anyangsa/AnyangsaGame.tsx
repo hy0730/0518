@@ -2,6 +2,7 @@ import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 're
 import { animate, motion, useMotionValue } from 'framer-motion';
 import type { MinigameProps } from '../../../types/game';
 import { storyDataByStageId } from '../../../data/storyData';
+import { useGameStore } from '../../../store/useGameStore';
 import { audio } from '../../../utils/audio';
 import { useToast } from '../common/useToast';
 import { useGameTuning } from '../../common/GameTuningContext';
@@ -152,6 +153,7 @@ function PuzzlePiece({
 }
 
 export default function AnyangsaGame({ stageId, onComplete, regionData }: MinigameProps) {
+  const isDevMode = useGameStore((s) => s.isDevMode);
   const stageTitle = useMemo(
     () => storyDataByStageId[stageId]?.title ?? regionData?.map?.nodes?.[stageId - 1]?.title ?? `스테이지 ${stageId}`,
     [regionData, stageId]
@@ -268,6 +270,10 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
       window.removeEventListener('pointercancel', up);
     };
   }, [tuning, puzzleScale, completeAdjustOpen]);
+
+  useEffect(() => {
+    if (!isDevMode) setCompleteAdjustOpen(false);
+  }, [isDevMode]);
 
   // 튜닝 창이 열려 있을 때 상단/보드/인벤을 직접 드래그해서 위치 조절
   const layoutDragRef = useRef<null | {
@@ -665,95 +671,97 @@ export default function AnyangsaGame({ stageId, onComplete, regionData }: Miniga
                         <div className="absolute inset-0 bg-ink/8" />
 
                         {/* 조절 버튼 */}
-                        <div className="absolute right-3 top-3 z-[14000] flex flex-col gap-2">
-                          <button
-                            type="button"
-                            className="rounded-xl px-3 py-2 text-xs font-black bg-paper2/90 border border-ink/25 shadow-paper"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              setCompleteAdjustOpen((v) => !v);
-                            }}
-                          >
-                            {completeAdjustOpen ? '조절 끝' : '완성 조절'}
-                          </button>
+                        {isDevMode && (
+                          <div className="absolute right-3 top-3 z-[14000] flex flex-col gap-2">
+                            <button
+                              type="button"
+                              className="rounded-xl px-3 py-2 text-xs font-black bg-paper2/90 border border-ink/25 shadow-paper"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setCompleteAdjustOpen((v) => !v);
+                              }}
+                            >
+                              {completeAdjustOpen ? '조절 끝' : '완성 조절'}
+                            </button>
 
-                          {completeAdjustOpen && (
-                            <div className="note-panel px-3 py-2 max-w-[220px]">
-                              <div className="text-[11px] font-black opacity-85">위치/크기 조절</div>
-                              <div className="mt-2 grid grid-cols-2 gap-2">
+                            {completeAdjustOpen && (
+                              <div className="note-panel px-3 py-2 max-w-[220px]">
+                                <div className="text-[11px] font-black opacity-85">위치/크기 조절</div>
+                                <div className="mt-2 grid grid-cols-2 gap-2">
+                                  <button
+                                    type="button"
+                                    className="rounded-lg px-2 py-1 text-[11px] font-black bg-paper/70 border border-ink/20"
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      if (!tuning || tuning.locked) return;
+                                      tuning.setNumber('completeImgScale', Math.max(0.6, Number((completeImgScale - 0.05).toFixed(2))));
+                                    }}
+                                  >
+                                    이미지 -
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="rounded-lg px-2 py-1 text-[11px] font-black bg-paper/70 border border-ink/20"
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      if (!tuning || tuning.locked) return;
+                                      tuning.setNumber('completeImgScale', Math.min(1.6, Number((completeImgScale + 0.05).toFixed(2))));
+                                    }}
+                                  >
+                                    이미지 +
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="rounded-lg px-2 py-1 text-[11px] font-black bg-paper/70 border border-ink/20"
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      if (!tuning || tuning.locked) return;
+                                      tuning.setNumber('completePopupScale', Math.max(0.6, Number((completePopupScale - 0.05).toFixed(2))));
+                                    }}
+                                  >
+                                    팝업 -
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="rounded-lg px-2 py-1 text-[11px] font-black bg-paper/70 border border-ink/20"
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      if (!tuning || tuning.locked) return;
+                                      tuning.setNumber('completePopupScale', Math.min(1.6, Number((completePopupScale + 0.05).toFixed(2))));
+                                    }}
+                                  >
+                                    팝업 +
+                                  </button>
+                                </div>
                                 <button
                                   type="button"
-                                  className="rounded-lg px-2 py-1 text-[11px] font-black bg-paper/70 border border-ink/20"
+                                  className="mt-2 w-full rounded-lg px-2 py-1 text-[11px] font-black bg-paper/70 border border-ink/20"
                                   onClick={(e) => {
                                     e.preventDefault();
                                     e.stopPropagation();
                                     if (!tuning || tuning.locked) return;
-                                    tuning.setNumber('completeImgScale', Math.max(0.6, Number((completeImgScale - 0.05).toFixed(2))));
+                                    tuning.setNumber('completeImgDx', 0);
+                                    tuning.setNumber('completeImgDy', 0);
+                                    tuning.setNumber('completeImgScale', 1);
+                                    tuning.setNumber('completePopupDx', 0);
+                                    tuning.setNumber('completePopupDy', 0);
+                                    tuning.setNumber('completePopupScale', 1);
                                   }}
                                 >
-                                  이미지 -
+                                  초기화
                                 </button>
-                                <button
-                                  type="button"
-                                  className="rounded-lg px-2 py-1 text-[11px] font-black bg-paper/70 border border-ink/20"
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    if (!tuning || tuning.locked) return;
-                                    tuning.setNumber('completeImgScale', Math.min(1.6, Number((completeImgScale + 0.05).toFixed(2))));
-                                  }}
-                                >
-                                  이미지 +
-                                </button>
-                                <button
-                                  type="button"
-                                  className="rounded-lg px-2 py-1 text-[11px] font-black bg-paper/70 border border-ink/20"
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    if (!tuning || tuning.locked) return;
-                                    tuning.setNumber('completePopupScale', Math.max(0.6, Number((completePopupScale - 0.05).toFixed(2))));
-                                  }}
-                                >
-                                  팝업 -
-                                </button>
-                                <button
-                                  type="button"
-                                  className="rounded-lg px-2 py-1 text-[11px] font-black bg-paper/70 border border-ink/20"
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    if (!tuning || tuning.locked) return;
-                                    tuning.setNumber('completePopupScale', Math.min(1.6, Number((completePopupScale + 0.05).toFixed(2))));
-                                  }}
-                                >
-                                  팝업 +
-                                </button>
+                                <div className="mt-2 text-[10px] font-bold opacity-70">
+                                  이미지/팝업을 드래그해서 위치를 옮길 수 있어.
+                                </div>
                               </div>
-                              <button
-                                type="button"
-                                className="mt-2 w-full rounded-lg px-2 py-1 text-[11px] font-black bg-paper/70 border border-ink/20"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  if (!tuning || tuning.locked) return;
-                                  tuning.setNumber('completeImgDx', 0);
-                                  tuning.setNumber('completeImgDy', 0);
-                                  tuning.setNumber('completeImgScale', 1);
-                                  tuning.setNumber('completePopupDx', 0);
-                                  tuning.setNumber('completePopupDy', 0);
-                                  tuning.setNumber('completePopupScale', 1);
-                                }}
-                              >
-                                초기화
-                              </button>
-                              <div className="mt-2 text-[10px] font-bold opacity-70">
-                                이미지/팝업을 드래그해서 위치를 옮길 수 있어.
-                              </div>
-                            </div>
-                          )}
-                        </div>
+                            )}
+                          </div>
+                        )}
 
                         {/* 완료 팝업(드래그 가능) */}
                         <div
