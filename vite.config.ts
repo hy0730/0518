@@ -6,6 +6,8 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
+      // 서비스워커 등록은 `src/main.tsx`에서 직접 제어(업데이트/새로고침 대응)
+      injectRegister: null,
       registerType: 'autoUpdate',
       manifest: {
         name: '안양 문화유산 탐험',
