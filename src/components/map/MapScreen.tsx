@@ -17,15 +17,15 @@ type MapNodePosition = {
 
 // 9개 문화유산 노드 위치 (원하는대로 숫자만 미세 조정하면 됨)
 const NODES: MapNode[] = [
-  { stageId: 1, left: 90, top: 58, icon: '/assets/images/relic_gwanyang_main.png' },
-  { stageId: 2, left: 64, top: 78, icon: '/assets/images/relic_pyeongchon_main.png' },
+  { stageId: 1, left: 84.54, top: 64.14, icon: '/assets/images/relic_gwanyang_main.png' },
+  { stageId: 2, left: 68.69, top: 82.85, icon: '/assets/images/relic_pyeongchon_main.png' },
   { stageId: 3, left: 52, top: 10, icon: '/assets/images/relic_seoksu_main.png' },
-  { stageId: 4, left: 50, top: 30, icon: '/assets/images/relic_jungcho_main.png' },
-  { stageId: 5, left: 55, top: 35, icon: '/assets/images/relic_bell_main.png' },
-  { stageId: 6, left: 60, top: 40, icon: '/assets/images/relic_turtle_main.png' },
-  { stageId: 7, left: 80, top: 45, icon: '/assets/images/relic_bisan_main.png' },
-  { stageId: 8, left: 20, top: 70, icon: '/assets/images/relic_bridge_main.png' },
-  { stageId: 9, left: 50, top: 80, icon: '/assets/images/relic_seoimyeon_main.png' },
+  { stageId: 4, left: 47.6, top: 35.66, icon: '/assets/images/relic_jungcho_main.png' },
+  { stageId: 5, left: 55.86, top: 30.09, icon: '/assets/images/relic_bell_main.png' },
+  { stageId: 6, left: 64.68, top: 27.1, icon: '/assets/images/relic_turtle_main.png' },
+  { stageId: 7, left: 74.61, top: 13.17, icon: '/assets/images/relic_bisan_main.png' },
+  { stageId: 8, left: 45.15, top: 52.19, icon: '/assets/images/relic_bridge_main.png' },
+  { stageId: 9, left: 53.18, top: 82.06, icon: '/assets/images/relic_seoimyeon_main.png' },
 ];
 
 const MAP_NODE_POSITIONS_STORAGE_KEY = 'mapNodePositions_v1';
