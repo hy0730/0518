@@ -8,6 +8,7 @@ export type GameTuningValue = {
   locked: boolean;
   setLocked: (locked: boolean) => void;
   innerTunerOpen: boolean;
+  masterEditorOpen?: boolean;
 };
 
 const GameTuningContext = createContext<GameTuningValue | null>(null);

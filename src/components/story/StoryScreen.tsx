@@ -159,6 +159,30 @@ export default function StoryScreen() {
         handleTapToAdvance();
       }}
     >
+      {/* 우측 상단 버튼 그룹 (완료하기 + 맵으로 돌아가기) */}
+      <div className="absolute top-4 right-32 flex gap-2 z-[9999]">
+        <button
+          type="button"
+          className="px-3 py-2 rounded-2xl border border-transparent bg-emerald-600/90 text-white font-black shadow-sm hover:bg-emerald-700 transition-colors"
+          onClick={(e) => {
+            e.stopPropagation();
+            setAppPhase('MINIGAME');
+          }}
+        >
+          완료하기
+        </button>
+        <button
+          type="button"
+          className="px-3 py-2 rounded-2xl border border-ink/30 bg-paper text-ink font-black shadow-sm hover:bg-stone-200 transition-colors"
+          onClick={(e) => {
+            e.stopPropagation();
+            setAppPhase('MAP');
+          }}
+        >
+          맵으로 돌아가기 ↩
+        </button>
+      </div>
+
       <div className={styles.header}>
         <div className={styles.stage}>
           {stage.stageId}. {stage.title}
@@ -187,16 +211,6 @@ export default function StoryScreen() {
             }}
           >
             ← 뒤로
-          </button>
-          <button
-            type="button"
-            className={styles.skipBtn}
-            onClick={(e) => {
-              e.stopPropagation();
-              setAppPhase('MINIGAME');
-            }}
-          >
-            건너뛰기
           </button>
         </div>
       </div>

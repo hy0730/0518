@@ -1,8 +1,348 @@
-import React, { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
+import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { motion } from 'framer-motion';
 import FitScaleWrapper from '../common/FitScaleWrapper';
 import { GameTuningProvider } from '../common/GameTuningContext';
 import { useGameStore } from '../../store/useGameStore';
 import type { MinigameProps } from '../../types/game';
+
+// ──────────────────────────────────────────────────────────
+// Fix #1: 별도 Input 셀 컴포넌트 (로컬 상태로 포커스 유지)
+// ──────────────────────────────────────────────────────────
+type InputCellProps = {
+  label: string;
+  initialValue: number;
+  min: number;
+  max: number;
+  step: number;
+  onCommit: (value: number) => void;
+  w?: string;
+  labelW?: string;
+};
+function InspectorInputCell({
+  label,
+  initialValue,
+  min,
+  max,
+  step,
+  onCommit,
+  w = '52px',
+  labelW = '28px',
+}: InputCellProps) {
+  const [localVal, setLocalVal] = useState<string>(String(initialValue));
+  const committedRef = useRef(initialValue);
+
+  // props.initialValue가 외부에서 바뀌었을 때, 로컬값이 아직 커밋되지 않은 상태면 동기화
+  useEffect(() => {
+    if (committedRef.current !== initialValue && Number(localVal) === committedRef.current) {
+      setLocalVal(String(initialValue));
+      committedRef.current = initialValue;
+    }
+  }, [initialValue, localVal]);
+
+  const commit = useCallback(
+    (raw: string) => {
+      const v = Number(raw);
+      if (isNaN(v)) {
+        // 잘못된 입력 → 마지막 커밋값으로 롤백
+        setLocalVal(String(committedRef.current));
+        return;
+      }
+      const clamped = Math.max(min, Math.min(max, v));
+      committedRef.current = clamped;
+      setLocalVal(String(clamped));
+      if (clamped !== initialValue) {
+        onCommit(clamped);
+      }
+    },
+    [min, max, initialValue, onCommit]
+  );
+
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setLocalVal(e.target.value);
+  }, []);
+
+  const handleBlur = useCallback(
+    (e: React.FocusEvent<HTMLInputElement>) => {
+      commit(e.target.value);
+    },
+    [commit]
+  );
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Enter') {
+        commit((e.target as HTMLInputElement).value);
+        (e.target as HTMLInputElement).blur();
+      }
+      if (e.key === 'Escape') {
+        setLocalVal(String(committedRef.current));
+        (e.target as HTMLInputElement).blur();
+      }
+    },
+    [commit]
+  );
+
+  return (
+    <div className="flex items-center gap-0.5">
+      <span
+        className="text-[9px] font-black text-ink/50 text-right shrink-0"
+        style={{ width: labelW }}
+      >
+        {label}
+      </span>
+      <input
+        type="number"
+        className="rounded-md border border-ink/15 bg-white px-1.5 py-0.5 text-[10px] font-bold text-ink/90 text-center"
+        style={{ width: w }}
+        value={localVal}
+        min={min}
+        max={max}
+        step={step}
+        onChange={handleChange}
+        onBlur={handleBlur}
+        onKeyDown={handleKeyDown}
+      />
+    </div>
+  );
+}
+
+/** 플로팅 마스터 에디터 패널 - Inspector 스타일 수치 입력 + 드래그 이동 가능 */
+function MasterEditorFloatingPanel({
+  items,
+  hoverId,
+  onHoverChange,
+  onCopyCoords,
+  onClose,
+  getNumber,
+  setNumber,
+  outerTune,
+  setOuterTune,
+  stageSchemaItems,
+  isGameLocked,
+  isOuterLocked,
+}: {
+  items: MasterEditorItem[];
+  hoverId: string | null;
+  onHoverChange: (id: string | null) => void;
+  onCopyCoords: () => Promise<void>;
+  onClose: () => void;
+  getNumber: (key: string, fallback: number) => number;
+  setNumber: (key: string, value: number) => void;
+  outerTune: LayoutTune;
+  setOuterTune: (key: keyof LayoutTune, value: number, min: number, max: number) => void;
+  stageSchemaItems: TuneSchemaItem[];
+  isGameLocked: boolean;
+  isOuterLocked: boolean;
+}) {
+  const [minimized, setMinimized] = useState(false);
+  // Fix #2: 패널 자체 드래그 위치
+  const [panelPos, setPanelPos] = useState({ x: 0, y: 0 });
+
+  const handleCopy = useCallback(async () => {
+    await onCopyCoords();
+  }, [onCopyCoords]);
+
+  const getSchema = useCallback(
+    (key: string) => {
+      return stageSchemaItems.find((s) => s.key === key);
+    },
+    [stageSchemaItems]
+  );
+
+  const getKeyType = (key: string): 'x' | 'y' | 'scale' | 'other' => {
+    if (key.endsWith('X')) return 'x';
+    if (key.endsWith('Y')) return 'y';
+    if (key.endsWith('Scale') || key.endsWith('scale')) return 'scale';
+    return 'other';
+  };
+
+  const getKeyLabel = (key: string): string => {
+    const t = getKeyType(key);
+    if (t === 'x') return 'X';
+    if (t === 'y') return 'Y';
+    if (t === 'scale') return 'Scale';
+    if (key === 'top') return '상단';
+    if (key === 'bottom') return '하단';
+    if (key === 'left') return '왼쪽';
+    if (key === 'right') return '오른쪽';
+    return key;
+  };
+
+  if (minimized) {
+    return (
+      <motion.div
+        className="absolute z-[65] m-3"
+        drag
+        dragMomentum={false}
+        dragElastic={0}
+        initial={false}
+        animate={panelPos}
+        onDragEnd={(_, info) => setPanelPos((p) => ({ x: p.x + info.offset.x, y: p.y + info.offset.y }))}
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
+        style={{ left: 0, top: 0, touchAction: 'none' }}
+      >
+        <button
+          type="button"
+          className="rounded-2xl border-2 border-amber-400/60 bg-white/90 px-4 py-3 text-[11px] font-black text-amber-700 shadow-2xl backdrop-blur-sm hover:bg-amber-50 transition-all"
+          onClick={() => setMinimized(false)}
+          title="에디터 패널 열기"
+          style={{ boxShadow: '0 4px 20px rgba(0,0,0,0.15)' }}
+        >
+          📋 Inspector 열기
+        </button>
+      </motion.div>
+    );
+  }
+
+  return (
+    <motion.div
+      className="absolute z-[65] m-3 max-w-[380px] w-[90vw]"
+      drag
+      dragMomentum={false}
+      dragElastic={0}
+      initial={false}
+      animate={panelPos}
+      onDragEnd={(_, info) => setPanelPos((p) => ({ x: p.x + info.offset.x, y: p.y + info.offset.y }))}
+      onPointerDown={(e) => e.stopPropagation()}
+      onClick={(e) => e.stopPropagation()}
+      style={{ left: 0, top: 0, touchAction: 'none' }}
+    >
+      <div
+        className="rounded-3xl border-2 border-amber-400/50 bg-white/95 px-4 py-3 shadow-2xl backdrop-blur-sm overflow-hidden transition-all"
+        style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }}
+      >
+        {/* 헤더 - 드래그 핸들 */}
+        <div className="flex items-center justify-between gap-2 mb-2 cursor-grab active:cursor-grabbing select-none">
+          <div className="text-[12px] font-black text-amber-800 flex items-center gap-1.5">
+            <span>📐</span>
+            <span>Inspector</span>
+          </div>
+          <div className="flex items-center gap-1 cursor-default" onPointerDown={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              className="rounded-lg border border-ink/20 bg-paper/80 px-2 py-0.5 text-[10px] font-black hover:bg-paper transition-colors"
+              onClick={() => setMinimized(true)}
+              title="최소화"
+            >
+              ➖
+            </button>
+            <button
+              type="button"
+              className="rounded-lg border border-ink/20 bg-paper/80 px-2 py-0.5 text-[10px] font-black hover:bg-red-50 transition-colors"
+              onClick={onClose}
+              title="닫기"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+
+        {/* 설명 */}
+        <div className="text-[10px] font-bold text-ink/60 leading-snug mb-2">
+          각 항목의 X, Y, Scale 값을 직접 입력하여 위치와 크기를 조절하세요.
+        </div>
+
+        {/* 항목 목록 */}
+        <div className="max-h-[40vh] overflow-y-auto rounded-xl border border-ink/10 bg-paper/50 p-1.5">
+          {items.length === 0 ? (
+            <div className="px-2 py-3 text-[10px] font-bold text-ink/40 text-center">
+              이 스테이지에 조절 가능한 항목이 없습니다.
+            </div>
+          ) : (
+            <div className="flex flex-col gap-1.5">
+              {items.map((item) => {
+                const isOuter = item.id === 'outer-layout';
+
+                return (
+                  <div
+                    key={item.id}
+                    className={[
+                      'rounded-xl border px-2.5 py-2 transition-colors',
+                      hoverId === item.id
+                        ? 'border-amber-400/70 bg-amber-50/80'
+                        : 'border-ink/8 bg-white/60 hover:bg-paper/80',
+                    ].join(' ')}
+                    onMouseEnter={() => onHoverChange(item.id)}
+                    onMouseLeave={() => onHoverChange(null)}
+                  >
+                    {/* 항목 레이블 + 배지 */}
+                    <div className="flex items-center justify-between gap-2 mb-1.5">
+                      <div className="text-[11px] font-black text-ink/85 truncate">{item.label}</div>
+                      <span className={[
+                        'shrink-0 rounded-md px-1.5 py-0.5 text-[9px] font-black',
+                        item.panel === 'outer' ? 'bg-sky-100 text-sky-700' :
+                        item.panel === 'object' ? 'bg-purple-100 text-purple-700' :
+                        'bg-emerald-100 text-emerald-700',
+                      ].join(' ')}>
+                        {item.panel === 'outer' ? '전체' : item.panel === 'object' ? '오브젝트' : '레이아웃'}
+                      </span>
+                    </div>
+
+                    {/* 수치 입력 필드 - Fix #1: 별도 InputCell 컴포넌트 사용, 마스터 권한으로 항상 활성화 */}
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {item.keys.map((key) => {
+                        const schema = getSchema(key);
+                        const min = schema?.min ?? -9999;
+                        const max = schema?.max ?? 9999;
+                        const step = schema?.step ?? 1;
+                        const label = getKeyLabel(key);
+
+                        if (isOuter) {
+                          const outerVal = outerTune[key as keyof LayoutTune] as number ?? 0;
+                          return (
+                            <InspectorInputCell
+                              key={key}
+                              label={label}
+                              initialValue={outerVal}
+                              min={-500}
+                              max={500}
+                              step={2}
+                              onCommit={(v) => setOuterTune(key as keyof LayoutTune, v, -500, 500)}
+                              w="52px"
+                              labelW="18px"
+                            />
+                          );
+                        }
+
+                        const val = getNumber(key, 0);
+                        return (
+                          <InspectorInputCell
+                            key={key}
+                            label={label}
+                            initialValue={val}
+                            min={min}
+                            max={max}
+                            step={step}
+                            onCommit={(v) => setNumber(key, v)}
+                            w="52px"
+                            labelW="28px"
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* 복사 버튼 */}
+        <div className="mt-2">
+          <button
+            type="button"
+            className="w-full rounded-xl border-2 border-amber-400/40 bg-amber-500/10 px-3 py-2 text-[11px] font-black text-amber-800 shadow-sm hover:bg-amber-500/20 transition-colors"
+            onClick={handleCopy}
+            title="현재 스테이지 좌표 JSON 복사"
+          >
+            📋 현재 좌표 복사하기
+          </button>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
 
 const BronzeAgeGame = lazy(() => import('./BronzeAge/BronzeAgeGame'));
 const DolmenGame = lazy(() => import('./Dolmen/DolmenGame'));
@@ -51,6 +391,13 @@ type StageTuneSchema = {
   items: TuneSchemaItem[];
 };
 
+type MasterEditorItem = {
+  id: string;
+  label: string;
+  panel: 'outer' | 'tuning' | 'object';
+  keys: string[];
+};
+
 const DEFAULT_LAYOUT_TUNES: Record<number, LayoutTune> = {
   1: { baseWidth: 800, baseHeight: 450, top: 12, right: 0, bottom: 12, left: 0 },
   2: { baseWidth: 800, baseHeight: 450, top: 12, right: 0, bottom: 12, left: 0 },
@@ -69,6 +416,58 @@ const OUTER_TUNES_LOCKED_KEY = 'outerLayoutTunes_locked_v2';
 
 const GAME_TUNES_STORAGE_KEY = 'gameTunes_v1';
 const GAME_TUNES_LOCKED_KEY = 'gameTunes_locked_v1';
+
+function normalizeMovableLabel(label: string) {
+  return label.replace(/\s*[XY]$/, '').trim();
+}
+
+function getMovableBaseKey(key: string) {
+  if (key.endsWith('X') || key.endsWith('Y')) return key.slice(0, -1);
+  return key;
+}
+
+function buildMasterEditorItems(stageSchema?: StageTuneSchema): MasterEditorItem[] {
+  const items: MasterEditorItem[] = [
+    { id: 'outer-layout', label: '전체 화면 프레임', panel: 'outer', keys: ['top', 'right', 'bottom', 'left'] },
+  ];
+  if (!stageSchema) return items;
+
+  const grouped = new Map<string, MasterEditorItem>();
+  // Track which keys we've already grouped to avoid duplicates
+  const groupedKeys = new Set<string>();
+  for (const it of stageSchema.items) {
+    const isMovableKey = it.key.endsWith('X') || it.key.endsWith('Y') || it.key.endsWith('Scale') || it.key.endsWith('scale');
+    if (!isMovableKey) {
+      // Non-XYScale keys (like invW, invH) get their own standalone entry
+      const id = `${it.panel ?? 'tuning'}:${it.key}`;
+      items.push({
+        id,
+        label: it.label,
+        panel: it.panel ?? 'tuning',
+        keys: [it.key],
+      });
+      groupedKeys.add(it.key);
+      continue;
+    }
+    const baseKey = getMovableBaseKey(it.key);
+    const id = `${it.panel ?? 'tuning'}:${baseKey}`;
+    const existing = grouped.get(id);
+    if (existing) {
+      existing.keys.push(it.key);
+      groupedKeys.add(it.key);
+      continue;
+    }
+    grouped.set(id, {
+      id,
+      label: normalizeMovableLabel(it.label),
+      panel: it.panel ?? 'tuning',
+      keys: [it.key],
+    });
+    groupedKeys.add(it.key);
+  }
+
+  return items.concat(Array.from(grouped.values()));
+}
 
 const STAGE_TUNING_SCHEMAS: Record<number, StageTuneSchema> = {
   2: {
@@ -226,18 +625,36 @@ const STAGE_TUNING_SCHEMAS: Record<number, StageTuneSchema> = {
   6: {
     title: '안양사 퍼즐 레이아웃',
     defaults: {
-      headerX: 70,
-      headerY: -45,
-      headerScale: 1.4,
-      boardX: 70,
-      boardY: 60, // 800x450 기준에서 3x2 보드 세로 중앙값(기본 SLOT_H=100, GAP=6 기준)
-      boardScale: 1.1,
-      invX: 70,
-      invY: 230,
-      inventoryScale: 1,
-      slotW: 180,
+      headerX: 100,
+      headerY: -40,
+      headerScale: 1.5,
+      boardX: -81,
+      boardY: 83,
+      boardScale: 1.5,
+      invX: 449,
+      invY: 79,
+      inventoryScale: 1.5,
+      slotW: 170,
       slotH: 70,
       pieceScale: 1,
+      invW: 300,
+      invH: 300,
+      piece1X: 10,
+      piece1Y: -3,
+      piece2X: -111,
+      piece2Y: 38,
+      piece3X: -181,
+      piece3Y: -14,
+      piece4X: -90,
+      piece4Y: -55,
+      piece5X: -200,
+      piece5Y: -8,
+      completeImgDx: -20,
+      completeImgDy: -2,
+      completeImgScale: 1,
+      completePopupDx: 0,
+      completePopupDy: 0,
+      completePopupScale: 1,
     },
     items: [
       { key: 'headerX', label: '상단 X', min: -400, max: 900, step: 2 },
@@ -252,6 +669,26 @@ const STAGE_TUNING_SCHEMAS: Record<number, StageTuneSchema> = {
       { key: 'slotW', label: '조각 폭', min: 40, max: 320, step: 2 },
       { key: 'slotH', label: '조각 높이', min: 40, max: 260, step: 2 },
       { key: 'pieceScale', label: '조각 크기', min: 0.4, max: 2.5, step: 0.05 },
+      { key: 'invW', label: '인벤 가로', min: 100, max: 800, step: 2 },
+      { key: 'invH', label: '인벤 세로', min: 80, max: 500, step: 2 },
+      { key: 'snapOffsetDx', label: '스냅 X보정', min: -40, max: 40, step: 1 },
+      { key: 'snapOffsetDy', label: '스냅 Y보정', min: -40, max: 40, step: 1 },
+      { key: 'piece1X', label: '파편1 X', min: -200, max: 200, step: 2, panel: 'object' },
+      { key: 'piece1Y', label: '파편1 Y', min: -200, max: 200, step: 2, panel: 'object' },
+      { key: 'piece2X', label: '파편2 X', min: -200, max: 200, step: 2, panel: 'object' },
+      { key: 'piece2Y', label: '파편2 Y', min: -200, max: 200, step: 2, panel: 'object' },
+      { key: 'piece3X', label: '파편3 X', min: -200, max: 200, step: 2, panel: 'object' },
+      { key: 'piece3Y', label: '파편3 Y', min: -200, max: 200, step: 2, panel: 'object' },
+      { key: 'piece4X', label: '파편4 X', min: -200, max: 200, step: 2, panel: 'object' },
+      { key: 'piece4Y', label: '파편4 Y', min: -200, max: 200, step: 2, panel: 'object' },
+      { key: 'piece5X', label: '파편5 X', min: -200, max: 200, step: 2, panel: 'object' },
+      { key: 'piece5Y', label: '파편5 Y', min: -200, max: 200, step: 2, panel: 'object' },
+      { key: 'completeImgDx', label: '완성비석 X', min: -300, max: 300, step: 2, panel: 'object' },
+      { key: 'completeImgDy', label: '완성비석 Y', min: -300, max: 300, step: 2, panel: 'object' },
+      { key: 'completeImgScale', label: '완성비석 크기', min: 0.6, max: 1.8, step: 0.05, panel: 'object' },
+      { key: 'completePopupDx', label: '완성팝업 X', min: -300, max: 300, step: 2, panel: 'object' },
+      { key: 'completePopupDy', label: '완성팝업 Y', min: -300, max: 300, step: 2, panel: 'object' },
+      { key: 'completePopupScale', label: '완성팝업 크기', min: 0.6, max: 1.8, step: 0.05, panel: 'object' },
     ],
   },
   8: {
@@ -295,14 +732,16 @@ export default function MiniGameManager() {
   const completeStage = useGameStore((s) => s.completeStage);
   const setAppPhase = useGameStore((s) => s.setAppPhase);
   const isDevMode = useGameStore((s) => s.isDevMode);
+  const isRuntimeDev = import.meta.env.DEV;
   const regionData = useGameStore((s) => s.regionData);
   const stageIdSafe = currentStageId ?? 1;
+  const [masterEditorOpen, setMasterEditorOpen] = useState(false);
+  const [masterEditorHoverId, setMasterEditorHoverId] = useState<string | null>(null);
   const [layoutTunes, setLayoutTunes] = useState<Record<number, LayoutTune>>(() => {
     try {
       const raw = window.localStorage.getItem(OUTER_TUNES_STORAGE_KEY);
       if (!raw) return DEFAULT_LAYOUT_TUNES;
       const parsed = JSON.parse(raw) as Record<number, LayoutTune>;
-      // 기본값 + 저장값 merge (키 누락 대비)
       return { ...DEFAULT_LAYOUT_TUNES, ...parsed };
     } catch {
       return DEFAULT_LAYOUT_TUNES;
@@ -317,12 +756,10 @@ export default function MiniGameManager() {
       return {};
     }
   });
-  // 기본은 모두 "접힘" 상태(개발용 조절 패널은 필요할 때만 열기)
   const [outerTunerOpen, setOuterTunerOpen] = useState(false);
   const [innerTunerOpen, setInnerTunerOpen] = useState(false);
   const [objectTunerOpen, setObjectTunerOpen] = useState(false);
 
-  // 게임별 튜닝(미니게임 내부 레이아웃) - 공통 HUD에서 제어
   const [gameTunes, setGameTunes] = useState<Record<number, Record<string, number>>>(() => {
     try {
       const raw = window.localStorage.getItem(GAME_TUNES_STORAGE_KEY);
@@ -332,13 +769,14 @@ export default function MiniGameManager() {
       return {};
     }
   });
+  const DEFAULT_GAME_TUNES_LOCKED: Record<number, boolean> = { 6: true };
   const [gameLocked, setGameLocked] = useState<Record<number, boolean>>(() => {
     try {
       const raw = window.localStorage.getItem(GAME_TUNES_LOCKED_KEY);
-      if (!raw) return {};
-      return JSON.parse(raw) as Record<number, boolean>;
+      if (!raw) return { ...DEFAULT_GAME_TUNES_LOCKED };
+      return { ...DEFAULT_GAME_TUNES_LOCKED, ...JSON.parse(raw) as Record<number, boolean> };
     } catch {
-      return {};
+      return { ...DEFAULT_GAME_TUNES_LOCKED };
     }
   });
 
@@ -352,7 +790,6 @@ export default function MiniGameManager() {
   const fit = { baseWidth: currentTune.baseWidth, baseHeight: currentTune.baseHeight };
   const isLocked = !!lockedTunes[stageIdSafe];
 
-  // dev에서 HMR/리렌더가 있어도 값이 유지되게 저장
   useEffect(() => {
     try {
       window.localStorage.setItem(OUTER_TUNES_STORAGE_KEY, JSON.stringify(layoutTunes));
@@ -394,19 +831,6 @@ export default function MiniGameManager() {
 
   const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
 
-  const tune = (key: keyof LayoutTune, delta: number, min: number, max: number) => {
-    setLayoutTunes((prev) => {
-      const base = prev[stageIdSafe] ?? DEFAULT_LAYOUT_TUNES[stageIdSafe] ?? DEFAULT_LAYOUT_TUNES[1];
-      return {
-        ...prev,
-        [stageIdSafe]: {
-          ...base,
-          [key]: Math.max(min, Math.min(max, base[key] + delta)),
-        },
-      };
-    });
-  };
-
   const setTune = (key: keyof LayoutTune, value: number, min: number, max: number) => {
     if (isLocked) return;
     setLayoutTunes((prev) => {
@@ -426,16 +850,17 @@ export default function MiniGameManager() {
   }, [currentTune]);
 
   const stageSchema = STAGE_TUNING_SCHEMAS[stageIdSafe];
+  const masterEditorItems = useMemo(() => buildMasterEditorItems(stageSchema), [stageSchema]);
   const isGameLocked = !!gameLocked[stageIdSafe];
   const tuningItems = (stageSchema?.items ?? []).filter((it) => (it.panel ?? 'tuning') === 'tuning');
   const objectItems = (stageSchema?.items ?? []).filter((it) => it.panel === 'object');
-  const getGameNumber = (key: string, fallback: number) => {
+  const getGameNumber = useCallback((key: string, fallback: number) => {
     const base = stageSchema?.defaults?.[key] ?? fallback;
     return gameTunes[stageIdSafe]?.[key] ?? base;
-  };
+  }, [stageSchema, gameTunes, stageIdSafe]);
   const setGameNumber = (key: string, value: number) => {
     if (!stageSchema) return;
-    if (isGameLocked) return;
+    if (isGameLocked && !masterEditorOpen) return;
     const item = stageSchema.items.find((x) => x.key === key);
     const min = item?.min ?? -99999;
     const max = item?.max ?? 99999;
@@ -459,49 +884,37 @@ export default function MiniGameManager() {
     });
   };
 
-  // 전체 레이아웃 드래그 이동(튜닝 창이 열려 있을 때)
-  const outerDragRef = useRef<null | {
-    pointerId: number;
-    startX: number;
-    startY: number;
-    left: number;
-    right: number;
-    top: number;
-    bottom: number;
-  }>(null);
+  const copyCurrentStageCoords = async () => {
+    const outerForStage = layoutTunes[stageIdSafe] ?? DEFAULT_LAYOUT_TUNES[stageIdSafe] ?? DEFAULT_LAYOUT_TUNES[1];
+    const outerLockedForStage = lockedTunes[stageIdSafe];
+    const gameForStage = gameTunes[stageIdSafe] ?? {};
+    const gameLockedForStage = gameLocked[stageIdSafe] ?? false;
 
-  useEffect(() => {
-    const move = (e: PointerEvent) => {
-      const drag = outerDragRef.current;
-      if (!drag) return;
-      const dx = e.clientX - drag.startX;
-      const dy = e.clientY - drag.startY;
-      setLayoutTunes((prev) => {
-        const base = prev[stageIdSafe] ?? DEFAULT_LAYOUT_TUNES[stageIdSafe] ?? DEFAULT_LAYOUT_TUNES[1];
-        return {
-          ...prev,
-          [stageIdSafe]: {
-            ...base,
-            left: clamp(drag.left + dx, -500, 500),
-            right: clamp(drag.right - dx, -500, 500),
-            top: clamp(drag.top + dy, -500, 500),
-            bottom: clamp(drag.bottom - dy, -500, 500),
-          },
-        };
-      });
+    const outerPayload = { [stageIdSafe]: outerForStage };
+    const outerLockedPayload = outerLockedForStage ? { [stageIdSafe]: outerLockedForStage } : {};
+    const gamePayload = Object.keys(gameForStage).length > 0 ? { [stageIdSafe]: gameForStage } : {};
+    const gameLockedPayload = { [stageIdSafe]: gameLockedForStage };
+
+    try {
+      window.localStorage.setItem(OUTER_TUNES_STORAGE_KEY, JSON.stringify({ ...layoutTunes, [stageIdSafe]: outerForStage }));
+      window.localStorage.setItem(OUTER_TUNES_LOCKED_KEY, JSON.stringify(outerLockedForStage ? { ...lockedTunes, [stageIdSafe]: outerLockedForStage } : lockedTunes));
+      window.localStorage.setItem(GAME_TUNES_STORAGE_KEY, JSON.stringify(Object.keys(gameForStage).length > 0 ? { ...gameTunes, [stageIdSafe]: gameForStage } : gameTunes));
+      window.localStorage.setItem(GAME_TUNES_LOCKED_KEY, JSON.stringify({ ...gameLocked, [stageIdSafe]: gameLockedForStage }));
+    } catch {
+      // ignore
+    }
+
+    const payload = {
+      stageId: stageIdSafe,
+      outerLayoutTunes_v2: outerPayload,
+      outerLayoutTunes_locked_v2: outerLockedPayload,
+      gameTunes_v1: gamePayload,
+      gameTunes_locked_v1: gameLockedPayload,
     };
-    const up = () => {
-      outerDragRef.current = null;
-    };
-    window.addEventListener('pointermove', move);
-    window.addEventListener('pointerup', up);
-    window.addEventListener('pointercancel', up);
-    return () => {
-      window.removeEventListener('pointermove', move);
-      window.removeEventListener('pointerup', up);
-      window.removeEventListener('pointercancel', up);
-    };
-  }, [stageIdSafe]);
+
+    await navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
+    window.alert('좌표가 클립보드에 복사되었습니다! 채팅창에 Ctrl+V 해주세요.');
+  };
 
   if (!currentStageId) return null;
 
@@ -530,7 +943,7 @@ export default function MiniGameManager() {
   return (
     <Suspense fallback={<div style={{ padding: 20 }}>게임 불러오는 중...</div>}>
       <div className="w-full h-full relative">
-        {/* 뒤로 버튼: 문서 흐름을 타지 않도록 완전 오버레이 */}
+        {/* 뒤로 버튼 */}
         <button
           type="button"
           className="absolute top-4 left-4 z-50 px-3 py-2 rounded-2xl border border-ink/30 bg-paper2/90 text-ink font-black shadow-md"
@@ -542,6 +955,32 @@ export default function MiniGameManager() {
         >
           ← 뒤로
         </button>
+
+        {/* 우측 상단 버튼 그룹 (완료하기 + 맵으로 돌아가기, 상시 표시) */}
+        <div className="absolute top-4 right-32 flex gap-2 z-[9999]">
+          <button
+            type="button"
+            className="px-3 py-2 rounded-2xl border border-transparent bg-emerald-600/90 text-white font-black shadow-sm hover:bg-emerald-700 transition-colors"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              completeStage(currentStageId);
+            }}
+          >
+            완료하기
+          </button>
+          <button
+            type="button"
+            className="px-3 py-2 rounded-2xl border border-ink/30 bg-paper text-ink font-black shadow-sm hover:bg-stone-200 transition-colors"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setAppPhase('MAP');
+            }}
+          >
+            맵으로 돌아가기 ↩
+          </button>
+        </div>
 
         {/* 전체 레이아웃 조절 */}
         {isDevMode && (outerTunerOpen ? (
@@ -592,7 +1031,6 @@ export default function MiniGameManager() {
                   className="px-2 py-1 rounded-lg border border-ink/20 bg-stamp text-white text-[10px] font-black"
                   onClick={(e) => {
                     e.stopPropagation();
-                    // 현재 화면(stage)의 값을 "확정"으로 저장 (이후 슬라이더/입력 비활성화)
                     setLockedTunes((prev) => ({
                       ...prev,
                       [currentStageId]: { ...currentTune },
@@ -625,7 +1063,6 @@ export default function MiniGameManager() {
                   disabled={isLocked}
                 />
               </div>
-
               <div className="flex items-center gap-2">
                 <span className="w-10 font-black">세로</span>
                 <input
@@ -646,7 +1083,6 @@ export default function MiniGameManager() {
                   disabled={isLocked}
                 />
               </div>
-
               <div className="flex items-center gap-2">
                 <span className="w-10 font-black">상단</span>
                 <input
@@ -667,7 +1103,6 @@ export default function MiniGameManager() {
                   disabled={isLocked}
                 />
               </div>
-
               <div className="flex items-center gap-2">
                 <span className="w-10 font-black">하단</span>
                 <input
@@ -688,7 +1123,6 @@ export default function MiniGameManager() {
                   disabled={isLocked}
                 />
               </div>
-
               <div className="flex items-center gap-2">
                 <span className="w-10 font-black">왼쪽</span>
                 <input
@@ -709,7 +1143,6 @@ export default function MiniGameManager() {
                   disabled={isLocked}
                 />
               </div>
-
               <div className="flex items-center gap-2">
                 <span className="w-10 font-black">오른쪽</span>
                 <input
@@ -730,7 +1163,6 @@ export default function MiniGameManager() {
                   disabled={isLocked}
                 />
               </div>
-
               <button
                 type="button"
                 className="mt-1 px-2 py-1 rounded-lg border border-ink/20 bg-stamp text-white font-black"
@@ -750,7 +1182,6 @@ export default function MiniGameManager() {
                 초기화
               </button>
             </div>
-
           </div>
         ) : (
           <button
@@ -766,7 +1197,45 @@ export default function MiniGameManager() {
           </button>
         ))}
 
-        {/* 게임 내부 레이아웃 조절(스테이지별 스키마) */}
+        {/* 마스터 에디터 ON/OFF 버튼 */}
+        {(isRuntimeDev || isDevMode) && (
+          <button
+            type="button"
+            className={[
+              'absolute right-4 top-[60px] z-[70] px-4 py-3 rounded-2xl border font-black shadow-md transition-all',
+              masterEditorOpen
+                ? 'border-sky-400/70 bg-sky-600 text-white'
+                : 'border-ink/30 bg-paper2/95 text-ink',
+            ].join(' ')}
+            onClick={(e) => {
+              e.stopPropagation();
+              setMasterEditorOpen((prev) => !prev);
+            }}
+            title="Inspector 패널"
+          >
+            {masterEditorOpen ? 'Inspector ON' : 'Inspector OFF'}
+          </button>
+        )}
+
+        {/* 마스터 에디터 목록 패널 */}
+        {(isRuntimeDev || isDevMode) && masterEditorOpen && (
+          <MasterEditorFloatingPanel
+            items={masterEditorItems}
+            hoverId={masterEditorHoverId}
+            onHoverChange={setMasterEditorHoverId}
+            onCopyCoords={copyCurrentStageCoords}
+            onClose={() => setMasterEditorOpen(false)}
+            getNumber={getGameNumber}
+            setNumber={setGameNumber}
+            outerTune={currentTune}
+            setOuterTune={setTune}
+            stageSchemaItems={stageSchema?.items ?? []}
+            isGameLocked={isGameLocked}
+            isOuterLocked={isLocked}
+          />
+        )}
+
+        {/* 게임 내부 레이아웃 조절 */}
         {isDevMode && stageSchema && tuningItems.length > 0 &&
           (innerTunerOpen ? (
             <div
@@ -988,28 +1457,39 @@ export default function MiniGameManager() {
           }}
         >
           <div className="relative w-full h-full">
-            {isDevMode && outerTunerOpen && !isLocked && (
+            {/* Fix #3: outline으로 변경하여 레이아웃 시프트 제거 */}
+            {isRuntimeDev && (outerTunerOpen || masterEditorOpen) && (
               <div
-                className="absolute inset-0 z-40 rounded-3xl border-2 border-dashed border-sky-400/70 bg-sky-100/10 cursor-move"
-                style={{ touchAction: 'none' }}
-                onPointerDown={(e) => {
-                  // 패널/버튼이 아닌 게임 프레임 자체를 드래그하면 전체 레이아웃 이동
-                  if ((e.target as HTMLElement).closest('[data-tuning-panel="true"]')) return;
-                  e.stopPropagation();
-                  outerDragRef.current = {
-                    pointerId: e.pointerId,
-                    startX: e.clientX,
-                    startY: e.clientY,
-                    left: currentTune.left,
-                    right: currentTune.right,
-                    top: currentTune.top,
-                    bottom: currentTune.bottom,
-                  };
-                }}
+                className={[
+                  'absolute inset-0 z-40 rounded-3xl pointer-events-none',
+                  'outline outline-[3px] outline-offset-[-3px]',
+                  masterEditorHoverId === 'outer-layout'
+                    ? 'outline-amber-400/80 bg-amber-100/15'
+                    : 'outline-sky-400/70 bg-sky-100/10',
+                ].join(' ')}
+                style={masterEditorHoverId !== 'outer-layout' ? { outlineStyle: 'dashed' } : undefined}
               >
                 <div className="absolute left-3 top-3 rounded-xl border border-sky-400/60 bg-paper2/92 px-3 py-1 text-[11px] font-black text-sky-700 shadow-md">
                   전체 레이아웃 드래그 이동
                 </div>
+                <button
+                  type="button"
+                  className={[
+                    'absolute right-3 top-3 pointer-events-auto rounded-xl border px-3 py-2 text-[11px] font-black shadow-md',
+                    masterEditorHoverId === 'outer-layout'
+                      ? 'border-amber-400/80 bg-amber-200/85 text-amber-900'
+                      : 'border-sky-400/60 bg-paper2/92 text-sky-700',
+                  ].join(' ')}
+                  style={{ touchAction: 'none' }}
+                  onPointerDown={(e) => {
+                    if ((e.target as HTMLElement).closest('[data-tuning-panel="true"]')) return;
+                    e.stopPropagation();
+                    // outerDragRef logic removed - use Inspector panel instead
+                  }}
+                  title="전체 프레임 (Inspector에서 수치 입력)"
+                >
+                  프레임 (Inspector)
+                </button>
               </div>
             )}
 
@@ -1020,9 +1500,10 @@ export default function MiniGameManager() {
                   getNumber: getGameNumber,
                   setNumber: setGameNumber,
                   reset: resetGameTunes,
-                  locked: isGameLocked,
+                  locked: masterEditorOpen ? false : isGameLocked,
                   setLocked: (locked) => setGameLocked((prev) => ({ ...prev, [currentStageId]: locked })),
-                  innerTunerOpen,
+                  innerTunerOpen: innerTunerOpen || masterEditorOpen,
+                  masterEditorOpen,
                 }}
               >
                 <CurrentMiniGame
